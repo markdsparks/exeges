@@ -75,8 +75,9 @@ export function useTheme() {
 
    return {
       mode,
+      toggleMode,
       fontSize,
       cycleFontSize,
        setMode,
-    };
+     };
 }

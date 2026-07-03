@@ -18,7 +18,7 @@ import { useTheme } from './hooks/useTheme';
 export default function App() {
     const { book, bibles, selectedBookId, selectedChapterNum, navigateTo } = useBibleData();
     const { isBookmarked, toggleBookmark } = useBookmarks();
-    const { mode, fontSize, cycleFontSize, setMode } = useTheme();
+    const { mode, toggleMode, fontSize, cycleFontSize, setMode } = useTheme();
 
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [hideControls, setHideControls] = useState(false);
