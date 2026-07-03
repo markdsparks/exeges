@@ -31,6 +31,8 @@ jobs:
         run: npm install
 
       - name: Build
+        env:
+          VITE_ESV_PROXY_URL: ${{ vars.VITE_ESV_PROXY_URL }}
         run: npm run build
 
       - name: Upload artifact

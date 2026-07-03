@@ -19,7 +19,7 @@ function json(body, init = {}) {
 
 function parsePassage(passage) {
     const cleanPassage = passage.replace(/\r/g, '').trim();
-    const copyrightIndex = cleanPassage.search(/\n\s*Scripture quotations/i);
+    const copyrightIndex = cleanPassage.search(/\s+(Scripture quotations|ESV® Bible|The Holy Bible, English Standard Version)/i);
     const textBlock = copyrightIndex === -1
         ? cleanPassage
         : cleanPassage.slice(0, copyrightIndex).trim();
