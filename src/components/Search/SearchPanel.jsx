@@ -1,23 +1,31 @@
 import { useEffect, useRef } from 'react';
 import '../../styles/search.css';
 
-function snippetParts(snippet, query) {
-    if (!query) return [{ text: snippet, match: false }];
+function snippetParts(snippet, terms) {
+    const highlightTerms = (terms ?? [])
+        .filter(Boolean)
+        .sort((a, b) => b.length - a.length);
 
+    if (!highlightTerms.length) return [{ text: snippet, match: false }];
+
+    const escapedTerms = highlightTerms.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const matcher = new RegExp(`\\b(${escapedTerms.join('|')})\\b`, 'gi');
     const lowerSnippet = snippet.toLowerCase();
-    const lowerQuery = query.toLowerCase();
     const parts = [];
     let cursor = 0;
-    let index = lowerSnippet.indexOf(lowerQuery);
+    let match = matcher.exec(lowerSnippet);
 
-    while (index !== -1) {
+    while (match) {
+        const index = match.index;
+        const matchText = snippet.slice(index, index + match[0].length);
+
         if (index > cursor) {
             parts.push({ text: snippet.slice(cursor, index), match: false });
         }
 
-        parts.push({ text: snippet.slice(index, index + query.length), match: true });
-        cursor = index + query.length;
-        index = lowerSnippet.indexOf(lowerQuery, cursor);
+        parts.push({ text: matchText, match: true });
+        cursor = index + match[0].length;
+        match = matcher.exec(lowerSnippet);
     }
 
     if (cursor < snippet.length) {
@@ -33,7 +41,7 @@ export default function SearchPanel({
     results,
     totalResults,
     isLimited,
-    normalizedQuery,
+    highlightTerms = [],
     translationName = 'KJV',
     searchSource = 'local',
     isLoading = false,
@@ -117,7 +125,7 @@ export default function SearchPanel({
                                         {result.bookName} {result.chapter}:{result.verse}
                                     </span>
                                     <span className="search-snippet">
-                                        {snippetParts(result.snippet, normalizedQuery).map((part, index) => (
+                                        {snippetParts(result.snippet, highlightTerms).map((part, index) => (
                                             part.match ? (
                                                 <mark key={index} className="search-highlight">{part.text}</mark>
                                             ) : (

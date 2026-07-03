@@ -102,8 +102,12 @@ export default function App() {
         }).filter(Boolean);
     }, [bibles, getAllNotes]);
 
-    const kjvSearch = useBibleSearch(bibles, searchQuery);
-    const esvSearch = useEsvSearch(bibles, searchQuery);
+    const searchContext = useMemo(() => ({
+        bookId: selectedBookId,
+        chapterNum: selectedChapterNum,
+    }), [selectedBookId, selectedChapterNum]);
+    const kjvSearch = useBibleSearch(bibles, searchQuery, searchContext);
+    const esvSearch = useEsvSearch(bibles, searchQuery, searchContext);
     const search = selectedTranslation.id === 'esv' ? esvSearch : kjvSearch;
     const translationStatus = translationState.status === 'setup-needed' || translationState.status === 'error'
         ? translationState.message
@@ -280,7 +284,7 @@ export default function App() {
                 results={search.results}
                 totalResults={search.totalResults}
                 isLimited={search.isLimited}
-                normalizedQuery={search.normalizedQuery}
+                highlightTerms={search.highlightTerms}
                 translationName={selectedTranslation.name}
                 searchSource={selectedTranslation.source}
                 isLoading={search.isLoading}
