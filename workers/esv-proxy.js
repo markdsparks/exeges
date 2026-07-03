@@ -1,4 +1,6 @@
-const ESV_ENDPOINT = 'https://api.esv.org/v3/passage/text/';
+const ESV_TEXT_ENDPOINT = 'https://api.esv.org/v3/passage/text/';
+const ESV_SEARCH_ENDPOINT = 'https://api.esv.org/v3/passage/search/';
+const SEARCH_PAGE_SIZE = '60';
 
 const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
@@ -38,6 +40,37 @@ function parsePassage(passage) {
     };
 }
 
+function parseReference(reference) {
+    const match = reference.match(/^(.+?)\s+(\d+):(\d+)/);
+    if (!match) return null;
+
+    return {
+        bookName: match[1],
+        chapter: Number.parseInt(match[2], 10),
+        verse: Number.parseInt(match[3], 10),
+    };
+}
+
+async function fetchFromEsv(url, env) {
+    const response = await fetch(url, {
+        headers: {
+            Authorization: `Token ${env.ESV_API_TOKEN}`,
+        },
+    });
+
+    if (!response.ok) {
+        return {
+            ok: false,
+            response: json({ error: `ESV API request failed with ${response.status}` }, { status: response.status }),
+        };
+    }
+
+    return {
+        ok: true,
+        payload: await response.json(),
+    };
+}
+
 export default {
     async fetch(request, env) {
         if (request.method === 'OPTIONS') {
@@ -54,12 +87,44 @@ export default {
 
         const url = new URL(request.url);
         const reference = url.searchParams.get('reference')?.trim();
+        const query = url.searchParams.get('q')?.trim();
 
-        if (!reference) {
+        if (!reference && !query) {
             return json({ error: 'Missing reference parameter' }, { status: 400 });
         }
 
-        const esvUrl = new URL(ESV_ENDPOINT);
+        if (query) {
+            const esvSearchUrl = new URL(ESV_SEARCH_ENDPOINT);
+            esvSearchUrl.searchParams.set('q', query);
+            esvSearchUrl.searchParams.set('page-size', SEARCH_PAGE_SIZE);
+
+            const result = await fetchFromEsv(esvSearchUrl, env);
+            if (!result.ok) return result.response;
+
+            const results = Array.isArray(result.payload.results) ? result.payload.results : [];
+
+            return json({
+                translation: 'esv',
+                query,
+                totalResults: result.payload.total_results ?? results.length,
+                page: result.payload.page ?? 1,
+                totalPages: result.payload.total_pages ?? 1,
+                results: results.map(result => {
+                    const parsed = parseReference(result.reference);
+
+                    return {
+                        reference: result.reference,
+                        bookName: parsed?.bookName ?? '',
+                        chapter: parsed?.chapter ?? null,
+                        verse: parsed?.verse ?? null,
+                        text: result.content?.replace(/\s+/g, ' ').trim() ?? '',
+                        snippet: result.content?.replace(/\s+/g, ' ').trim() ?? '',
+                    };
+                }).filter(result => result.bookName && result.chapter && result.verse && result.text),
+            });
+        }
+
+        const esvUrl = new URL(ESV_TEXT_ENDPOINT);
         esvUrl.searchParams.set('q', reference);
         esvUrl.searchParams.set('include-passage-references', 'false');
         esvUrl.searchParams.set('include-footnotes', 'false');
@@ -68,17 +133,10 @@ export default {
         esvUrl.searchParams.set('include-copyright', 'true');
         esvUrl.searchParams.set('line-length', '0');
 
-        const response = await fetch(esvUrl, {
-            headers: {
-                Authorization: `Token ${env.ESV_API_TOKEN}`,
-            },
-        });
+        const result = await fetchFromEsv(esvUrl, env);
+        if (!result.ok) return result.response;
 
-        if (!response.ok) {
-            return json({ error: `ESV API request failed with ${response.status}` }, { status: response.status });
-        }
-
-        const payload = await response.json();
+        const payload = result.payload;
         const passage = payload.passages?.[0] ?? '';
         const parsed = parsePassage(passage);
 

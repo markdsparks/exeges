@@ -41,4 +41,30 @@ Expected response:
 }
 ```
 
+Search request:
+
+```text
+GET /?q=kingdom
+```
+
+Search response:
+
+```json
+{
+  "translation": "esv",
+  "query": "kingdom",
+  "totalResults": 295,
+  "results": [
+    {
+      "reference": "Genesis 10:10",
+      "bookName": "Genesis",
+      "chapter": 10,
+      "verse": 10,
+      "text": "...",
+      "snippet": "..."
+    }
+  ]
+}
+```
+
 Keep ESV text out of committed files and long-lived browser storage.

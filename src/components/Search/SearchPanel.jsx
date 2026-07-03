@@ -35,6 +35,9 @@ export default function SearchPanel({
     isLimited,
     normalizedQuery,
     translationName = 'KJV',
+    searchSource = 'local',
+    isLoading = false,
+    error = '',
     onQueryChange,
     onClose,
     onSelectResult
@@ -42,6 +45,9 @@ export default function SearchPanel({
     const inputRef = useRef(null);
     const hasQuery = query.trim().length > 0;
     const canSearch = query.trim().length >= 2;
+    const searchLocation = searchSource === 'remote'
+        ? 'through the ESV proxy'
+        : 'stored on this device';
 
     useEffect(() => {
         if (!open) return;
@@ -89,9 +95,13 @@ export default function SearchPanel({
 
                 <div className="search-results" aria-live="polite">
                     {!hasQuery ? (
-                        <p className="search-empty">Search the {translationName} text stored on this device.</p>
+                        <p className="search-empty">Search the {translationName} text {searchLocation}.</p>
                     ) : !canSearch ? (
                         <p className="search-empty">Enter at least two characters.</p>
+                    ) : isLoading ? (
+                        <p className="search-empty">Searching {translationName}...</p>
+                    ) : error ? (
+                        <p className="search-empty">{error}</p>
                     ) : results.length > 0 ? (
                         <>
                             <p className="search-count">

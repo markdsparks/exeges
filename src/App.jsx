@@ -19,7 +19,7 @@ import { useBibleData } from './hooks/useBibleData';
 import { useBookmarks } from './hooks/useBookmarks';
 import { useNotes } from './hooks/useNotes';
 import { useTheme } from './hooks/useTheme';
-import { useBibleSearch } from './hooks/useBibleSearch';
+import { useBibleSearch, useEsvSearch } from './hooks/useBibleSearch';
 import { useTranslation } from './hooks/useTranslation';
 
 export default function App() {
@@ -102,7 +102,9 @@ export default function App() {
         }).filter(Boolean);
     }, [bibles, getAllNotes]);
 
-    const search = useBibleSearch(bibles, searchQuery);
+    const kjvSearch = useBibleSearch(bibles, searchQuery);
+    const esvSearch = useEsvSearch(bibles, searchQuery);
+    const search = selectedTranslation.id === 'esv' ? esvSearch : kjvSearch;
     const translationStatus = translationState.status === 'setup-needed' || translationState.status === 'error'
         ? translationState.message
         : translationState.status === 'loading'
@@ -279,7 +281,10 @@ export default function App() {
                 totalResults={search.totalResults}
                 isLimited={search.isLimited}
                 normalizedQuery={search.normalizedQuery}
-                translationName="KJV"
+                translationName={selectedTranslation.name}
+                searchSource={selectedTranslation.source}
+                isLoading={search.isLoading}
+                error={search.error}
                 onQueryChange={setSearchQuery}
                 onClose={() => setSearchOpen(false)}
                 onSelectResult={handleSearchResult}
