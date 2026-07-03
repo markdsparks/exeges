@@ -45,6 +45,8 @@ export default function App() {
 
     // Shared ref for the reader container — used by ChapterReader and BackToTop
     const readerRef = useRef(null);
+    const lastScrollYRef = useRef(0);
+    const tickingRef = useRef(false);
 
     // Sync dark-mode class on documentElement with theme state
     useEffect(() => {
@@ -55,6 +57,37 @@ export default function App() {
     useEffect(() => {
         document.documentElement.style.setProperty('--reader-font-size', `${fontSize}px`);
     }, [fontSize]);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            if (tickingRef.current) return;
+
+            tickingRef.current = true;
+            window.requestAnimationFrame(() => {
+                const currentY = window.scrollY;
+                const previousY = lastScrollYRef.current;
+                const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+                const delta = currentY - previousY;
+                const nearTop = currentY < 96;
+                const nearBottom = maxScroll - currentY < 160;
+                const scrollingDown = delta > 8;
+                const scrollingUp = delta < -8;
+
+                if (nearTop || nearBottom || scrollingUp) {
+                    setHideControls(false);
+                } else if (scrollingDown && currentY > 160) {
+                    setHideControls(true);
+                }
+
+                lastScrollYRef.current = currentY;
+                tickingRef.current = false;
+            });
+        };
+
+        lastScrollYRef.current = window.scrollY;
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     // Group all books by testament for sidebar
     const bookGroups = bibles ? (() => {
@@ -209,11 +242,6 @@ export default function App() {
         setSearchOpen(true);
     }, []);
 
-    const handleReaderChromeToggle = useCallback((event) => {
-        if (event.target.closest('button, a, .verse-group')) return;
-        setHideControls(prev => !prev);
-    }, []);
-
     // Chapter navigation — prev/next with book-boundary logic
     const chapterNav = useMemo(() => {
         if (!book || !bibles) return null;
@@ -315,7 +343,7 @@ export default function App() {
             </header>
 
             {/* Reader */}
-            <main className="app-main" onClick={handleReaderChromeToggle}>
+            <main className="app-main">
                 {bookGroups ? (
                     book ? (
                         <>
@@ -368,11 +396,6 @@ export default function App() {
                     aria-label="Search scripture"
                 >⌕</button>
                 <FontSizeControl fontSize={fontSize} onCycle={cycleFontSize} />
-                <button
-                    className="control-button"
-                    onClick={() => setHideControls(!hideControls)}
-                    title="Toggle reading mode"
-                >📖</button>
             </div>
         </div>
     );

@@ -293,7 +293,7 @@ button {
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
 
-/* Reading mode — hide all chrome */
+/* Reading mode — hide reader chrome during downward scroll */
 .app.reading-mode .app-header {
     transform: translateY(-100%);
     opacity: 0;
