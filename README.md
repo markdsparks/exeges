@@ -57,7 +57,7 @@ src/
 │    │    └── ChapterReader.jsx     # Verse-by-verse rendering with scroll-to-anchor
 │    ├── Navigation/
 │    │    ├── Sidebar.jsx           # Book list + expandable chapter grids
-│    │    ├── ChapterNav.jsx        # Prev/Next chapter buttons (built, not wired yet)
+│    │    ├── ChapterNav.jsx        # Prev/Next chapter buttons with book-boundary logic
 │    │    ├── TranslationPicker.jsx # Stub for future multi-translation
 │    │    └── ReadingProgress.jsx   # Scroll-based progress bar
 │    └── Shared/
@@ -86,22 +86,17 @@ src/
 
 | Issue | Priority | Notes |
 |-------|----------|-------|
-| **Sidebar performance** | Medium | 66 books with expandable grids — will feel sluggish on low-end devices with very long books |
-| **ChapterNav not wired** | Low | `ChapterReader` renders but prev/next buttons are dead components; need to wire them up |
 | **TranslationPicker is stub** | Low | UI exists in Sidebar but only shows "KJV" — the infrastructure for multi-translation is ready though |
-| **Large bundle size** | Medium | `bible.json` is ~130K lines — should be compressed for production builds |
+| **Large bundle size** | Low | `bible.json` is ~130K lines; production gzip achieves ~1.4 MB total (JS+CSS). Lazy-fetch TBD. |
 | **No loading state for long chapters** | Low | Genesis 1 loads fast, but longer chapters (e.g., Psalm 119) may benefit from a lazy render approach |
 
 ---
 
 ## Roadmap
 
-### Phase 2: Polish (`v0.2`) — "Feels finished"
-- [ ] Wire up `ChapterNav` prev/next buttons with proper book boundary logic
-- [ ] Add a subtle "back to top" button when scrolling mid-chapter
-- [ ] Improve sidebar performance for large book lists (virtualize or lazy render)
-- [ ] Add production build compression (`bible.json` → gzipped ~15KB estimated)
-- [ ] Favicon and PWA-ready manifest
+### Phase 2: Polish (`v0.2`) — "Feels finished" ✅ Shipped
+
+All v0.2 items shipped. Production build compresses to ~1.4 MB gzipped (JS+CSS). Manifest linked for PWA install; service worker follow-up TBD.
 
 ### Phase 3: Multi-Translation (`v0.3`) — "Study capability"
 - [ ] Integrate ESV and NASB translations alongside KJV
