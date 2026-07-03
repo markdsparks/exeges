@@ -1,44 +1,38 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import '../../styles/reader.css';
 
 /**
  * BackToTop — Floating "back to chapter top" button that appears after scrolling ~40%
  */
-export default function BackToTop({ readerRef }) {
+export default function BackToTop() {
     const [visible, setVisible] = useState(false);
-    const isMounted = useRef(false);
 
     // Track scroll progress and decide when to show/hide the button
     const handleScroll = () => {
-        if (!readerRef.current) return;
-        const el = readerRef.current;
-        const scrollTop = el.scrollTop;
-        const totalHeight = el.scrollHeight - el.clientHeight;
+        const scrollTop = window.scrollY;
+        const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
         if (totalHeight <= 0) return;
 
         const progress = scrollTop / totalHeight;
         setVisible(progress >= 0.4);
     };
 
-    // Attach the scroll listener to the reader container
+    // Attach to the document scroll, which is the app's active scroll surface.
     useEffect(() => {
-        if (!readerRef.current) return;
-        isMounted.current = true;
-
-        readerRef.current.addEventListener('scroll', handleScroll, { passive: true });
+        window.addEventListener('scroll', handleScroll, { passive: true });
 
         // Initialise visibility based on current scroll position
         handleScroll();
 
         return () => {
-            readerRef.current?.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('scroll', handleScroll);
         };
-    }, [readerRef]);
+    }, []);
 
     if (!visible) return null;
 
     const handleClick = () => {
-        readerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     return (

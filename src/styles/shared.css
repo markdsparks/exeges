@@ -115,8 +115,9 @@ button {
     margin-top: 52px;
     padding-bottom: calc(56px + var(--space-3xl));
     display: flex;
+    flex-direction: column;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
 }
 
 /* Sidebar overlay */
@@ -158,6 +159,7 @@ button {
 .reader-container {
     width: 100%;
     max-width: min(var(--max-width-ch), 92vw);
+    font-size: var(--reader-font-size, 1rem);
     padding-inline: var(--space-md);
     margin-inline: auto;
     margin-top: var(--space-lg);
@@ -258,9 +260,14 @@ button {
 ::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
 
 /* Reading mode — hide all chrome */
-.app.reading-mode .app-header,
-.app.reading-mode .controls-bar {
+.app.reading-mode .app-header {
     transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.app.reading-mode .controls-bar {
+    transform: translateY(100%);
     opacity: 0;
     pointer-events: none;
 }

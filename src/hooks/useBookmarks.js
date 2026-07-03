@@ -2,6 +2,18 @@ import { useState, useCallback } from 'react';
 
 const STORAGE_KEY = 'exeges-bookmarks';
 
+function parseBookmarkKey(key) {
+    const parts = key.split('-');
+    if (parts.length < 3) return null;
+
+    const verse = parseInt(parts.pop(), 10);
+    const chapter = parseInt(parts.pop(), 10);
+    const bookId = parts.join('-');
+
+    if (!bookId || Number.isNaN(chapter) || Number.isNaN(verse)) return null;
+    return { bookId, chapter, verse };
+}
+
 /**
  * Hook: useBookmarks
  *
@@ -53,15 +65,24 @@ export function useBookmarks() {
             return Object.entries(bookmarks)
                 .filter(([key]) => key.startsWith(prefix))
                 .map(([key]) => {
-                    // Extract verse number from the tail of the key
-                    const parts = key.split('-');
-                    const verse = parseInt(parts[parts.length - 1], 10);
-                    return { bookId, chapter, verse };
+                    const parsed = parseBookmarkKey(key);
+                    return parsed ? { bookId, chapter, verse: parsed.verse } : null;
                   })
+                .filter(Boolean)
                 .sort((a, b) => a.verse - b.verse);
           },
         [bookmarks]
      );
 
-    return { bookmarks, isBookmarked, toggleBookmark, getBookmarksForChapter };
+    const getAllBookmarks = useCallback(() => {
+        return Object.entries(bookmarks)
+            .map(([key, timestamp]) => {
+                const parsed = parseBookmarkKey(key);
+                return parsed ? { ...parsed, timestamp } : null;
+            })
+            .filter(Boolean)
+            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    }, [bookmarks]);
+
+    return { bookmarks, isBookmarked, toggleBookmark, getBookmarksForChapter, getAllBookmarks };
 }

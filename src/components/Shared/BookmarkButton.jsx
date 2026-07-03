@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import '../../styles/reader.css';
 
 /**
@@ -8,13 +8,19 @@ import '../../styles/reader.css';
 export default function BookmarkButton({ bookId, chapter, verse, isBookmarked, onToggle }) {
    const [hovering, setHovering] = useState(false);
 
+   const handleClick = (event) => {
+      event.stopPropagation();
+      onToggle?.(bookId, chapter, verse);
+   };
+
    return (
       <button
          className={`bookmark-indicator ${isBookmarked ? 'active' : ''}`}
-          onClick={() => onToggle?.(bookId, chapter, verse)}
+          onClick={handleClick}
           onMouseEnter={() => setHovering(true)}
           onMouseLeave={() => setHovering(false)}
-          title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+         title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+         aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
          style={{ opacity: hovering || isBookmarked ? 1 : 0.3 }}
          >
          {isBookmarked ? '♥' : '♡'}

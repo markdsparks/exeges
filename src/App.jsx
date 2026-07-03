@@ -3,6 +3,7 @@ import './styles/shared.css';
 import './styles/tokens.css';
 import './styles/reader.css';
 import './styles/navigation.css';
+import './styles/search.css';
 
 import ChapterReader from './components/Reader/ChapterReader';
 import ChapterNav from './components/Navigation/ChapterNav';
@@ -10,18 +11,23 @@ import BackToTop from './components/Shared/BackToTop';
 import Sidebar from './components/Navigation/Sidebar';
 import ReadingProgress from './components/Navigation/ReadingProgress';
 import FontSizeControl from './components/Shared/FontSizeControl';
+import SearchPanel from './components/Search/SearchPanel';
 
 import { useBibleData } from './hooks/useBibleData';
 import { useBookmarks } from './hooks/useBookmarks';
 import { useTheme } from './hooks/useTheme';
+import { useBibleSearch } from './hooks/useBibleSearch';
 
 export default function App() {
     const { book, bibles, selectedBookId, selectedChapterNum, navigateTo } = useBibleData();
-    const { isBookmarked, toggleBookmark } = useBookmarks();
-    const { mode, toggleMode, fontSize, cycleFontSize, setMode } = useTheme();
+    const { isBookmarked, toggleBookmark, getAllBookmarks } = useBookmarks();
+    const { mode, toggleMode, fontSize, cycleFontSize } = useTheme();
 
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [hideControls, setHideControls] = useState(false);
+    const [targetVerse, setTargetVerse] = useState(null);
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Shared ref for the reader container — used by ChapterReader and BackToTop
     const readerRef = useRef(null);
@@ -30,6 +36,11 @@ export default function App() {
     useEffect(() => {
         document.documentElement.classList.toggle('dark-mode', mode === 'dark');
     }, [mode]);
+
+    // Apply the persisted reader font size to the document root.
+    useEffect(() => {
+        document.documentElement.style.setProperty('--reader-font-size', `${fontSize}px`);
+    }, [fontSize]);
 
     // Group all books by testament for sidebar
     const bookGroups = bibles ? (() => {
@@ -41,8 +52,30 @@ export default function App() {
         return { OT: ot, NT: nt };
     })() : null;
 
+    const bookmarkedVerses = useMemo(() => {
+        if (!bibles) return [];
+
+        return getAllBookmarks().map(bookmark => {
+            const bookmarkBook = bibles.find(b => b.id === bookmark.bookId);
+            const bookmarkChapter = bookmarkBook?.chapters?.find(c => c.chapter === bookmark.chapter);
+            const bookmarkVerse = bookmarkChapter?.verses?.find(v => v.verse === bookmark.verse);
+
+            if (!bookmarkBook || !bookmarkVerse) return null;
+
+            return {
+                ...bookmark,
+                bookName: bookmarkBook.name,
+                text: bookmarkVerse.text,
+            };
+        }).filter(Boolean);
+    }, [bibles, getAllBookmarks]);
+
+    const search = useBibleSearch(bibles, searchQuery);
+
     // Load last reading position from localStorage on mount
     useEffect(() => {
+        if (window.location.hash) return;
+
         if (!selectedBookId || selectedBookId === 'genesis') {
             try {
                 const pos = JSON.parse(localStorage.getItem('exes-position'));
@@ -68,20 +101,51 @@ export default function App() {
     // Handle URL hash for shareable links
     useEffect(() => {
         const onHashChange = () => {
-            const match = window.location.hash.match(/#([\w-]+)\/(\d+)/);
-            if (match) navigateTo(match[1], parseInt(match[2], 10));
+            const match = window.location.hash.match(/^#\/?([\w-]+)\/(\d+)(?:\/v(\d+))?$/);
+            if (match) {
+                navigateTo(match[1], parseInt(match[2], 10));
+                setTargetVerse(match[3] ? parseInt(match[3], 10) : null);
+            }
         };
 
+        onHashChange();
+        window.addEventListener('hashchange', onHashChange);
         window.addEventListener('popstate', onHashChange);
-        return () => window.removeEventListener('popstate', onHashChange);
+        return () => {
+            window.removeEventListener('hashchange', onHashChange);
+            window.removeEventListener('popstate', onHashChange);
+        };
     }, [navigateTo]);
 
     const handleNavigate = useCallback((bookId, chapterNum) => {
+        setTargetVerse(null);
         navigateTo(bookId, chapterNum);
         setSidebarOpen(false);
         window.history.pushState(null, '', `#${bookId}/${chapterNum}`);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, [navigateTo]);
+
+    const handleNavigateToVerse = useCallback((bookId, chapterNum, verseNum) => {
+        setTargetVerse(verseNum);
+        navigateTo(bookId, chapterNum);
+        setSidebarOpen(false);
+        setSearchOpen(false);
+        window.history.pushState(null, '', `#${bookId}/${chapterNum}/v${verseNum}`);
+    }, [navigateTo]);
+
+    const handleSearchResult = useCallback((result) => {
+        handleNavigateToVerse(result.bookId, result.chapter, result.verse);
+    }, [handleNavigateToVerse]);
+
+    const handleOpenSearch = useCallback(() => {
+        setHideControls(false);
+        setSearchOpen(true);
+    }, []);
+
+    const handleReaderChromeToggle = useCallback((event) => {
+        if (event.target.closest('button, a, .verse-group')) return;
+        setHideControls(prev => !prev);
+    }, []);
 
     // Chapter navigation — prev/next with book-boundary logic
     const chapterNav = useMemo(() => {
@@ -134,10 +198,26 @@ export default function App() {
                 <Sidebar
                     booksByTestament={bookGroups}
                     activeBookId={selectedBookId}
+                    activeBookName={book?.name}
+                    activeChapterNum={selectedChapterNum}
+                    bookmarks={bookmarkedVerses}
                     onNavigate={handleNavigate}
+                    onNavigateToVerse={handleNavigateToVerse}
                     onClose={() => setSidebarOpen(false)}
                 />
             </div>
+
+            <SearchPanel
+                open={searchOpen}
+                query={searchQuery}
+                results={search.results}
+                totalResults={search.totalResults}
+                isLimited={search.isLimited}
+                normalizedQuery={search.normalizedQuery}
+                onQueryChange={setSearchQuery}
+                onClose={() => setSearchOpen(false)}
+                onSelectResult={handleSearchResult}
+            />
 
             {/* Header */}
             <header className={`app-header ${hideControls ? 'hidden' : ''}`}>
@@ -151,12 +231,28 @@ export default function App() {
             </header>
 
             {/* Reader */}
-            <main className="app-main" onClick={() => setHideControls(!hideControls)}>
+            <main className="app-main" onClick={handleReaderChromeToggle}>
                 {bookGroups ? (
                     book ? (
                         <>
-                            <ChapterReader book={book} chapterNum={selectedChapterNum} readerRef={readerRef} />
-                            <BackToTop readerRef={readerRef} />
+                            <ChapterReader
+                                book={book}
+                                chapterNum={selectedChapterNum}
+                                readerRef={readerRef}
+                                targetVerse={targetVerse}
+                                isBookmarked={isBookmarked}
+                                onToggleBookmark={toggleBookmark}
+                            />
+                            {(chapterNav?.prevChapter || chapterNav?.nextChapter) && (
+                                <ChapterNav
+                                    prevChapter={chapterNav.prevChapter}
+                                    nextChapter={chapterNav.nextChapter}
+                                    currentReference={`${book.name} ${selectedChapterNum}`}
+                                    onPrev={() => chapterNav.prevChapter && handleNavigate(chapterNav.prevChapter.bookId, chapterNav.prevChapter.chapterNum)}
+                                    onNext={() => chapterNav.nextChapter && handleNavigate(chapterNav.nextChapter.bookId, chapterNav.nextChapter.chapterNum)}
+                                />
+                            )}
+                            <BackToTop />
                         </>
                     ) : (
                         <div style={{ textAlign: 'center', marginTop: '15vh' }}>
@@ -175,18 +271,14 @@ export default function App() {
                 )}
             </main>
 
-            {/* Chapter Navigation */}
-            {(book && bookGroups) && (chapterNav?.prevChapter || chapterNav?.nextChapter) && (
-                <ChapterNav
-                    prevChapter={chapterNav.prevChapter}
-                    nextChapter={chapterNav.nextChapter}
-                    onPrev={() => chapterNav.prevChapter && handleNavigate(chapterNav.prevChapter.bookId, chapterNav.prevChapter.chapterNum)}
-                    onNext={() => chapterNav.nextChapter && handleNavigate(chapterNav.nextChapter.bookId, chapterNav.nextChapter.chapterNum)}
-                />
-            )}
-
             {/* Bottom Controls */}
             <div className={`controls-bar ${hideControls ? 'hidden' : ''}`}>
+                <button
+                    className="control-button"
+                    onClick={handleOpenSearch}
+                    title="Search"
+                    aria-label="Search scripture"
+                >⌕</button>
                 <FontSizeControl fontSize={fontSize} onCycle={cycleFontSize} />
                 <button
                     className="control-button"

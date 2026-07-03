@@ -74,6 +74,10 @@
     border-radius: 2px;
 }
 
+.verse-group.linked {
+    background-color: color-mix(in srgb, var(--color-accent) 14%, transparent);
+}
+
 /* Verse number */
 .verse-number {
     font-family: var(--font-family-ui);
@@ -99,11 +103,14 @@
 
 /* Chapter navigation */
 .chapter-nav {
+    width: 100%;
+    max-width: min(var(--max-width-ch), 92vw);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-top: var(--space-xl);
-    margin-top: var(--space-2xl);
+    gap: var(--space-md);
+    padding: var(--space-xl) var(--space-md) 0;
+    margin: 0 auto var(--space-3xl);
     border-top: 1px solid var(--color-border);
 }
 
@@ -111,11 +118,43 @@
     display: flex;
     align-items: center;
     gap: var(--space-xs);
+    min-width: 0;
     padding: var(--space-sm) var(--space-md);
     border-radius: var(--radius-md);
     font-size: 0.875rem;
+    text-align: left;
     color: var(--color-text-secondary);
     transition: all var(--transition-fast);
+}
+
+.chapter-nav-button:last-child {
+    text-align: right;
+}
+
+.chapter-nav-kicker,
+.chapter-nav-reference {
+    display: block;
+    line-height: 1.25;
+}
+
+.chapter-nav-kicker {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted);
+}
+
+.chapter-nav-reference {
+    color: var(--color-text-primary);
+}
+
+.chapter-nav-current {
+    flex: 0 1 auto;
+    font-family: var(--font-family-ui);
+    font-size: var(--font-size-body-sm);
+    line-height: 1.25;
+    text-align: center;
+    color: var(--color-text-muted);
 }
 
 .chapter-nav-button:hover {
@@ -123,9 +162,25 @@
     color: var(--color-accent);
 }
 
+.chapter-nav-button:hover .chapter-nav-reference {
+    color: var(--color-accent);
+}
+
 .chapter-nav-button.disabled {
     opacity: 0.3;
     pointer-events: none;
+}
+
+@media (max-width: 520px) {
+    .chapter-nav {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .chapter-nav-current {
+        grid-column: 1 / -1;
+        grid-row: 1;
+    }
 }
 
 /* Subtle fade-in animation for verses */

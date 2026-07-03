@@ -4,6 +4,7 @@ import viteCompression from 'vite-plugin-compression'
 
 // https://vite.dev/config/
 export default defineConfig({
+	base: '/exeges/',
 	plugins: [
 		react(),
 			// gzip compression — reduces bible.json ~130K lines → ~15KB gzipped

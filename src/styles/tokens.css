@@ -49,7 +49,7 @@
 }
 
 /* Dark Mode — triggered by .dark-mode class on html element */
-.dark-mode :root {
+:root.dark-mode {
          --color-bg-primary:       #1A1510;     /* warm charcoal                            */
          --color-bg-surface:      #261E17;      /* slightly lighter — cards                  */
          --color-text-primary:    #E8DDD3;      /* warm cream                                */

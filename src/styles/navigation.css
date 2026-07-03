@@ -49,6 +49,89 @@
     -webkit-overflow-scrolling: touch;
 }
 
+.reader-state-section {
+    padding: var(--space-md) var(--space-lg) var(--space-sm);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.continue-reading {
+    width: 100%;
+    display: grid;
+    gap: 2px;
+    padding: var(--space-sm) var(--space-md);
+    text-align: left;
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg-surface);
+}
+
+.continue-reading:hover {
+    color: var(--color-accent);
+}
+
+.continue-label {
+    font-size: 0.68rem;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted);
+}
+
+.continue-reference {
+    font-family: var(--font-family-heading);
+    font-size: 1rem;
+    line-height: 1.25;
+    color: var(--color-text-primary);
+}
+
+.bookmarks-section {
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.bookmark-list {
+    display: grid;
+    gap: 1px;
+}
+
+.bookmark-row {
+    width: 100%;
+    display: grid;
+    gap: 3px;
+    padding: var(--space-sm) var(--space-lg);
+    text-align: left;
+}
+
+.bookmark-row:hover {
+    background-color: var(--color-bg-surface);
+}
+
+.bookmark-reference {
+    font-family: var(--font-family-ui);
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--color-accent);
+}
+
+.bookmark-snippet {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-family: var(--font-family-body);
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--color-text-secondary);
+}
+
+.bookmark-empty {
+    padding: 0 var(--space-lg) var(--space-sm);
+    font-family: var(--font-family-ui);
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--color-text-muted);
+}
+
 /* Testament section heading */
 .testament-label {
     font-family: var(--font-family-ui);

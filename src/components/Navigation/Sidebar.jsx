@@ -94,7 +94,16 @@ function BookItem({ name, chapterCount, isActive, isOpen, onOpen, onSelect }) {
  * Sidebar — Book/chapter navigation panel.
  * Slides in from the left with a dimmed overlay.
  */
-export default function Sidebar({ booksByTestament, activeBookId, onNavigate, onClose }) {
+export default function Sidebar({
+    booksByTestament,
+    activeBookId,
+    activeBookName,
+    activeChapterNum,
+    bookmarks = [],
+    onNavigate,
+    onNavigateToVerse,
+    onClose
+}) {
     const [openBookId, setOpenBookId] = useState(null);
 
     if (!booksByTestament) return null;
@@ -111,6 +120,38 @@ export default function Sidebar({ booksByTestament, activeBookId, onNavigate, on
 
             {/* Content */}
             <div className="sidebar-content">
+                <section className="reader-state-section">
+                    <button
+                        className="continue-reading"
+                        onClick={() => onNavigate?.(activeBookId, activeChapterNum)}
+                    >
+                        <span className="continue-label">Continue</span>
+                        <span className="continue-reference">{activeBookName} {activeChapterNum}</span>
+                    </button>
+                </section>
+
+                <section className="bookmarks-section">
+                    <h3 className="testament-label">Bookmarks</h3>
+                    {bookmarks.length > 0 ? (
+                        <div className="bookmark-list">
+                            {bookmarks.slice(0, 12).map(bookmark => (
+                                <button
+                                    key={`${bookmark.bookId}-${bookmark.chapter}-${bookmark.verse}`}
+                                    className="bookmark-row"
+                                    onClick={() => onNavigateToVerse?.(bookmark.bookId, bookmark.chapter, bookmark.verse)}
+                                >
+                                    <span className="bookmark-reference">
+                                        {bookmark.bookName} {bookmark.chapter}:{bookmark.verse}
+                                    </span>
+                                    <span className="bookmark-snippet">{bookmark.text}</span>
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="bookmark-empty">Saved verses will appear here.</p>
+                    )}
+                </section>
+
                 {/* Old Testament */}
                 <section>
                     <h3 className="testament-label">Old Testament</h3>
