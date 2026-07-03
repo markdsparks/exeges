@@ -2,7 +2,8 @@
 	"name": "Exeges — Bible Reader",
 	"short_name": "Exeges",
 	"description": "A beautiful, personal Bible reader with exegetical depth.",
-	"start_url": "/",
+	"start_url": "/exeges/",
+	"scope": "/exeges/",
 	"display": "standalone",
 	"background_color": "#FAF6EF",
 	"theme_color": "#FAF6EF",
@@ -10,7 +11,7 @@
 	"categories": ["books"],
 	"icons": [
 		{
-			"src": "/favicon.svg",
+			"src": "/exeges/favicon.svg",
 			"sizes": "any",
 			"type": "image/svg+xml",
 			"purpose": "any maskable"
