@@ -148,6 +148,37 @@
 .verse-group:nth-child(4) { animation-delay: 45ms; }
 .verse-group:nth-child(5) { animation-delay: 60ms; }
 
+/* Back-to-top floating button */
+.back-to-top {
+    position: fixed;
+    bottom: var(--space-xl);
+    right: var(--space-lg);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background-color: var(--color-accent);
+    color: #ffffff;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.4s ease, transform 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.back-to-top:hover {
+    transform: scale(1.1);
+}
+
+.back-to-top:active {
+    transform: scale(0.95);
+}
+
 /* Bookmark indicator button */
 .bookmark-indicator {
     background: none !important;

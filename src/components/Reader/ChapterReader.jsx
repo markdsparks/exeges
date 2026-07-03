@@ -5,8 +5,8 @@ import '../../styles/reader.css';
  * ChapterReader — The heart of the app.
  * Renders a single chapter verse-by-verse with beautiful typography.
  */
-export default function ChapterReader({ book, chapterNum }) {
-    const ref = useRef(null);
+export default function ChapterReader({ book, chapterNum, readerRef }) {
+    const ref = readerRef ?? useRef(null);
     const chapter = book?.chapters?.find(c => c.chapter === chapterNum);
 
        // Scroll to top when chapter changes

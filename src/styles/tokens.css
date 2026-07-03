@@ -48,9 +48,8 @@
      --transition-slow: 400ms ease;
 }
 
-/* Dark Mode */
-@media (prefers-color-scheme: dark) {
-     :root {
+/* Dark Mode — triggered by .dark-mode class on html element */
+.dark-mode :root {
          --color-bg-primary:       #1A1510;     /* warm charcoal                            */
          --color-bg-surface:      #261E17;      /* slightly lighter — cards                  */
          --color-text-primary:    #E8DDD3;      /* warm cream                                */
@@ -66,7 +65,6 @@
          --radius-lg: 12px;
          --radius-xl: 16px;
      }
-}
 
 /* Typography Scale */
 :root {

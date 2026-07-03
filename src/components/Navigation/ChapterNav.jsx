@@ -5,25 +5,27 @@ import '../../styles/reader.css';
  * Shows the previous and next chapter links, respecting book boundaries.
  */
 export default function ChapterNav({ prevChapter, nextChapter, onPrev, onNext }) {
-   return (
-       <nav className="chapter-nav">
-           <button
-              className={`chapter-nav-button ${prevChapter ? '' : 'disabled'}`}
-               onClick={() => prevChapter && onPrev?.()}
+    return (
+        <nav className="chapter-nav">
+            <button
+                className={`chapter-nav-button ${prevChapter ? '' : 'disabled'}`}
+                disabled={!prevChapter}
+                onClick={onPrev}
             >
-              ← Prev
-             </button>
+                &larr; Prev
+            </button>
 
-           <span style={{ fontSize: 'var(--font-size-body-sm)', color: 'var(--color-text-muted)' }}>
-               Chapter {prevChapter?.chapter || '—'} ↔ {nextChapter?.chapter || '—'}
-           </span>
+            <span style={{ fontSize: 'var(--font-size-body-sm)', color: 'var(--color-text-muted)' }}>
+                Chapter {prevChapter?.chapter || '—'} &harr; {nextChapter?.chapter || '—'}
+            </span>
 
-           <button
-             className={`chapter-nav-button ${nextChapter ? '' : 'disabled'}`}
-              onClick={() => nextChapter && onNext?.()}
+            <button
+                className={`chapter-nav-button ${nextChapter ? '' : 'disabled'}`}
+                disabled={!nextChapter}
+                onClick={onNext}
             >
-              Next →
-          </button>
-       </nav>
+                Next &rarr;
+            </button>
+        </nav>
     );
 }
