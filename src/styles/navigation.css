@@ -1,0 +1,170 @@
+/* ─── Sidebar Styles ─── */
+
+.sidebar-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Sidebar header */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    padding: 0 var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.sidebar-title {
+    font-family: var(--font-family-heading);
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--color-text-primary);
+}
+
+/* Sidebar close button */
+.sidebar-close {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    font-size: 1.4em;
+    color: var(--color-text-secondary);
+}
+
+.sidebar-close:hover {
+    background-color: var(--color-bg-surface);
+    color: var(--color-text-primary);
+}
+
+/* Sidebar content */
+.sidebar-content {
+    padding: var(--space-sm) 0;
+    overflow-y: auto;
+    height: calc(100vh - 56px);
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Testament section heading */
+.testament-label {
+    font-family: var(--font-family-ui);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-text-muted);
+    padding: var(--space-sm) var(--space-lg);
+    margin-top: var(--space-xs);
+}
+
+/* Book item (in sidebar) */
+.book-item-wrapper {
+    border-bottom: 1px solid var(--color-border);
+}
+
+.book-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: calc(var(--space-sm) * 1.5) var(--space-lg);
+    font-size: 0.9rem;
+    text-align: left;
+    color: var(--color-text-primary);
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.book-item:hover {
+    background-color: var(--color-bg-surface);
+}
+
+.book-item.active {
+    background-color: var(--color-accent);
+    color: #fff;
+}
+
+.book-item > span:last-child {
+    font-size: 0.75em;
+    opacity: 0.5;
+}
+
+/* Book chapters grid */
+.chapter-grid {
+    padding: 0 var(--space-md) var(--space-sm);
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+    gap: var(--space-xs);
+    max-height: 250px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.chapter-item {
+    width: 100%;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    transition: all var(--transition-fast);
+}
+
+.chapter-item:hover {
+    background-color: var(--color-bg-surface);
+    color: var(--color-accent);
+}
+
+/* Translation picker */
+.translation-picker {
+    padding: var(--space-sm) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.translation-label {
+    font-family: var(--font-family-ui);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-xs);
+}
+
+.translation-options {
+    display: flex;
+    gap: var(--space-xs);
+    flex-wrap: wrap;
+}
+
+.translation-option {
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    background-color: var(--color-bg-surface);
+    color: var(--color-text-secondary);
+}
+
+.translation-option:hover {
+    background-color: var(--color-border);
+}
+
+.translation-option.active {
+    background-color: var(--color-accent);
+    color: #fff;
+    font-weight: 600;
+}
+
+/* Font size display */
+.font-size-display {
+    font-family: var(--font-family-ui);
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    min-width: 42px;
+    text-align: center;
+}

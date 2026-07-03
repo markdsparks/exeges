@@ -1,0 +1,88 @@
+/* ─── Design Tokens ─── */
+/* Warm, book-like palette — aged paper feel, never sterile */
+
+:root {
+     /* Light Mode */
+     --color-bg-primary: #F6EFD3;          /* warm ivory — main reading area            */
+     --color-bg-surface: #EDE5D8;           /* deeper cream — cards, sidebars            */
+     --color-text-primary: #3A2E1F;         /* dark brown — body text                    */
+     --color-text-secondary: #7A6B58;       /* muted brown — verse numbers / labels      */
+     --color-text-muted:    #948776;          /* lighter brown — inline notes (was #B0A494, ~2.9:1) */
+     --color-accent:         #A05D3C;        /* warm terracotta — links, highlights       */
+     --color-accent-hover: #C87E56;         /* lighter terracotta — hover states         */
+     --color-border:         #E4DBCA;         /* subtle ivory border                      */
+     --color-shadow:     rgba(58, 46, 31, 0.06);
+
+     /* Border radius */
+     --radius-sm: 4px;
+     --radius-md: 8px;
+     --radius-lg: 12px;
+     --radius-xl: 16px;
+
+     /* Typography */
+     --font-family-body: 'Source Serif 4', 'Lora', Georgia, serif;
+     --font-family-heading: 'Source Serif 4', Georgia, serif;
+     --font-family-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+     /* Base */
+     --font-size-base: 18px;                /* default body text size                    */
+     --line-height: 1.75;                 /* generous leading for readability          */
+     --max-width-ch: 65ch;                /* ideal line length                         */
+
+     /* Spacing */
+     --space-xs: 0.25rem;
+     --space-sm: 0.5rem;
+     --space-md: 1rem;
+     --space-lg: 1.5rem;
+     --space-xl: 2rem;
+     --space-2xl: 3rem;
+     --space-3xl: 4.5rem;
+
+     /* Letter spacing */
+     --letter-spacing-body: 0.01em;
+     --word-spacing-body: 0.03em;
+
+     /* Transitions */
+     --transition-fast: 150ms ease;
+     --transition-base: 250ms ease;
+     --transition-slow: 400ms ease;
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+     :root {
+         --color-bg-primary:       #1A1510;     /* warm charcoal                            */
+         --color-bg-surface:      #261E17;      /* slightly lighter — cards                  */
+         --color-text-primary:    #E8DDD3;      /* warm cream                                */
+         --color-text-secondary:#9B8D7E;
+         --color-text-muted:       #8A7F6E;      /* improved contrast on dark bg (was #6A5F50) */
+         --color-accent:          #C87E56;      /* warm terracotta                           */
+         --color-accent-hover:    #E0A87A;
+         --color-border:          #3D342A;
+         --color-shadow:     rgba(0, 0, 0, 0.2);
+
+         --radius-sm: 4px;
+         --radius-md: 8px;
+         --radius-lg: 12px;
+         --radius-xl: 16px;
+     }
+}
+
+/* Typography Scale */
+:root {
+     --font-size-h1: 2em;                   /* Book title                                */
+     --font-size-h2: 1.4em;                 /* Chapter header                              */
+     --font-size-body-sm: 0.85em;           /* Verse numbers                               */
+     --font-size-body-xs: 0.72em;           /* Captions, footnotes                         */
+}
+
+/* Responsive */
+@media (min-width: 480px) {
+     :root { --font-size-base: 19px; --space-xl: 2.5rem; --space-2xl: 3.5rem; }
+}
+@media (min-width: 768px) {
+     :root { --font-size-base: 20px; --space-xl: 3rem; --space-2xl: 4rem; --space-3xl: 5.5rem; }
+}
+@media (min-width: 1024px) {
+     :root { --font-size-base: 21px; --space-2xl: 4.5rem; --space-3xl: 7rem; }
+}

@@ -1,0 +1,180 @@
+/* ─── Reader Styles ─── */
+
+/* Chapter header */
+.chapter-header {
+    text-align: center;
+    margin-top: 2.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: var(--space-md);
+    position: relative;
+}
+
+.chapter-number {
+    font-family: var(--font-family-heading);
+    font-size: var(--font-size-h2);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--color-accent);
+    margin-bottom: var(--space-sm);
+}
+
+.chapter-divider {
+    width: 48px;
+    height: 1px;
+    background-color: var(--color-accent);
+    margin: var(--space-sm) auto 0;
+    opacity: 0.4;
+}
+
+/* Book header (shown at top of first chapter) */
+.book-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.book-title {
+    font-family: var(--font-family-heading);
+    font-size: var(--font-size-h1);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--color-text-primary);
+    margin-bottom: var(--space-xs);
+}
+
+/* Verse group */
+.verse-group {
+    margin-bottom: var(--space-sm);
+    padding: calc(var(--space-xs) * 0.5) 0;
+    transition: background-color var(--transition-fast), opacity var(--transition-base);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    position: relative;
+}
+
+.verse-group:hover {
+    background-color: var(--color-bg-surface);
+}
+
+/* Bookmarked verse — left accent bar + subtle highlight */
+.verse-group.bookmarked {
+    background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
+    position: relative;
+}
+
+.verse-group.bookmarked::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background-color: var(--color-accent);
+    border-radius: 2px;
+}
+
+/* Verse number */
+.verse-number {
+    font-family: var(--font-family-ui);
+    font-size: var(--font-size-body-xs);
+    font-weight: 600;
+    color: var(--color-text-muted);
+    vertical-align: super;
+    margin-right: 2px;
+    user-select: none;
+    line-height: 1;
+    opacity: 0.7;
+}
+
+/* Verse text */
+.verse-text {
+    font-family: var(--font-family-body);
+    font-size: 1em;
+    line-height: var(--line-height);
+    letter-spacing: var(--letter-spacing-body);
+    word-spacing: var(--word-spacing-body);
+    color: var(--color-text-primary);
+}
+
+/* Chapter navigation */
+.chapter-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: var(--space-xl);
+    margin-top: var(--space-2xl);
+    border-top: 1px solid var(--color-border);
+}
+
+.chapter-nav-button {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    transition: all var(--transition-fast);
+}
+
+.chapter-nav-button:hover {
+    background-color: var(--color-bg-surface);
+    color: var(--color-accent);
+}
+
+.chapter-nav-button.disabled {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+/* Subtle fade-in animation for verses */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.verse-group {
+    animation: fadeIn 200ms ease both;
+}
+
+/* Stagger animations — much lighter steps */
+.verse-group:nth-child(2) { animation-delay: 15ms; }
+.verse-group:nth-child(3) { animation-delay: 30ms; }
+.verse-group:nth-child(4) { animation-delay: 45ms; }
+.verse-group:nth-child(5) { animation-delay: 60ms; }
+
+/* Bookmark indicator button */
+.bookmark-indicator {
+    background: none !important;
+    border: none !important;
+    padding: var(--space-xs) !important;
+    cursor: pointer !important;
+    font-size: 1.1em !important;
+    line-height: 1 !important;
+    opacity: 0.25 !important;
+    transition: opacity var(--transition-fast), transform var(--transition-fast) !important;
+    color: var(--color-text-muted) !important;
+}
+
+.bookmark-indicator:hover {
+    opacity: 0.7 !important;
+    transform: scale(1.15);
+}
+
+.bookmark-indicator.active {
+    opacity: 1 !important;
+    color: var(--color-accent) !important;
+}
+
+/* Reading mode */
+.app.reading-mode .app-main .chapter-header,
+.app.reading-mode .chapter-nav {
+    opacity: 0;
+    height: 0;
+    overflow: hidden;
+}
