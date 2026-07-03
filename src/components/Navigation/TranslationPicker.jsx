@@ -1,17 +1,12 @@
 import '../../styles/navigation.css';
+import { TRANSLATIONS } from '../../lib/translations';
 
 /**
  * TranslationPicker — Dropdown to select Bible translation.
  * For now shows KJV only (the one we have), but structured
  * for easy expansion to ESV, NASB when data is added.
  */
-const TRANSLATIONS = [
-   { id: 'kjv', name: 'KJV', label: 'King James Version' },
-   // Soon: { id: 'esv', name: 'ESV', label: 'English Standard Version' },
-   // Soon: { id: 'nasb', name: 'NASB', label: 'New American Standard Bible' },
-];
-
-export default function TranslationPicker({ activeId, onToggle }) {
+export default function TranslationPicker({ activeId, onToggle, status }) {
    return (
       <div className="translation-picker">
          <div className="translation-label">Translation</div>
@@ -27,6 +22,9 @@ export default function TranslationPicker({ activeId, onToggle }) {
                 </button>
               ))}
          </div>
+         {status && (
+            <p className="translation-status">{status}</p>
+         )}
        </div>
     );
   }

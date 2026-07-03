@@ -20,12 +20,21 @@ import { useBookmarks } from './hooks/useBookmarks';
 import { useNotes } from './hooks/useNotes';
 import { useTheme } from './hooks/useTheme';
 import { useBibleSearch } from './hooks/useBibleSearch';
+import { useTranslation } from './hooks/useTranslation';
 
 export default function App() {
     const { book, bibles, selectedBookId, selectedChapterNum, navigateTo } = useBibleData();
     const { isBookmarked, toggleBookmark, getAllBookmarks } = useBookmarks();
     const { getNote, hasNote, saveNote, deleteNote, getAllNotes } = useNotes();
     const { mode, toggleMode, fontSize, cycleFontSize } = useTheme();
+    const {
+        selectedTranslation,
+        selectedTranslationId,
+        selectTranslation,
+        displayBook,
+        localBook,
+        translationState,
+    } = useTranslation(book, selectedChapterNum);
 
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [hideControls, setHideControls] = useState(false);
@@ -94,6 +103,12 @@ export default function App() {
     }, [bibles, getAllNotes]);
 
     const search = useBibleSearch(bibles, searchQuery);
+    const translationStatus = translationState.status === 'setup-needed' || translationState.status === 'error'
+        ? translationState.message
+        : translationState.status === 'loading'
+            ? 'Loading ESV...'
+            : '';
+    const readerBook = selectedTranslation.source === 'remote' ? displayBook : localBook;
 
     // Load last reading position from localStorage on mount
     useEffect(() => {
@@ -161,7 +176,9 @@ export default function App() {
     }, [handleNavigateToVerse]);
 
     const handleOpenNote = useCallback((bookId, chapterNum, verseNum) => {
-        const noteBook = bibles?.find(b => b.id === bookId);
+        const noteBook = displayBook?.id === bookId
+            ? displayBook
+            : bibles?.find(b => b.id === bookId);
         const noteChapter = noteBook?.chapters?.find(c => c.chapter === chapterNum);
         const noteVerse = noteChapter?.verses?.find(v => v.verse === verseNum);
 
@@ -175,7 +192,7 @@ export default function App() {
             verse: verseNum,
             text: noteVerse.text,
         });
-    }, [bibles]);
+    }, [bibles, displayBook]);
 
     const activeNote = noteTarget
         ? getNote(noteTarget.bookId, noteTarget.chapter, noteTarget.verse)
@@ -244,8 +261,11 @@ export default function App() {
                     activeBookId={selectedBookId}
                     activeBookName={book?.name}
                     activeChapterNum={selectedChapterNum}
+                    activeTranslationId={selectedTranslationId}
+                    translationStatus={translationStatus}
                     bookmarks={bookmarkedVerses}
                     notes={notedVerses}
+                    onSelectTranslation={selectTranslation}
                     onNavigate={handleNavigate}
                     onNavigateToVerse={handleNavigateToVerse}
                     onClose={() => setSidebarOpen(false)}
@@ -259,6 +279,7 @@ export default function App() {
                 totalResults={search.totalResults}
                 isLimited={search.isLimited}
                 normalizedQuery={search.normalizedQuery}
+                translationName="KJV"
                 onQueryChange={setSearchQuery}
                 onClose={() => setSearchOpen(false)}
                 onSelectResult={handleSearchResult}
@@ -290,7 +311,7 @@ export default function App() {
                     book ? (
                         <>
                             <ChapterReader
-                                book={book}
+                                book={readerBook}
                                 chapterNum={selectedChapterNum}
                                 readerRef={readerRef}
                                 targetVerse={targetVerse}
@@ -298,6 +319,8 @@ export default function App() {
                                 onToggleBookmark={toggleBookmark}
                                 hasNote={hasNote}
                                 onOpenNote={handleOpenNote}
+                                translation={selectedTranslation}
+                                translationState={translationState}
                             />
                             {(chapterNav?.prevChapter || chapterNav?.nextChapter) && (
                                 <ChapterNav

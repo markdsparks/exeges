@@ -14,7 +14,9 @@ export default function ChapterReader({
     isBookmarked,
     onToggleBookmark,
     hasNote,
-    onOpenNote
+    onOpenNote,
+    translation,
+    translationState
 }) {
     const fallbackRef = useRef(null);
     const ref = readerRef ?? fallbackRef;
@@ -49,7 +51,13 @@ export default function ChapterReader({
     if (!book || !chapter) {
         return (
             <div style={{ textAlign: 'center', marginTop: '15vh' }}>
-                <p style={{ color: 'var(--color-text-muted)', fontStyle: 'italic' }}>Loading...</p>
+                <p style={{ color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+                    {translationState?.status === 'setup-needed'
+                        ? translationState.message
+                        : translationState?.status === 'error'
+                            ? translationState.message
+                            : 'Loading...'}
+                </p>
               </div>
              );
           }
@@ -63,6 +71,7 @@ export default function ChapterReader({
                {/* Chapter header */}
                 <header className="chapter-header">
                    <h2 className="chapter-number">Chapter {chapterNum}</h2>
+                    <p className="chapter-translation">{translation?.name}</p>
                     <div className="chapter-divider" />
                  </header>
 
@@ -102,6 +111,9 @@ export default function ChapterReader({
                         </div>
                     );
                 })}
+                {book.copyright && (
+                    <p className="translation-copyright">{book.copyright}</p>
+                )}
                   </div>
                  );
              }

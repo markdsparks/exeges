@@ -30,6 +30,7 @@ This is built as a single family's tool — bookmarks persist in localStorage, f
 | **Reading progress** | Thin scroll-based progress bar at the top of viewport |
 | **URL hash links** | Shareable chapter links (`/#/genesis/1`), popstate support for back-button |
 | **Last position** | Remembers last book/chapter across page refreshes via localStorage |
+| **Translation layer** | KJV is local; ESV is wired as a remote provider behind a private proxy |
 
 ### 🔧 Recently Fixed (July 2026)
 
@@ -51,6 +52,7 @@ src/
 ├── hooks/
 │    ├── useBibleData.js      # Book/chapter state + navigation logic
 │    ├── useBookmarks.js      # localStorage bookmarks (persisted per verse)
+│    ├── useTranslation.js    # KJV local provider + ESV remote provider boundary
 │    └── useTheme.js          # Dark/light mode + font size + system preference detection
 ├── components/
 │    ├── Reader/
@@ -86,9 +88,9 @@ src/
 
 | Issue | Priority | Notes |
 |-------|----------|-------|
-| **TranslationPicker is stub** | Low | UI exists in Sidebar but only shows "KJV" — the infrastructure for multi-translation is ready though |
 | **Large bundle size** | Low | `bible.json` is ~130K lines; production gzip achieves ~1.4 MB total (JS+CSS). Lazy-fetch TBD. |
 | **No loading state for long chapters** | Low | Genesis 1 loads fast, but longer chapters (e.g., Psalm 119) may benefit from a lazy render approach |
+| **ESV proxy not deployed** | High | App-side ESV support is wired, but needs a deployed Worker and `VITE_ESV_PROXY_URL` before real ESV text loads |
 
 ---
 
@@ -99,8 +101,10 @@ src/
 All v0.2 items shipped. Production build compresses to ~1.4 MB gzipped (JS+CSS). Manifest linked for PWA install; service worker follow-up TBD.
 
 ### Phase 3: Multi-Translation (`v0.3`) — "Study capability"
-- [ ] Integrate ESV and NASB translations alongside KJV
-- [ ] Translation picker becomes functional (KJV, ESV, NASB dropdowns)
+- [x] Add translation provider layer and functional picker
+- [ ] Deploy private ESV proxy and configure `VITE_ESV_PROXY_URL`
+- [ ] Add ESV passage search through the ESV API
+- [ ] Consider NASB only after licensing path is clear
 - [ ] Verse comparison view (side-by-side or stacked translation display)
 
 ### Phase 4: Deep Study (`v1.0`) — "Exegetical"

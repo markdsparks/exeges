@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import '../../styles/navigation.css';
+import TranslationPicker from './TranslationPicker';
 
 /** Hook: fires a callback once when the element enters the viewport. */
 function useInViewObserver(onInView) {
@@ -99,8 +100,11 @@ export default function Sidebar({
     activeBookId,
     activeBookName,
     activeChapterNum,
+    activeTranslationId,
+    translationStatus,
     bookmarks = [],
     notes = [],
+    onSelectTranslation,
     onNavigate,
     onNavigateToVerse,
     onClose
@@ -130,6 +134,12 @@ export default function Sidebar({
                         <span className="continue-reference">{activeBookName} {activeChapterNum}</span>
                     </button>
                 </section>
+
+                <TranslationPicker
+                    activeId={activeTranslationId}
+                    status={translationStatus}
+                    onToggle={onSelectTranslation}
+                />
 
                 <section className="bookmarks-section">
                     <h3 className="testament-label">Bookmarks</h3>

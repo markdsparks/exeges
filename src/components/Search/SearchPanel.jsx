@@ -34,6 +34,7 @@ export default function SearchPanel({
     totalResults,
     isLimited,
     normalizedQuery,
+    translationName = 'KJV',
     onQueryChange,
     onClose,
     onSelectResult
@@ -88,7 +89,7 @@ export default function SearchPanel({
 
                 <div className="search-results" aria-live="polite">
                     {!hasQuery ? (
-                        <p className="search-empty">Search the KJV text stored on this device.</p>
+                        <p className="search-empty">Search the {translationName} text stored on this device.</p>
                     ) : !canSearch ? (
                         <p className="search-empty">Enter at least two characters.</p>
                     ) : results.length > 0 ? (
