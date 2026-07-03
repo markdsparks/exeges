@@ -100,6 +100,7 @@ export default function Sidebar({
     activeBookName,
     activeChapterNum,
     bookmarks = [],
+    notes = [],
     onNavigate,
     onNavigateToVerse,
     onClose
@@ -149,6 +150,28 @@ export default function Sidebar({
                         </div>
                     ) : (
                         <p className="bookmark-empty">Saved verses will appear here.</p>
+                    )}
+                </section>
+
+                <section className="notes-section">
+                    <h3 className="testament-label">Notes</h3>
+                    {notes.length > 0 ? (
+                        <div className="note-list">
+                            {notes.slice(0, 12).map(note => (
+                                <button
+                                    key={`${note.bookId}-${note.chapter}-${note.verse}`}
+                                    className="note-row"
+                                    onClick={() => onNavigateToVerse?.(note.bookId, note.chapter, note.verse)}
+                                >
+                                    <span className="note-row-reference">
+                                        {note.bookName} {note.chapter}:{note.verse}
+                                    </span>
+                                    <span className="note-row-snippet">{note.text}</span>
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="note-empty">Notes you write will appear here.</p>
                     )}
                 </section>
 

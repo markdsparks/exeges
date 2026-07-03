@@ -78,6 +78,10 @@
     background-color: color-mix(in srgb, var(--color-accent) 14%, transparent);
 }
 
+.verse-group.noted {
+    box-shadow: inset -3px 0 0 color-mix(in srgb, var(--color-accent) 55%, transparent);
+}
+
 /* Verse number */
 .verse-number {
     font-family: var(--font-family-ui);
@@ -234,8 +238,9 @@
     transform: scale(0.95);
 }
 
-/* Bookmark indicator button */
-.bookmark-indicator {
+/* Verse action buttons */
+.bookmark-indicator,
+.note-indicator {
     background: none !important;
     border: none !important;
     padding: var(--space-xs) !important;
@@ -247,14 +252,20 @@
     color: var(--color-text-muted) !important;
 }
 
-.bookmark-indicator:hover {
+.bookmark-indicator:hover,
+.note-indicator:hover {
     opacity: 0.7 !important;
     transform: scale(1.15);
 }
 
-.bookmark-indicator.active {
+.bookmark-indicator.active,
+.note-indicator.active {
     opacity: 1 !important;
     color: var(--color-accent) !important;
+}
+
+.note-indicator {
+    font-size: 1em !important;
 }
 
 /* Reading mode */

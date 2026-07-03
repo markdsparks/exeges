@@ -6,7 +6,16 @@ import BookmarkButton from '../Shared/BookmarkButton';
  * ChapterReader — The heart of the app.
  * Renders a single chapter verse-by-verse with beautiful typography.
  */
-export default function ChapterReader({ book, chapterNum, readerRef, targetVerse, isBookmarked, onToggleBookmark }) {
+export default function ChapterReader({
+    book,
+    chapterNum,
+    readerRef,
+    targetVerse,
+    isBookmarked,
+    onToggleBookmark,
+    hasNote,
+    onOpenNote
+}) {
     const fallbackRef = useRef(null);
     const ref = readerRef ?? fallbackRef;
     const chapter = book?.chapters?.find(c => c.chapter === chapterNum);
@@ -60,11 +69,12 @@ export default function ChapterReader({ book, chapterNum, readerRef, targetVerse
                {/* Verses — beautifully spaced */}
                 {chapter.verses.map((v) => {
                     const bookmarked = isBookmarked?.(book.id, chapterNum, v.verse) ?? false;
+                    const noted = hasNote?.(book.id, chapterNum, v.verse) ?? false;
 
                     return (
                        <div
                           key={v.verse}
-                         className={`verse-group ${bookmarked ? 'bookmarked' : ''} ${highlightedVerse === v.verse ? 'linked' : ''}`}
+                         className={`verse-group ${bookmarked ? 'bookmarked' : ''} ${noted ? 'noted' : ''} ${highlightedVerse === v.verse ? 'linked' : ''}`}
                           data-verse={v.verse}
                           id={`verse-${v.verse}`}
                           onClick={() => handleVerseToggle(v.verse)}
@@ -78,6 +88,17 @@ export default function ChapterReader({ book, chapterNum, readerRef, targetVerse
                                 isBookmarked={bookmarked}
                                 onToggle={onToggleBookmark}
                             />
+                            <button
+                                className={`note-indicator ${noted ? 'active' : ''}`}
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    onOpenNote?.(book.id, chapterNum, v.verse);
+                                }}
+                                aria-label={`${noted ? 'Edit' : 'Add'} note for ${book.name} ${chapterNum}:${v.verse}`}
+                                title={`${noted ? 'Edit' : 'Add'} note`}
+                            >
+                                ✎
+                            </button>
                         </div>
                     );
                 })}

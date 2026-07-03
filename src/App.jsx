@@ -4,6 +4,7 @@ import './styles/tokens.css';
 import './styles/reader.css';
 import './styles/navigation.css';
 import './styles/search.css';
+import './styles/notes.css';
 
 import ChapterReader from './components/Reader/ChapterReader';
 import ChapterNav from './components/Navigation/ChapterNav';
@@ -12,15 +13,18 @@ import Sidebar from './components/Navigation/Sidebar';
 import ReadingProgress from './components/Navigation/ReadingProgress';
 import FontSizeControl from './components/Shared/FontSizeControl';
 import SearchPanel from './components/Search/SearchPanel';
+import NoteEditor from './components/Notes/NoteEditor';
 
 import { useBibleData } from './hooks/useBibleData';
 import { useBookmarks } from './hooks/useBookmarks';
+import { useNotes } from './hooks/useNotes';
 import { useTheme } from './hooks/useTheme';
 import { useBibleSearch } from './hooks/useBibleSearch';
 
 export default function App() {
     const { book, bibles, selectedBookId, selectedChapterNum, navigateTo } = useBibleData();
     const { isBookmarked, toggleBookmark, getAllBookmarks } = useBookmarks();
+    const { getNote, hasNote, saveNote, deleteNote, getAllNotes } = useNotes();
     const { mode, toggleMode, fontSize, cycleFontSize } = useTheme();
 
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -28,6 +32,7 @@ export default function App() {
     const [targetVerse, setTargetVerse] = useState(null);
     const [searchOpen, setSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [noteTarget, setNoteTarget] = useState(null);
 
     // Shared ref for the reader container — used by ChapterReader and BackToTop
     const readerRef = useRef(null);
@@ -69,6 +74,24 @@ export default function App() {
             };
         }).filter(Boolean);
     }, [bibles, getAllBookmarks]);
+
+    const notedVerses = useMemo(() => {
+        if (!bibles) return [];
+
+        return getAllNotes().map(note => {
+            const noteBook = bibles.find(b => b.id === note.bookId);
+            const noteChapter = noteBook?.chapters?.find(c => c.chapter === note.chapter);
+            const noteVerse = noteChapter?.verses?.find(v => v.verse === note.verse);
+
+            if (!noteBook || !noteVerse) return null;
+
+            return {
+                ...note,
+                bookName: noteBook.name,
+                verseText: noteVerse.text,
+            };
+        }).filter(Boolean);
+    }, [bibles, getAllNotes]);
 
     const search = useBibleSearch(bibles, searchQuery);
 
@@ -137,6 +160,27 @@ export default function App() {
         handleNavigateToVerse(result.bookId, result.chapter, result.verse);
     }, [handleNavigateToVerse]);
 
+    const handleOpenNote = useCallback((bookId, chapterNum, verseNum) => {
+        const noteBook = bibles?.find(b => b.id === bookId);
+        const noteChapter = noteBook?.chapters?.find(c => c.chapter === chapterNum);
+        const noteVerse = noteChapter?.verses?.find(v => v.verse === verseNum);
+
+        if (!noteBook || !noteVerse) return;
+
+        setHideControls(false);
+        setNoteTarget({
+            bookId,
+            bookName: noteBook.name,
+            chapter: chapterNum,
+            verse: verseNum,
+            text: noteVerse.text,
+        });
+    }, [bibles]);
+
+    const activeNote = noteTarget
+        ? getNote(noteTarget.bookId, noteTarget.chapter, noteTarget.verse)
+        : null;
+
     const handleOpenSearch = useCallback(() => {
         setHideControls(false);
         setSearchOpen(true);
@@ -201,6 +245,7 @@ export default function App() {
                     activeBookName={book?.name}
                     activeChapterNum={selectedChapterNum}
                     bookmarks={bookmarkedVerses}
+                    notes={notedVerses}
                     onNavigate={handleNavigate}
                     onNavigateToVerse={handleNavigateToVerse}
                     onClose={() => setSidebarOpen(false)}
@@ -217,6 +262,15 @@ export default function App() {
                 onQueryChange={setSearchQuery}
                 onClose={() => setSearchOpen(false)}
                 onSelectResult={handleSearchResult}
+            />
+
+            <NoteEditor
+                open={!!noteTarget}
+                noteTarget={noteTarget}
+                note={activeNote}
+                onSave={(text) => noteTarget && saveNote(noteTarget.bookId, noteTarget.chapter, noteTarget.verse, text)}
+                onDelete={() => noteTarget && deleteNote(noteTarget.bookId, noteTarget.chapter, noteTarget.verse)}
+                onClose={() => setNoteTarget(null)}
             />
 
             {/* Header */}
@@ -242,6 +296,8 @@ export default function App() {
                                 targetVerse={targetVerse}
                                 isBookmarked={isBookmarked}
                                 onToggleBookmark={toggleBookmark}
+                                hasNote={hasNote}
+                                onOpenNote={handleOpenNote}
                             />
                             {(chapterNav?.prevChapter || chapterNav?.nextChapter) && (
                                 <ChapterNav

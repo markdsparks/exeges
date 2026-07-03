@@ -27,6 +27,7 @@ body {
 }
 
 body:has(.search-overlay),
+body:has(.note-overlay),
 body:has(.sidebar.open) {
     overflow: hidden;
 }
