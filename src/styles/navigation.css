@@ -86,11 +86,6 @@
     color: #fff;
 }
 
-.book-item > span:last-child {
-    font-size: 0.75em;
-    opacity: 0.5;
-}
-
 /* Book chapters grid */
 .chapter-grid {
     padding: 0 var(--space-md) var(--space-sm);

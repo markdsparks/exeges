@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import '../../styles/navigation.css';
 
 /** Hook: fires a callback once when the element enters the viewport. */
 function useInViewObserver(onInView) {
-    const ref = React.useRef(null);
+    const ref = useRef(null);
     useEffect(() => {
         const el = ref.current;
         if (!el || !onInView) return;
@@ -78,7 +78,6 @@ function BookItem({ name, chapterCount, isActive, isOpen, onOpen, onSelect }) {
                 aria-controls={`chapters-${name.replace(/\s/g, '-')}`}
             >
                 <span>{name}</span>
-                <span className="book-chapter-count">{chapterCount}</span>
                 <span className="expand-indicator" aria-hidden="true">
                     {isOpen ? '−' : '+'}
                 </span>
