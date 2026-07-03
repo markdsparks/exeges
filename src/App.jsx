@@ -176,7 +176,7 @@ export default function App() {
             </main>
 
             {/* Chapter Navigation */}
-            {book && bookGroups && chapterNav && (
+            {(book && bookGroups) && (chapterNav?.prevChapter || chapterNav?.nextChapter) && (
                 <ChapterNav
                     prevChapter={chapterNav.prevChapter}
                     nextChapter={chapterNav.nextChapter}
