@@ -75,6 +75,7 @@ function buildMessages(synthesisRequest, options = {}) {
                 'Do not return empty labels. If the grounding is thin, say what is safe to say and what to check next.',
                 'Never apologize, never say you lack ability, and never say you need source chunks when source chunks are supplied.',
                 'Prefer plain text with the exact headings Context, Meaning, Guardrail, Next question, Citations, Confidence.',
+                'Return each heading at most once. Do not use a repeated Question/Response format.',
                 options.retry
                     ? 'Retry instruction: the previous answer was too cautious. Use the source chunks below and produce the draft sections.'
                     : '',
@@ -106,6 +107,7 @@ function formatSynthesisPrompt(synthesisRequest, options = {}) {
             : 'Task: Draft a small grounded interpretation helper for testing.',
         'Give a real response the user can evaluate, not only a warning or an empty schema.',
         'Do not include apologies, capability disclaimers, or requests for more source chunks.',
+        'Do not echo the question. Do not repeat the same answer.',
         '',
         `Observation: ${observation.label || observation.reference || observation.quote}`,
         `Type: ${observation.type || 'observation'}`,
@@ -172,6 +174,14 @@ function normalizeCitations(value, sourceIds) {
         });
 }
 
+function normalizeComparableLine(line) {
+    return line
+        .toLowerCase()
+        .replace(/[^\w\s-]+/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 function getPlainTextHeading(line) {
     const cleanLine = line
         .trim()
@@ -188,6 +198,8 @@ function getPlainTextHeading(line) {
         context: 'context',
         meaning: 'meaning',
         interpretation: 'meaning',
+        response: 'meaning',
+        answer: 'meaning',
         guardrail: 'guardrail',
         caution: 'guardrail',
         'next question': 'nextQuestion',
@@ -195,6 +207,7 @@ function getPlainTextHeading(line) {
         confidence: 'confidence',
         citations: 'citations',
         citation: 'citations',
+        question: 'ignore',
     };
 
     if (!fieldByHeading[key]) return null;
@@ -210,8 +223,12 @@ function appendPlainTextSection(sections, field, line) {
         .trim()
         .replace(/^[*-]\s+/, '')
         .trim();
+    const comparableLine = normalizeComparableLine(cleanLine);
+    const alreadyIncluded = sections[field].some(item => (
+        normalizeComparableLine(item) === comparableLine
+    ));
 
-    if (cleanLine) {
+    if (cleanLine && comparableLine && !alreadyIncluded) {
         sections[field].push(cleanLine);
     }
 }
@@ -233,8 +250,8 @@ export function parseLocalStudyPlainTextDraft(text) {
 
         const heading = getPlainTextHeading(line);
         if (heading) {
-            currentField = heading.field;
-            if (heading.content) {
+            currentField = heading.field === 'ignore' ? '' : heading.field;
+            if (currentField && heading.content) {
                 appendPlainTextSection(sections, currentField, heading.content);
             }
             continue;
@@ -341,8 +358,8 @@ function normalizeDraft(parsed, synthesisRequest, rawText, options = {}) {
 async function createLocalDraftCompletion(engine, synthesisRequest, options = {}) {
     const response = await engine.chat.completions.create({
         messages: buildMessages(synthesisRequest, options),
-        temperature: options.retry ? 0.35 : 0.2,
-        max_tokens: 520,
+        temperature: options.retry ? 0.25 : 0.15,
+        max_tokens: 300,
     });
 
     return response?.choices?.[0]?.message?.content ?? '';
