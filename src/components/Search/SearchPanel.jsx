@@ -51,6 +51,7 @@ export default function SearchPanel({
     onSelectResult
 }) {
     const inputRef = useRef(null);
+    const scrollLockYRef = useRef(0);
     const hasQuery = query.trim().length > 0;
     const canSearch = query.trim().length >= 2;
     const searchLocation = searchSource === 'remote'
@@ -83,22 +84,39 @@ export default function SearchPanel({
 
         const updateViewportHeight = () => {
             const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+            const viewportTop = window.visualViewport?.offsetTop ?? 0;
             document.documentElement.style.setProperty('--search-viewport-height', `${viewportHeight}px`);
+            document.documentElement.style.setProperty('--search-viewport-top', `${viewportTop}px`);
         };
 
+        const handleTouchMove = (event) => {
+            if (event.target instanceof Element && event.target.closest('.search-results')) return;
+            event.preventDefault();
+        };
+
+        scrollLockYRef.current = window.scrollY;
+        document.documentElement.classList.add('search-open');
         document.body.classList.add('search-open');
+        document.body.style.top = `-${scrollLockYRef.current}px`;
         updateViewportHeight();
 
         window.visualViewport?.addEventListener('resize', updateViewportHeight);
         window.visualViewport?.addEventListener('scroll', updateViewportHeight);
         window.addEventListener('resize', updateViewportHeight);
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
 
         return () => {
+            const lockedScrollY = scrollLockYRef.current;
+            document.documentElement.classList.remove('search-open');
             document.body.classList.remove('search-open');
+            document.body.style.top = '';
             document.documentElement.style.removeProperty('--search-viewport-height');
+            document.documentElement.style.removeProperty('--search-viewport-top');
             window.visualViewport?.removeEventListener('resize', updateViewportHeight);
             window.visualViewport?.removeEventListener('scroll', updateViewportHeight);
             window.removeEventListener('resize', updateViewportHeight);
+            document.removeEventListener('touchmove', handleTouchMove);
+            window.scrollTo(0, lockedScrollY);
         };
     }, [open]);
 
