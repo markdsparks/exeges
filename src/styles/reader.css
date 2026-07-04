@@ -415,11 +415,3 @@
 .verse-group:hover .note-indicator {
     opacity: 0.85 !important;
 }
-
-/* Reading mode */
-.app.reading-mode .app-main .chapter-header,
-.app.reading-mode .chapter-nav {
-    opacity: 0;
-    height: 0;
-    overflow: hidden;
-}

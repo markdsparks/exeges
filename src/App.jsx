@@ -102,6 +102,11 @@ export default function App() {
     }, [fontSize]);
 
     useEffect(() => {
+        if (studyTarget) {
+            setHideControls(false);
+            return;
+        }
+
         const handleScroll = () => {
             if (tickingRef.current) return;
 
@@ -130,7 +135,7 @@ export default function App() {
         lastScrollYRef.current = window.scrollY;
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
+    }, [studyTarget]);
 
     // Group all books by testament for sidebar
     const bookGroups = bibles ? (() => {

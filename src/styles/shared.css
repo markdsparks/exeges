@@ -343,7 +343,7 @@ button {
 }
 
 .app.reading-mode .controls-bar {
-    transform: translateY(100%);
+    transform: translate(-50%, calc(100% + var(--space-lg)));
     opacity: 0;
     pointer-events: none;
 }
