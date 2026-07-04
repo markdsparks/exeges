@@ -5,6 +5,7 @@ import {
     getObservationTypeLabel,
     getSelectionQuote,
 } from '../../lib/studyMethod';
+import { getBackgroundGuideForObservation } from '../../lib/backgroundGuides';
 import StudySelectionPanel from './StudySelectionPanel';
 
 const EMPTY_DRAFT = {
@@ -270,6 +271,102 @@ function ObservationWorkbenchHeader({ observation, stage }) {
     );
 }
 
+function mergeHelperText(current = '', next = '') {
+    const cleanNext = next.trim();
+    const cleanCurrent = current.trim();
+    if (!cleanNext) return current;
+    if (cleanCurrent.includes(cleanNext)) return current;
+    return cleanCurrent ? `${cleanCurrent}\n\n${cleanNext}` : cleanNext;
+}
+
+function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
+    const guide = getBackgroundGuideForObservation(observation);
+    if (!guide) return null;
+
+    const handleUseDraft = (key, value) => {
+        onHelperChange(key, mergeHelperText(interpretation?.[key], value));
+    };
+
+    return (
+        <section className="study-background-card">
+            <div className="study-background-heading">
+                <span className="study-context-card-label">
+                    {guide.exact ? 'Grounded help' : 'Research path'}
+                </span>
+                <strong>{guide.title}</strong>
+                <p>{guide.subtitle}</p>
+            </div>
+
+            {!guide.exact && (
+                <p className="study-background-note">
+                    We do not have a curated source card for this exact question yet, but this is still a valid study question.
+                </p>
+            )}
+
+            <div className="study-background-section">
+                <span>Local context</span>
+                {guide.contextNotes.map(note => (
+                    <p key={note}>{note}</p>
+                ))}
+            </div>
+
+            <div className="study-background-section">
+                <span>Trusted source notes</span>
+                {guide.sourceNotes.map(note => (
+                    <p key={`${note.label}-${note.text}`}>
+                        <strong>{note.label}:</strong> {note.text}
+                        {note.href && (
+                            <>
+                                {' '}
+                                <a href={note.href} target="_blank" rel="noreferrer">
+                                    {note.sourceLabel}
+                                </a>
+                            </>
+                        )}
+                    </p>
+                ))}
+            </div>
+
+            <div className="study-background-section">
+                <span>Careful synthesis</span>
+                {guide.synthesis.map(note => (
+                    <p key={note}>{note}</p>
+                ))}
+            </div>
+
+            <div className="study-background-actions" aria-label="Use grounded help">
+                {guide.contextDraft && (
+                    <button
+                        type="button"
+                        className="study-selection-action primary"
+                        onClick={() => handleUseDraft('context', guide.contextDraft)}
+                    >
+                        Add to context
+                    </button>
+                )}
+                {guide.meaningDraft && (
+                    <button
+                        type="button"
+                        className="study-selection-action"
+                        onClick={() => handleUseDraft('meaning', guide.meaningDraft)}
+                    >
+                        Add to meaning
+                    </button>
+                )}
+                {guide.guardrailDraft && (
+                    <button
+                        type="button"
+                        className="study-selection-action"
+                        onClick={() => handleUseDraft('guardrail', guide.guardrailDraft)}
+                    >
+                        Add caution
+                    </button>
+                )}
+            </div>
+        </section>
+    );
+}
+
 function InterpretWorkbench({
     book,
     chapter,
@@ -307,6 +404,11 @@ function InterpretWorkbench({
             <div className="study-workbench">
                 <ObservationWorkbenchHeader observation={activeObservation} stage="interpret" />
                 <ContextCards book={book} chapter={chapter} focusVerse={activeObservation.verse} />
+                <BackgroundGuideCard
+                    observation={activeObservation}
+                    interpretation={interpretation}
+                    onHelperChange={handleHelperChange}
+                />
                 <div className="study-helper-stack">
                     {INTERPRET_HELPERS.map(helper => (
                         <HelperField

@@ -804,6 +804,75 @@
     color: var(--color-text-secondary);
 }
 
+.study-background-card {
+    display: grid;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    border: 1px solid color-mix(in srgb, var(--color-illumination) 34%, var(--color-border));
+    border-radius: var(--radius-md);
+    background-color: color-mix(in srgb, var(--color-bg-note) 90%, var(--color-illumination));
+}
+
+.study-background-heading {
+    display: grid;
+    gap: 0.15rem;
+}
+
+.study-background-heading strong {
+    font-family: var(--font-family-heading);
+    font-size: 1.05rem;
+    line-height: 1.25;
+    color: var(--color-text-primary);
+}
+
+.study-background-heading p,
+.study-background-note {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--color-text-secondary);
+}
+
+.study-background-section {
+    display: grid;
+    gap: 0.3rem;
+    padding-top: var(--space-sm);
+    border-top: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.study-background-section span {
+    font-family: var(--font-family-ui);
+    font-size: 0.68rem;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-label);
+    color: var(--color-text-muted);
+}
+
+.study-background-section p {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--color-text-secondary);
+}
+
+.study-background-section strong {
+    color: var(--color-text-primary);
+}
+
+.study-background-section a {
+    font-size: 0.74rem;
+}
+
+.study-background-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    padding-top: var(--space-xs);
+}
+
 .study-helper-stack {
     display: grid;
     gap: var(--space-sm);
