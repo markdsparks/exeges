@@ -834,6 +834,32 @@
     color: var(--color-text-secondary);
 }
 
+.study-background-route {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--color-illumination) 28%, transparent);
+    border-radius: var(--radius-sm);
+    background-color: color-mix(in srgb, var(--color-bg-elevated) 62%, transparent);
+}
+
+.study-background-route span {
+    font-family: var(--font-family-ui);
+    font-size: 0.68rem;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-label);
+    color: var(--color-accent-strong);
+}
+
+.study-background-route p {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.76rem;
+    line-height: 1.42;
+    color: var(--color-text-secondary);
+}
+
 .study-background-section {
     display: grid;
     gap: 0.3rem;
@@ -860,6 +886,13 @@
 
 .study-background-section strong {
     color: var(--color-text-primary);
+}
+
+.study-background-section em {
+    display: inline;
+    font-style: normal;
+    font-size: 0.74rem;
+    color: var(--color-text-muted);
 }
 
 .study-background-section a {

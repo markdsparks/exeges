@@ -291,15 +291,20 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
         <section className="study-background-card">
             <div className="study-background-heading">
                 <span className="study-context-card-label">
-                    {guide.exact ? 'Grounded help' : 'Research path'}
+                    {guide.exact ? 'Grounded help' : 'Study path'}
                 </span>
                 <strong>{guide.title}</strong>
                 <p>{guide.subtitle}</p>
             </div>
 
+            <div className="study-background-route">
+                <span>{guide.routeLabel}</span>
+                <p>{guide.reason}</p>
+            </div>
+
             {!guide.exact && (
                 <p className="study-background-note">
-                    We do not have a curated source card for this exact question yet, but this is still a valid study question.
+                    We do not have a curated source card for this exact item yet, so this helper gives a careful research path instead of a finished answer.
                 </p>
             )}
 
@@ -322,6 +327,9 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
                                     {note.sourceLabel}
                                 </a>
                             </>
+                        )}
+                        {note.sourceLabel && !note.href && (
+                            <em> {note.sourceLabel}</em>
                         )}
                     </p>
                 ))}
