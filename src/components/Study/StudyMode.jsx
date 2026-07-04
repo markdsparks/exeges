@@ -153,12 +153,24 @@ function LocalDraftAudit({ audit }) {
     const sectionsToReview = audit.sections.filter(section => (
         !['empty', 'supported'].includes(section.status)
     ));
+    const needsReview = sectionsToReview.length > 0;
+    const statusLabel = audit.status === 'supported'
+        ? 'Checked'
+        : audit.status === 'uncited'
+            ? 'Needs citations'
+            : 'Review';
 
     return (
-        <div className={`study-local-audit status-${audit.status}`.trim()}>
-            <span>Source check</span>
+        <details
+            className={`study-local-audit status-${audit.status}`.trim()}
+            open={needsReview}
+        >
+            <summary>
+                <span>Source check</span>
+                <strong>{statusLabel}</strong>
+            </summary>
             <p>{audit.summary}</p>
-            {sectionsToReview.length > 0 && (
+            {needsReview && (
                 <div className="study-local-audit-list">
                     {sectionsToReview.map(section => (
                         <div
@@ -175,6 +187,115 @@ function LocalDraftAudit({ audit }) {
                             )}
                         </div>
                     ))}
+                </div>
+            )}
+        </details>
+    );
+}
+
+function getDraftUsableFields(draft) {
+    return [
+        ['context', draft?.context],
+        ['meaning', draft?.meaning],
+        ['guardrail', draft?.guardrail],
+    ].filter(([, value]) => value?.trim());
+}
+
+function StudyDraftCard({
+    draft,
+    title,
+    kicker,
+    note,
+    audit,
+    onUseField,
+}) {
+    if (!draft) return null;
+
+    const usableFields = getDraftUsableFields(draft);
+    const canUseDraft = usableFields.length > 0;
+    const handleUseDraft = () => {
+        usableFields.forEach(([key, value]) => onUseField(key, value));
+    };
+
+    return (
+        <div className="study-assistant-draft">
+            <div className="study-assistant-draft-heading">
+                <span>{kicker}</span>
+                <strong>{title}</strong>
+                {note && <p>{note}</p>}
+            </div>
+
+            <div className="study-assistant-draft-lines">
+                {draft.context && (
+                    <p>
+                        <strong>Context:</strong> {draft.context}
+                    </p>
+                )}
+                {draft.meaning && (
+                    <p>
+                        <strong>Meaning:</strong> {draft.meaning}
+                    </p>
+                )}
+                {draft.guardrail && (
+                    <p>
+                        <strong>Guardrail:</strong> {draft.guardrail}
+                    </p>
+                )}
+                {draft.nextQuestion && (
+                    <p>
+                        <strong>Next question:</strong> {draft.nextQuestion}
+                    </p>
+                )}
+            </div>
+
+            <p className="study-assistant-draft-meta">
+                Confidence: {draft.confidence}
+                {draft.citations?.length > 0 && (
+                    <em>Uses {draft.citations.join(', ')}</em>
+                )}
+                {draft.unstructured && (
+                    <em>Cleaned plain text</em>
+                )}
+            </p>
+
+            {audit && <LocalDraftAudit audit={audit} />}
+
+            {canUseDraft && (
+                <div className="study-background-actions" aria-label={`Use ${title}`}>
+                    <button
+                        type="button"
+                        className="study-selection-action primary"
+                        onClick={handleUseDraft}
+                    >
+                        Use draft
+                    </button>
+                    {draft.context && (
+                        <button
+                            type="button"
+                            className="study-selection-action"
+                            onClick={() => onUseField('context', draft.context)}
+                        >
+                            Context
+                        </button>
+                    )}
+                    {draft.meaning && (
+                        <button
+                            type="button"
+                            className="study-selection-action"
+                            onClick={() => onUseField('meaning', draft.meaning)}
+                        >
+                            Meaning
+                        </button>
+                    )}
+                    {draft.guardrail && (
+                        <button
+                            type="button"
+                            className="study-selection-action"
+                            onClick={() => onUseField('guardrail', draft.guardrail)}
+                        >
+                            Caution
+                        </button>
+                    )}
                 </div>
             )}
         </div>
@@ -361,10 +482,20 @@ function BackgroundGuideCard({ observation, interpretation, bibles, onHelperChan
         localDraft?.nextQuestion
     );
     const localDraftIsRawOnly = !!(localDraft?.unstructured && !localDraftHasFields);
-    const localDraftMeaning = localDraft?.meaning || '';
+    const hasUsableLocalDraft = !!(localDraft && localDraftHasFields && !localDraftIsRawOnly);
     const localDraftAudit = localDraft
         ? auditLocalStudyDraft(localDraft, guide.grounding.synthesisRequest, { bibles })
         : null;
+    const groundedDraftAudit = groundedDraft
+        ? auditLocalStudyDraft(groundedDraft, guide.grounding.synthesisRequest, { bibles })
+        : null;
+    const primaryDraft = hasUsableLocalDraft ? localDraft : groundedDraft;
+    const primaryDraftAudit = hasUsableLocalDraft ? localDraftAudit : groundedDraftAudit;
+    const localModelMessage = capabilities.localSlmRecommended
+        ? `Use ${selectedLocalModel.label} for a second pass on this device.`
+        : capabilities.localSlmRisk === 'ios-webgpu-memory-risk'
+            ? `${selectedLocalModel.label} can run here, but phone browsers may reload during model loading.`
+            : 'This browser needs WebGPU before local model drafting can run.';
 
     const handleUseDraft = (key, value) => {
         onHelperChange(key, mergeHelperText(interpretation?.[key], value));
@@ -422,318 +553,177 @@ function BackgroundGuideCard({ observation, interpretation, bibles, onHelperChan
     };
 
     return (
-        <section className="study-background-card">
-            <div className="study-background-heading">
-                <span className="study-context-card-label">
-                    {guide.exact ? 'Grounded help' : 'Study path'}
-                </span>
-                <strong>{guide.title}</strong>
-                <p>{guide.subtitle}</p>
-            </div>
-
-            <div className="study-background-route">
-                <span>{guide.routeLabel}</span>
-                <p>{guide.reason}</p>
-            </div>
-
-            <div className="study-background-grounding">
-                <span>
-                    Local grounding &middot; {sourceCount} chunk{sourceCount === 1 ? '' : 's'}
-                </span>
-                <p>
-                    {sourceCount
-                        ? 'This helper is using local source-pack retrieval before any model synthesis.'
-                        : 'No local source chunks matched yet; keep this as a method prompt until the source pack grows.'}
-                </p>
-                <p>
-                    {sourceCount
-                        ? 'The draft below is assembled from the retrieved evidence cards without loading a model.'
-                        : 'This device is running retrieval-only guidance until the source pack has enough matching material.'}
-                </p>
-            </div>
-
-            {groundedDraft && (
-                <div className="study-background-section study-grounded-draft">
-                    <span>Grounded draft</span>
-                    {groundedDraft.context && (
-                        <p>
-                            <strong>Context:</strong> {groundedDraft.context}
-                        </p>
-                    )}
-                    {groundedDraft.meaning && (
-                        <p>
-                            <strong>Meaning:</strong> {groundedDraft.meaning}
-                        </p>
-                    )}
-                    {groundedDraft.guardrail && (
-                        <p>
-                            <strong>Guardrail:</strong> {groundedDraft.guardrail}
-                        </p>
-                    )}
-                    {groundedDraft.nextQuestion && (
-                        <p>
-                            <strong>Next question:</strong> {groundedDraft.nextQuestion}
-                        </p>
-                    )}
-                    <p>
-                        <strong>Confidence:</strong> {groundedDraft.confidence}
-                        {groundedDraft.citations.length > 0 && (
-                            <em> Uses {groundedDraft.citations.join(', ')}</em>
-                        )}
-                    </p>
-                    <div className="study-background-actions" aria-label="Use grounded draft">
-                        {groundedDraft.context && (
-                            <button
-                                type="button"
-                                className="study-selection-action primary"
-                                onClick={() => handleUseDraft('context', groundedDraft.context)}
-                            >
-                                Add context
-                            </button>
-                        )}
-                        {groundedDraft.meaning && (
-                            <button
-                                type="button"
-                                className="study-selection-action"
-                                onClick={() => handleUseDraft('meaning', groundedDraft.meaning)}
-                            >
-                                Add meaning
-                            </button>
-                        )}
-                        {groundedDraft.guardrail && (
-                            <button
-                                type="button"
-                                className="study-selection-action"
-                                onClick={() => handleUseDraft('guardrail', groundedDraft.guardrail)}
-                            >
-                                Add caution
-                            </button>
-                        )}
-                    </div>
+        <section className="study-assistant-card">
+            <div className="study-assistant-top">
+                <div>
+                    <span className="study-context-card-label">
+                        {guide.exact ? 'Study assistant' : 'Study path'}
+                    </span>
+                    <strong>{guide.title}</strong>
+                    <p>{guide.reason}</p>
                 </div>
-            )}
-
-            <details className="study-local-experimental">
-                <summary>Experimental local model</summary>
-                <div className="study-local-synthesis">
-                    <div>
-                        <span>Local model draft</span>
-                        <p>
-                            {capabilities.localSlmRecommended
-                                ? `Downloads ${selectedLocalModel.label} and runs it on this device.`
-                                : capabilities.localSlmRisk === 'ios-webgpu-memory-risk'
-                                    ? `Can download ${selectedLocalModel.label} and run it here, but on-phone model loading may crash or reload Safari.`
-                                    : 'This browser needs WebGPU before it can run a local study model.'}
-                        </p>
-                        {capabilities.webGpu && (
-                            <label className="study-local-model-control">
-                                <span>Local model</span>
-                                <select
-                                    value={selectedLocalModelId}
-                                    onChange={(event) => setSelectedLocalModelId(event.target.value)}
-                                    disabled={isDraftingLocally || !capabilities.localSlmAvailable}
-                                >
-                                    {LOCAL_STUDY_SLM_MODELS.map(model => (
-                                        <option key={model.id} value={model.id}>
-                                            {model.label} · {model.description}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                        )}
-                        {localDraftState.progress && (
-                            <p>{localDraftState.progress}</p>
-                        )}
-                        {localDraftState.error && (
-                            <p>{localDraftState.error}</p>
-                        )}
-                    </div>
-                    <button
-                        type="button"
-                        className="study-selection-action"
-                        onClick={handleDraftLocally}
-                        disabled={!canDraftLocally || isDraftingLocally}
-                    >
-                        {isDraftingLocally ? 'Drafting...' : 'Run experimental model'}
-                    </button>
+                <div className="study-assistant-status" aria-label="Assistant grounding status">
+                    <span>{sourceCount} source card{sourceCount === 1 ? '' : 's'}</span>
+                    <span>Bible refs checked</span>
+                    <span>{hasUsableLocalDraft ? 'Local draft' : 'Curated draft'}</span>
                 </div>
+            </div>
 
-                {localDraft && (
-                    <div className="study-background-section study-local-draft">
-                        <span>Local model draft</span>
-                        {localDraftIsRawOnly && (
-                            <>
-                                <p className="study-local-draft-note">
-                                    Raw local response.
-                                </p>
-                                <pre className="study-local-raw-response">{localDraft.rawText}</pre>
-                            </>
-                        )}
-                        {!localDraftIsRawOnly && localDraft.unstructured && (
-                            <p className="study-local-draft-note">
-                                Plain-text local response, cleaned for review.
-                            </p>
-                        )}
-                        {localDraft.context && (
-                            <p>
-                                <strong>Context:</strong> {localDraft.context}
-                            </p>
-                        )}
-                        {localDraft.meaning && (
-                            <p>
-                                <strong>Meaning:</strong> {localDraft.meaning}
-                            </p>
-                        )}
-                        {localDraft.guardrail && (
-                            <p>
-                                <strong>Guardrail:</strong> {localDraft.guardrail}
-                            </p>
-                        )}
-                        {localDraft.nextQuestion && (
-                            <p>
-                                <strong>Next question:</strong> {localDraft.nextQuestion}
-                            </p>
-                        )}
-                        <p>
-                            <strong>Confidence:</strong> {localDraft.confidence}
-                            {localDraft.unstructured && (
-                                <em> Plain text</em>
-                            )}
-                            {localDraft.citations.length > 0 && (
-                                <em> Uses {localDraft.citations.join(', ')}</em>
-                            )}
-                        </p>
-                        <LocalDraftAudit audit={localDraftAudit} />
-                        {!localDraftIsRawOnly && localDraft.unstructured && localDraft.rawText && (
-                            <details className="study-local-raw-details">
-                                <summary>Raw response</summary>
-                                <pre className="study-local-raw-response">{localDraft.rawText}</pre>
-                            </details>
-                        )}
-                        <div className="study-background-actions" aria-label="Use local model draft">
-                            {localDraft.context && (
-                                <button
-                                    type="button"
-                                    className="study-selection-action primary"
-                                    onClick={() => handleUseDraft('context', localDraft.context)}
-                                >
-                                    Add context
-                                </button>
-                            )}
-                            {localDraftMeaning && (
-                                <button
-                                    type="button"
-                                    className="study-selection-action"
-                                    onClick={() => handleUseDraft('meaning', localDraftMeaning)}
-                                >
-                                    Add meaning
-                                </button>
-                            )}
-                            {localDraft.guardrail && (
-                                <button
-                                    type="button"
-                                    className="study-selection-action"
-                                    onClick={() => handleUseDraft('guardrail', localDraft.guardrail)}
-                                >
-                                    Add caution
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                )}
-            </details>
-
-            {!guide.exact && (
+            {primaryDraft ? (
+                <StudyDraftCard
+                    draft={primaryDraft}
+                    title={hasUsableLocalDraft ? 'Local model draft' : 'Suggested draft'}
+                    kicker={hasUsableLocalDraft ? selectedLocalModel.label : 'Passage-first'}
+                    note={hasUsableLocalDraft
+                        ? 'Generated on this device, then checked against the local Bible and retrieved evidence.'
+                        : 'Assembled from retrieved evidence cards while the local model stays optional.'}
+                    audit={primaryDraftAudit}
+                    onUseField={handleUseDraft}
+                />
+            ) : (
                 <p className="study-background-note">
-                    We do not have a curated source card for this exact item yet, so this helper gives a careful research path instead of a finished answer.
+                    This helper has a route for the question, but no source-backed draft yet.
                 </p>
             )}
 
-            <div className="study-background-section">
-                <span>Local context</span>
-                {guide.contextNotes.map(note => (
-                    <p key={note}>{note}</p>
-                ))}
+            <div className="study-assistant-local">
+                <div>
+                    <span>Local model pass</span>
+                    <p>{localModelMessage}</p>
+                    {localDraftState.progress && (
+                        <p>{localDraftState.progress}</p>
+                    )}
+                    {localDraftState.error && (
+                        <p>{localDraftState.error}</p>
+                    )}
+                </div>
+                <button
+                    type="button"
+                    className="study-selection-action"
+                    onClick={handleDraftLocally}
+                    disabled={!canDraftLocally || isDraftingLocally}
+                >
+                    {isDraftingLocally
+                        ? 'Drafting...'
+                        : hasUsableLocalDraft
+                            ? 'Refresh draft'
+                            : 'Draft locally'}
+                </button>
             </div>
 
-            <div className="study-background-section">
-                <span>Trusted source notes</span>
-                {guide.sourceNotes.map(note => (
-                    <p key={`${note.label}-${note.text}`}>
-                        <strong>{note.label}:</strong> {note.text}
-                        {note.href && (
-                            <>
-                                {' '}
-                                <a href={note.href} target="_blank" rel="noreferrer">
-                                    {note.sourceLabel}
-                                </a>
-                            </>
-                        )}
-                        {note.sourceLabel && !note.href && (
-                            <em> {note.sourceLabel}</em>
-                        )}
-                    </p>
-                ))}
-            </div>
+            {capabilities.webGpu && (
+                <details className="study-assistant-settings">
+                    <summary>Model settings</summary>
+                    <label className="study-local-model-control">
+                        <span>Local model</span>
+                        <select
+                            value={selectedLocalModelId}
+                            onChange={(event) => setSelectedLocalModelId(event.target.value)}
+                            disabled={isDraftingLocally || !capabilities.localSlmAvailable}
+                        >
+                            {LOCAL_STUDY_SLM_MODELS.map(model => (
+                                <option key={model.id} value={model.id}>
+                                    {model.label} · {model.description}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                </details>
+            )}
 
-            {sourceFindings.length > 0 && (
+            {localDraftIsRawOnly && (
+                <details className="study-assistant-diagnostic" open>
+                    <summary>Local response kept out of the draft</summary>
+                    <p>The model returned text that was not safe to promote into the interpretation fields.</p>
+                    <pre className="study-local-raw-response">{localDraft.rawText}</pre>
+                </details>
+            )}
+
+            {hasUsableLocalDraft && groundedDraft && (
+                <details className="study-assistant-details">
+                    <summary>Curated fallback draft</summary>
+                    <StudyDraftCard
+                        draft={groundedDraft}
+                        title="Suggested draft"
+                        kicker="Passage-first"
+                        note="This deterministic draft remains available if the local model wanders."
+                        audit={groundedDraftAudit}
+                        onUseField={handleUseDraft}
+                    />
+                </details>
+            )}
+
+            <details className="study-assistant-details">
+                <summary>Evidence and method</summary>
                 <div className="study-background-section">
-                    <span>Retrieved source chunks</span>
-                    {sourceFindings.map(finding => (
-                        <p key={finding.id}>
-                            <strong>{finding.title}:</strong> {finding.text}
-                            {finding.source?.href && (
+                    <span>Route</span>
+                    <p>
+                        <strong>{guide.routeLabel}:</strong> {guide.subtitle}
+                    </p>
+                </div>
+
+                {!guide.exact && (
+                    <p className="study-background-note">
+                        We do not have a curated source card for this exact item yet, so this helper gives a careful research path instead of a finished answer.
+                    </p>
+                )}
+
+                <div className="study-background-section">
+                    <span>Local context</span>
+                    {guide.contextNotes.map(note => (
+                        <p key={note}>{note}</p>
+                    ))}
+                </div>
+
+                <div className="study-background-section">
+                    <span>Trusted source notes</span>
+                    {guide.sourceNotes.map(note => (
+                        <p key={`${note.label}-${note.text}`}>
+                            <strong>{note.label}:</strong> {note.text}
+                            {note.href && (
                                 <>
                                     {' '}
-                                    <a href={finding.source.href} target="_blank" rel="noreferrer">
-                                        {finding.source.label}
+                                    <a href={note.href} target="_blank" rel="noreferrer">
+                                        {note.sourceLabel}
                                     </a>
                                 </>
                             )}
-                            {finding.source && (
-                                <em> {finding.source.license}</em>
+                            {note.sourceLabel && !note.href && (
+                                <em> {note.sourceLabel}</em>
                             )}
                         </p>
                     ))}
                 </div>
-            )}
 
-            <div className="study-background-section">
-                <span>Careful synthesis</span>
-                {guide.synthesis.map(note => (
-                    <p key={note}>{note}</p>
-                ))}
-            </div>
+                {sourceFindings.length > 0 && (
+                    <div className="study-background-section">
+                        <span>Retrieved source chunks</span>
+                        {sourceFindings.map(finding => (
+                            <p key={finding.id}>
+                                <strong>{finding.title}:</strong> {finding.text}
+                                {finding.source?.href && (
+                                    <>
+                                        {' '}
+                                        <a href={finding.source.href} target="_blank" rel="noreferrer">
+                                            {finding.source.label}
+                                        </a>
+                                    </>
+                                )}
+                                {finding.source && (
+                                    <em> {finding.source.license}</em>
+                                )}
+                            </p>
+                        ))}
+                    </div>
+                )}
 
-            <div className="study-background-actions" aria-label="Use grounded help">
-                {guide.contextDraft && (
-                    <button
-                        type="button"
-                        className="study-selection-action primary"
-                        onClick={() => handleUseDraft('context', guide.contextDraft)}
-                    >
-                        Add to context
-                    </button>
-                )}
-                {guide.meaningDraft && (
-                    <button
-                        type="button"
-                        className="study-selection-action"
-                        onClick={() => handleUseDraft('meaning', guide.meaningDraft)}
-                    >
-                        Add to meaning
-                    </button>
-                )}
-                {guide.guardrailDraft && (
-                    <button
-                        type="button"
-                        className="study-selection-action"
-                        onClick={() => handleUseDraft('guardrail', guide.guardrailDraft)}
-                    >
-                        Add caution
-                    </button>
-                )}
-            </div>
+                <div className="study-background-section">
+                    <span>Careful synthesis</span>
+                    {guide.synthesis.map(note => (
+                        <p key={note}>{note}</p>
+                    ))}
+                </div>
+            </details>
         </section>
     );
 }
