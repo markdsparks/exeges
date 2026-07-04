@@ -328,7 +328,9 @@
 .study-selection-card,
 .study-context-card,
 .study-observation,
-.study-mode-field {
+.study-mode-field,
+.study-workbench-anchor,
+.study-helper-field {
     border: 1px solid var(--color-border-soft);
     border-radius: var(--radius-md);
     background-color: var(--color-bg-note);
@@ -618,8 +620,29 @@
     position: relative;
     display: grid;
     gap: var(--space-xs);
-    padding: var(--space-sm) 2.35rem var(--space-sm) var(--space-sm);
+    padding: var(--space-sm);
     border-left: 2px solid color-mix(in srgb, var(--color-illumination) 65%, transparent);
+}
+
+.study-observation:has(.study-observation-remove) {
+    padding-right: 2.35rem;
+}
+
+.study-observation.selected {
+    border-color: color-mix(in srgb, var(--color-accent) 38%, var(--color-border));
+    border-left-color: var(--color-accent);
+    background-color: color-mix(in srgb, var(--color-bg-note) 88%, var(--color-accent));
+}
+
+.study-observation-body {
+    width: 100%;
+    display: grid;
+    gap: var(--space-xs);
+    text-align: left;
+}
+
+.study-observation-body:hover .study-observation-quote {
+    color: var(--color-accent);
 }
 
 .study-observation-meta {
@@ -720,6 +743,114 @@
     color: var(--color-text-muted);
 }
 
+.study-workbench {
+    display: grid;
+    gap: var(--space-md);
+}
+
+.study-workbench-anchor {
+    display: grid;
+    gap: var(--space-xs);
+    padding: var(--space-md);
+    border-color: color-mix(in srgb, var(--color-accent) 24%, var(--color-border));
+}
+
+.study-workbench-reference {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.76rem;
+    line-height: 1.35;
+    color: var(--color-text-secondary);
+}
+
+.study-workbench-anchor blockquote {
+    margin: 0;
+    font-family: var(--font-family-body);
+    font-size: 1rem;
+    line-height: 1.45;
+    color: var(--color-text-primary);
+}
+
+.study-workbench-note {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--color-text-secondary);
+}
+
+.study-workbench-meaning {
+    display: grid;
+    gap: 0.2rem;
+    margin-top: var(--space-xs);
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--color-border-soft);
+}
+
+.study-workbench-meaning span {
+    font-family: var(--font-family-ui);
+    font-size: 0.68rem;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-label);
+    color: var(--color-text-muted);
+}
+
+.study-workbench-meaning p {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--color-text-secondary);
+}
+
+.study-helper-stack {
+    display: grid;
+    gap: var(--space-sm);
+}
+
+.study-helper-field {
+    display: grid;
+    gap: var(--space-xs);
+    padding: var(--space-sm);
+}
+
+.study-helper-field span {
+    font-family: var(--font-family-heading);
+    font-size: 0.98rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--color-text-primary);
+}
+
+.study-helper-field p {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.76rem;
+    line-height: 1.4;
+    color: var(--color-text-muted);
+}
+
+.study-helper-field textarea {
+    width: 100%;
+    min-height: 76px;
+    padding: var(--space-sm);
+    resize: vertical;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    outline: none;
+    font-family: var(--font-family-ui);
+    font-size: 0.86rem;
+    line-height: 1.45;
+    color: var(--color-text-primary);
+    background-color: color-mix(in srgb, var(--color-bg-primary) 82%, transparent);
+}
+
+.study-helper-field textarea:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
 .study-mode-footer {
     display: flex;
     justify-content: flex-end;
@@ -813,6 +944,11 @@
         backdrop-filter: blur(18px);
     }
 
+    .study-tray.stage-interpret,
+    .study-tray.stage-apply {
+        max-height: min(62dvh, 520px);
+    }
+
     .study-tray.collapsed {
         max-height: calc(54px + var(--safe-area-inset-bottom));
     }
@@ -829,6 +965,11 @@
     .study-tray-content {
         max-height: calc(min(40dvh, 340px) - 54px);
         padding-bottom: calc(var(--space-md) + var(--safe-area-inset-bottom));
+    }
+
+    .study-tray.stage-interpret .study-tray-content,
+    .study-tray.stage-apply .study-tray-content {
+        max-height: calc(min(62dvh, 520px) - 54px);
     }
 
     .study-tray-selection-panel,

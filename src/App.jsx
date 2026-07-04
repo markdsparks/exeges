@@ -58,6 +58,7 @@ export default function App() {
         saveStudy,
         addObservation,
         removeObservation,
+        updateObservation,
         deleteStudy,
         getAllStudies,
     } = useStudies();
@@ -82,7 +83,7 @@ export default function App() {
     const [studySelection, setStudySelection] = useState([]);
     const [studyWorkflow, setStudyWorkflow] = useState(null);
 
-    // Shared ref for the reader container — used by ChapterReader and BackToTop
+    // Shared ref for the reader container - used by ChapterReader and BackToTop
     const readerRef = useRef(null);
     const lastScrollYRef = useRef(0);
     const tickingRef = useRef(false);
@@ -414,6 +415,7 @@ export default function App() {
                 ...observation,
                 verse,
                 quote: selectedWord.text,
+                reference,
                 scope: 'word-group',
                 selections,
                 relatedSelections,
@@ -435,6 +437,7 @@ export default function App() {
                 ...observation,
                 verse: sideA[0]?.verse ?? sideB[0]?.verse ?? verse,
                 quote: `${sideAQuote} / ${sideBQuote}`,
+                reference: getSelectionReference([...sideA, ...sideB]),
                 scope: 'contrast',
                 selections: [...sideA, ...sideB],
                 contrast: { sideA, sideB },
@@ -467,6 +470,11 @@ export default function App() {
         removeObservation(studyTarget.bookId, studyTarget.chapter, observationId);
     }, [removeObservation, studyTarget]);
 
+    const handleUpdateStudyObservation = useCallback((observationId, fields) => {
+        if (!studyTarget) return;
+        updateObservation(studyTarget.bookId, studyTarget.chapter, observationId, fields);
+    }, [studyTarget, updateObservation]);
+
     const handleSaveStudyFields = useCallback((fields) => {
         if (!studyTarget) return;
         saveStudy(studyTarget.bookId, studyTarget.chapter, fields);
@@ -487,7 +495,7 @@ export default function App() {
         setHideControls(false);
     }, []);
 
-    // Chapter navigation — prev/next with book-boundary logic
+    // Chapter navigation - prev/next with book-boundary logic
     const chapterNav = useMemo(() => {
         if (!book || !bibles) return null;
         const idx = bibles.findIndex(b => b.id === selectedBookId);
@@ -649,6 +657,7 @@ export default function App() {
                                     onStartContrast={handleStartContrast}
                                     onCancelWorkflow={() => setStudyWorkflow(null)}
                                     onRemoveObservation={handleRemoveStudyObservation}
+                                    onUpdateObservation={handleUpdateStudyObservation}
                                     onSaveFields={handleSaveStudyFields}
                                     onDeleteStudy={handleDeleteActiveStudy}
                                     onClose={handleCloseStudy}

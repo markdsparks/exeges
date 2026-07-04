@@ -324,6 +324,11 @@ button {
     .app.study-mode:has(.study-tray.expanded) .app-main {
         padding-bottom: calc(min(40dvh, 340px) + var(--space-xl) + var(--safe-area-inset-bottom));
     }
+
+    .app.study-mode:has(.study-tray.stage-interpret.expanded) .app-main,
+    .app.study-mode:has(.study-tray.stage-apply.expanded) .app-main {
+        padding-bottom: calc(min(62dvh, 520px) + var(--space-xl) + var(--safe-area-inset-bottom));
+    }
 }
 
 /* Scrollbar styling */
@@ -335,7 +340,7 @@ button {
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
 
-/* Reading mode — hide reader chrome during downward scroll */
+/* Reading mode - hide reader chrome during downward scroll */
 .app.reading-mode .app-header {
     transform: translateY(-100%);
     opacity: 0;

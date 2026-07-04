@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react';
 
 const STORAGE_KEY = 'exeges-studies';
+const INTERPRETATION_KEYS = ['anchor', 'context', 'meaning', 'guardrail', 'summary'];
+const APPLICATION_KEYS = ['worship', 'trust', 'turn', 'obey', 'prayer'];
 
 function makeStudyKey(bookId, chapter) {
     return `${bookId}-${chapter}`;
@@ -23,9 +25,9 @@ function normalizeStudy(study) {
         : [];
 
     return {
-        observe: study?.observe?.trim() ?? '',
-        interpret: study?.interpret?.trim() ?? '',
-        apply: study?.apply?.trim() ?? '',
+        observe: typeof study?.observe === 'string' ? study.observe : '',
+        interpret: typeof study?.interpret === 'string' ? study.interpret : '',
+        apply: typeof study?.apply === 'string' ? study.apply : '',
         observations,
         updatedAt: study?.updatedAt ?? 0,
     };
@@ -57,12 +59,22 @@ function normalizeObservation(observation) {
         scope: observation?.scope ?? 'verse',
         verse,
         quote,
+        reference: observation?.reference?.trim() ?? '',
         selections,
         relatedSelections,
         contrast,
         note: observation?.note?.trim() ?? '',
+        interpretation: normalizeFieldMap(observation?.interpretation, INTERPRETATION_KEYS),
+        application: normalizeFieldMap(observation?.application, APPLICATION_KEYS),
         createdAt: observation?.createdAt ?? Date.now(),
     };
+}
+
+function normalizeFieldMap(fields, keys) {
+    return keys.reduce((normalized, key) => ({
+        ...normalized,
+        [key]: typeof fields?.[key] === 'string' ? fields[key] : '',
+    }), {});
 }
 
 function normalizeSelectionItem(item) {
@@ -86,7 +98,12 @@ function normalizeSelectionItem(item) {
 }
 
 function hasStudyText(study) {
-    return !!(study.observe || study.interpret || study.apply || study.observations.length);
+    return !!(
+        study.observe.trim()
+        || study.interpret.trim()
+        || study.apply.trim()
+        || study.observations.length
+    );
 }
 
 export function useStudies() {
@@ -193,6 +210,42 @@ export function useStudies() {
         });
     }, []);
 
+    const updateObservation = useCallback((bookId, chapter, observationId, fields) => {
+        const key = makeStudyKey(bookId, chapter);
+
+        setStudies(prev => {
+            const next = { ...prev };
+            const previousStudy = normalizeStudy(prev[key]);
+            const observations = previousStudy.observations.map(item => {
+                if (item.id !== observationId) return item;
+
+                return normalizeObservation({
+                    ...item,
+                    ...fields,
+                    interpretation: fields?.interpretation
+                        ? { ...item.interpretation, ...fields.interpretation }
+                        : item.interpretation,
+                    application: fields?.application
+                        ? { ...item.application, ...fields.application }
+                        : item.application,
+                });
+            }).filter(Boolean);
+            const cleanStudy = { ...previousStudy, observations };
+
+            if (hasStudyText(cleanStudy)) {
+                next[key] = { ...cleanStudy, updatedAt: Date.now() };
+            } else {
+                delete next[key];
+            }
+
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+            } catch {}
+
+            return next;
+        });
+    }, []);
+
     const deleteStudy = useCallback((bookId, chapter) => {
         const key = makeStudyKey(bookId, chapter);
 
@@ -229,6 +282,7 @@ export function useStudies() {
         saveStudy,
         addObservation,
         removeObservation,
+        updateObservation,
         deleteStudy,
         getAllStudies,
     };

@@ -13,6 +13,72 @@ const EMPTY_DRAFT = {
     apply: '',
 };
 
+const INTERPRET_HELPERS = [
+    {
+        key: 'anchor',
+        label: 'Anchor it',
+        prompt: 'What words or details in the passage show this?',
+        placeholder: 'God said... and there was light.',
+    },
+    {
+        key: 'context',
+        label: 'Read around it',
+        prompt: 'How do nearby verses, repetition, or the chapter flow clarify it?',
+        placeholder: 'This fits the repeated pattern: God said, and it was so.',
+    },
+    {
+        key: 'meaning',
+        label: 'Name the meaning',
+        prompt: 'What does this reveal about God, people, creation, sin, promise, or obedience?',
+        placeholder: 'God creates by command; his word is effective.',
+    },
+    {
+        key: 'guardrail',
+        label: 'Guard the claim',
+        prompt: 'What would be saying more than this passage actually says?',
+        placeholder: 'This does not make human speech creator-level speech.',
+    },
+    {
+        key: 'summary',
+        label: 'Say it simply',
+        prompt: 'Write the meaning in one clear sentence.',
+        placeholder: "Genesis 1:3 shows that God's word powerfully brings light into being.",
+    },
+];
+
+const APPLICATION_HELPERS = [
+    {
+        key: 'worship',
+        label: 'Worship',
+        prompt: 'What does this lead you to praise God for?',
+        placeholder: 'Praise God that his word is powerful and life-giving.',
+    },
+    {
+        key: 'trust',
+        label: 'Trust',
+        prompt: 'What truth about God should you rely on?',
+        placeholder: 'I can trust what God says even before I see the outcome.',
+    },
+    {
+        key: 'turn',
+        label: 'Turn',
+        prompt: 'What false belief, fear, or response does this correct?',
+        placeholder: 'I should not treat darkness or disorder as stronger than God.',
+    },
+    {
+        key: 'obey',
+        label: 'Obey',
+        prompt: 'What faithful response does this call for?',
+        placeholder: "Listen carefully to God's word and respond with faith.",
+    },
+    {
+        key: 'prayer',
+        label: 'Pray',
+        prompt: 'Turn the meaning into prayer.',
+        placeholder: 'Lord, help me trust your word and worship your power.',
+    },
+];
+
 function getContextVerses(chapter, focusVerse) {
     const verses = chapter?.verses ?? [];
     if (!verses.length) return [];
@@ -42,7 +108,43 @@ function StudyTextArea({ label, value, placeholder, onChange, className = '' }) 
     );
 }
 
-function ObservationList({ observations, onRemoveObservation }) {
+function countFilledFields(fields = {}, helpers = []) {
+    return helpers.reduce((count, helper) => (
+        fields?.[helper.key]?.trim() ? count + 1 : count
+    ), 0);
+}
+
+function getObservationWorkStatus(observation, stage) {
+    const helpers = stage === 'apply' ? APPLICATION_HELPERS : INTERPRET_HELPERS;
+    const fields = stage === 'apply' ? observation?.application : observation?.interpretation;
+    return `${countFilledFields(fields, helpers)}/${helpers.length}`;
+}
+
+function getObservationDisplayReference(observation) {
+    return observation?.reference || `v${observation?.verse}`;
+}
+
+function HelperField({ helper, value, onChange }) {
+    return (
+        <label className="study-helper-field">
+            <span>{helper.label}</span>
+            <p>{helper.prompt}</p>
+            <textarea
+                value={value ?? ''}
+                placeholder={helper.placeholder}
+                onChange={(event) => onChange(event.target.value)}
+            />
+        </label>
+    );
+}
+
+function ObservationList({
+    observations,
+    onRemoveObservation,
+    selectedId,
+    onSelectObservation,
+    workStage = 'interpret',
+}) {
     if (!observations.length) {
         return (
             <p className="study-mode-empty">
@@ -53,35 +155,67 @@ function ObservationList({ observations, onRemoveObservation }) {
 
     return (
         <div className="study-observation-list">
-            {observations.map(observation => (
-                <article key={observation.id} className={`study-observation type-${observation.type}`}>
-                    <div className="study-observation-meta">
-                        <span>{getObservationTypeLabel(observation.type)}</span>
-                        <span>v{observation.verse}</span>
-                    </div>
-                    <p className="study-observation-quote">&ldquo;{observation.quote}&rdquo;</p>
-                    {observation.note && (
-                        <p className="study-observation-note">{observation.note}</p>
+            {observations.map(observation => {
+                const selectable = !!onSelectObservation;
+                const body = (
+                    <>
+                        <div className="study-observation-meta">
+                            <span>{getObservationTypeLabel(observation.type)}</span>
+                            <span>{getObservationDisplayReference(observation)}</span>
+                        </div>
+                        <p className="study-observation-quote">&ldquo;{observation.quote}&rdquo;</p>
+                        {observation.note && (
+                            <p className="study-observation-note">{observation.note}</p>
+                        )}
+                        {observation.type === 'repeated-word' && observation.relatedSelections?.length > 1 && (
+                            <p className="study-observation-detail">
+                                {observation.relatedSelections.length} linked uses in this chapter.
+                            </p>
+                        )}
+                        {observation.contrast?.sideA?.length && observation.contrast?.sideB?.length ? (
+                            <p className="study-observation-detail">
+                                {getSelectionQuote(observation.contrast.sideA)} contrasts with {getSelectionQuote(observation.contrast.sideB)}
+                            </p>
+                        ) : null}
+                        {selectable && (
+                            <p className="study-observation-detail">
+                                {workStage === 'apply' ? 'Apply' : 'Interpret'} {getObservationWorkStatus(observation, workStage)}
+                            </p>
+                        )}
+                    </>
+                );
+
+                return (
+                <article
+                    key={observation.id}
+                    className={`study-observation type-${observation.type} ${selectedId === observation.id ? 'selected' : ''}`.trim()}
+                >
+                    {selectable ? (
+                        <button
+                            type="button"
+                            className="study-observation-body"
+                            onClick={() => onSelectObservation(observation.id)}
+                            aria-pressed={selectedId === observation.id}
+                        >
+                            {body}
+                        </button>
+                    ) : (
+                        <div className="study-observation-body">
+                            {body}
+                        </div>
                     )}
-                    {observation.type === 'repeated-word' && observation.relatedSelections?.length > 1 && (
-                        <p className="study-observation-detail">
-                            {observation.relatedSelections.length} linked uses in this chapter.
-                        </p>
+                    {onRemoveObservation && (
+                        <button
+                            className="study-observation-remove"
+                            onClick={() => onRemoveObservation(observation.id)}
+                            aria-label={`Remove ${getObservationTypeLabel(observation.type)} observation`}
+                        >
+                            &times;
+                        </button>
                     )}
-                    {observation.contrast?.sideA?.length && observation.contrast?.sideB?.length ? (
-                        <p className="study-observation-detail">
-                            {getSelectionQuote(observation.contrast.sideA)} contrasts with {getSelectionQuote(observation.contrast.sideB)}
-                        </p>
-                    ) : null}
-                    <button
-                        className="study-observation-remove"
-                        onClick={() => onRemoveObservation?.(observation.id)}
-                        aria-label={`Remove ${getObservationTypeLabel(observation.type)} observation`}
-                    >
-                        &times;
-                    </button>
                 </article>
-            ))}
+                );
+            })}
         </div>
     );
 }
@@ -111,6 +245,144 @@ function ContextCards({ book, chapter, focusVerse }) {
     );
 }
 
+function ObservationWorkbenchHeader({ observation, stage }) {
+    const meaning = observation?.interpretation?.summary || observation?.interpretation?.meaning;
+
+    return (
+        <section className="study-workbench-anchor">
+            <span className="study-context-card-label">
+                {stage === 'apply' ? 'Applying' : 'Interpreting'}
+            </span>
+            <p className="study-workbench-reference">
+                {getObservationTypeLabel(observation.type)} &middot; {getObservationDisplayReference(observation)}
+            </p>
+            <blockquote>&ldquo;{observation.quote}&rdquo;</blockquote>
+            {observation.note && (
+                <p className="study-workbench-note">{observation.note}</p>
+            )}
+            {stage === 'apply' && (
+                <div className="study-workbench-meaning">
+                    <span>Meaning so far</span>
+                    <p>{meaning || 'Write a one-sentence interpretation first, then respond from that meaning.'}</p>
+                </div>
+            )}
+        </section>
+    );
+}
+
+function InterpretWorkbench({
+    book,
+    chapter,
+    observations,
+    activeObservation,
+    activeObservationId,
+    onSelectObservation,
+    onUpdateObservation,
+    interpretValue,
+    onInterpretChange,
+}) {
+    if (!observations.length) {
+        return (
+            <p className="study-mode-empty">
+                Save at least one observation first. Interpretation starts with something you noticed in the passage.
+            </p>
+        );
+    }
+
+    const interpretation = activeObservation?.interpretation ?? {};
+    const handleHelperChange = (key, value) => {
+        onUpdateObservation?.(activeObservation.id, {
+            interpretation: { [key]: value },
+        });
+    };
+
+    return (
+        <>
+            <ObservationList
+                observations={observations}
+                selectedId={activeObservationId}
+                onSelectObservation={onSelectObservation}
+                workStage="interpret"
+            />
+            <div className="study-workbench">
+                <ObservationWorkbenchHeader observation={activeObservation} stage="interpret" />
+                <ContextCards book={book} chapter={chapter} focusVerse={activeObservation.verse} />
+                <div className="study-helper-stack">
+                    {INTERPRET_HELPERS.map(helper => (
+                        <HelperField
+                            key={helper.key}
+                            helper={helper}
+                            value={interpretation[helper.key]}
+                            onChange={(value) => handleHelperChange(helper.key, value)}
+                        />
+                    ))}
+                </div>
+            </div>
+            <StudyTextArea
+                label="Chapter interpretation notes"
+                value={interpretValue}
+                placeholder="Pull the strongest meanings together for the passage."
+                onChange={onInterpretChange}
+            />
+        </>
+    );
+}
+
+function ApplicationWorkbench({
+    observations,
+    activeObservation,
+    activeObservationId,
+    onSelectObservation,
+    onUpdateObservation,
+    applyValue,
+    onApplyChange,
+}) {
+    if (!observations.length) {
+        return (
+            <p className="study-mode-empty">
+                Save at least one observation first. Application responds to interpreted meaning, not first impressions.
+            </p>
+        );
+    }
+
+    const application = activeObservation?.application ?? {};
+    const handleHelperChange = (key, value) => {
+        onUpdateObservation?.(activeObservation.id, {
+            application: { [key]: value },
+        });
+    };
+
+    return (
+        <>
+            <ObservationList
+                observations={observations}
+                selectedId={activeObservationId}
+                onSelectObservation={onSelectObservation}
+                workStage="apply"
+            />
+            <div className="study-workbench">
+                <ObservationWorkbenchHeader observation={activeObservation} stage="apply" />
+                <div className="study-helper-stack">
+                    {APPLICATION_HELPERS.map(helper => (
+                        <HelperField
+                            key={helper.key}
+                            helper={helper}
+                            value={application[helper.key]}
+                            onChange={(value) => handleHelperChange(helper.key, value)}
+                        />
+                    ))}
+                </div>
+            </div>
+            <StudyTextArea
+                label="Chapter application notes"
+                value={applyValue}
+                placeholder="What response does this passage call for?"
+                onChange={onApplyChange}
+            />
+        </>
+    );
+}
+
 export default function StudyMode({
     book,
     chapter,
@@ -125,6 +397,7 @@ export default function StudyMode({
     onStartContrast,
     onCancelWorkflow,
     onRemoveObservation,
+    onUpdateObservation,
     onSaveFields,
     onDeleteStudy,
     onClose,
@@ -132,6 +405,7 @@ export default function StudyMode({
     const observations = study?.observations ?? [];
     const [draft, setDraft] = useState(EMPTY_DRAFT);
     const [trayOpen, setTrayOpen] = useState(() => !prefersCompactStudyTray());
+    const [activeObservationId, setActiveObservationId] = useState(null);
 
     useEffect(() => {
         setDraft({
@@ -145,8 +419,25 @@ export default function StudyMode({
         setTrayOpen(!prefersCompactStudyTray());
     }, [reference]);
 
+    useEffect(() => {
+        if (!observations.length) {
+            setActiveObservationId(null);
+            return;
+        }
+
+        if (!observations.some(observation => observation.id === activeObservationId)) {
+            setActiveObservationId(observations[0].id);
+        }
+    }, [activeObservationId, observations]);
+
+    useEffect(() => {
+        if (stage === 'observe' && observations[0]?.id) {
+            setActiveObservationId(observations[0].id);
+        }
+    }, [observations, stage]);
+
     const currentStage = STUDY_STAGES.find(item => item.id === stage) ?? STUDY_STAGES[0];
-    const focusVerse = selection[0]?.verse ?? observations[0]?.verse ?? chapter?.verses?.[0]?.verse ?? 1;
+    const activeObservation = observations.find(item => item.id === activeObservationId) ?? observations[0] ?? null;
     const hasStudyContent = !!(
         observations.length
         || draft.observe.trim()
@@ -189,7 +480,7 @@ export default function StudyMode({
                 </div>
             </header>
 
-            <aside className={`study-tray ${trayOpen ? 'expanded' : 'collapsed'}`}>
+            <aside className={`study-tray ${trayOpen ? 'expanded' : 'collapsed'} stage-${stage}`}>
                 <button
                     className="study-tray-handle"
                     onClick={() => setTrayOpen(open => !open)}
@@ -231,31 +522,30 @@ export default function StudyMode({
 
                     {stage === 'interpret' && (
                         <div className="study-stage-panel">
-                            <ContextCards book={book} chapter={chapter} focusVerse={focusVerse} />
-                            <ObservationList
+                            <InterpretWorkbench
+                                book={book}
+                                chapter={chapter}
                                 observations={observations}
-                                onRemoveObservation={onRemoveObservation}
-                            />
-                            <StudyTextArea
-                                label="Interpretation"
-                                value={draft.interpret}
-                                placeholder="What does this mean in context?"
-                                onChange={(value) => handleFieldChange('interpret', value)}
+                                activeObservation={activeObservation}
+                                activeObservationId={activeObservation?.id}
+                                onSelectObservation={setActiveObservationId}
+                                onUpdateObservation={onUpdateObservation}
+                                interpretValue={draft.interpret}
+                                onInterpretChange={(value) => handleFieldChange('interpret', value)}
                             />
                         </div>
                     )}
 
                     {stage === 'apply' && (
                         <div className="study-stage-panel">
-                            <section className="study-context-card">
-                                <span className="study-context-card-label">Interpretation</span>
-                                <p>{draft.interpret || 'Summarize the meaning before application.'}</p>
-                            </section>
-                            <StudyTextArea
-                                label="Application"
-                                value={draft.apply}
-                                placeholder="What response does this call for?"
-                                onChange={(value) => handleFieldChange('apply', value)}
+                            <ApplicationWorkbench
+                                observations={observations}
+                                activeObservation={activeObservation}
+                                activeObservationId={activeObservation?.id}
+                                onSelectObservation={setActiveObservationId}
+                                onUpdateObservation={onUpdateObservation}
+                                applyValue={draft.apply}
+                                onApplyChange={(value) => handleFieldChange('apply', value)}
                             />
                         </div>
                     )}
