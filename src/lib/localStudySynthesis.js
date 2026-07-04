@@ -62,55 +62,71 @@ async function getLocalEngine(onProgress) {
     return enginePromise;
 }
 
-function buildMessages(synthesisRequest) {
+function buildMessages(synthesisRequest, options = {}) {
     return [
         {
             role: 'system',
             content: [
-                'You are an experimental local Bible study helper.',
-                'Use only the observation and source chunks supplied by the user.',
+                'You are an experimental local Bible study drafting function.',
+                'You are not chatting with the user; output only the requested draft sections.',
+                'Use only the observation and source chunks supplied in this prompt.',
                 'Do not invent facts, definitions, history, cross references, or lexical claims.',
                 'Write a concise, useful interpretation draft, even when it must stay tentative.',
                 'Do not return empty labels. If the grounding is thin, say what is safe to say and what to check next.',
-                'Prefer JSON with fields context, meaning, guardrail, nextQuestion, citations, confidence.',
-                'If JSON is difficult, answer in plain text with short headings.',
+                'Never apologize, never say you lack ability, and never say you need source chunks when source chunks are supplied.',
+                'Prefer plain text with the exact headings Context, Meaning, Guardrail, Next question, Citations, Confidence.',
+                options.retry
+                    ? 'Retry instruction: the previous answer was too cautious. Use the source chunks below and produce the draft sections.'
+                    : '',
             ].join(' '),
         },
         {
             role: 'user',
-            content: formatSynthesisPrompt(synthesisRequest),
+            content: formatSynthesisPrompt(synthesisRequest, options),
         },
     ];
 }
 
-function formatSynthesisPrompt(synthesisRequest) {
+function formatSynthesisPrompt(synthesisRequest, options = {}) {
     const observation = synthesisRequest.observation ?? {};
     const route = synthesisRequest.route ?? {};
     const sources = synthesisRequest.sources ?? [];
     const validCitationIds = sources.map(source => source.id).filter(Boolean);
     const sourceText = sources.map(source => (
-        `[${source.id}] ${source.title}: ${source.text}`
-    )).join('\n');
+        [
+            `SOURCE ID: ${source.id}`,
+            `TITLE: ${source.title}`,
+            `TEXT: ${source.text}`,
+        ].join('\n')
+    )).join('\n\n');
 
     return [
-        'Task: Draft a small grounded interpretation helper for testing.',
+        options.retry
+            ? 'Task: Retry the draft. The supplied source chunks are enough for a tentative helper.'
+            : 'Task: Draft a small grounded interpretation helper for testing.',
         'Give a real response the user can evaluate, not only a warning or an empty schema.',
+        'Do not include apologies, capability disclaimers, or requests for more source chunks.',
         '',
         `Observation: ${observation.label || observation.reference || observation.quote}`,
         `Type: ${observation.type || 'observation'}`,
         `Question or note: ${observation.note || 'none'}`,
         `Selected text: ${observation.quote || 'none'}`,
         `Study route: ${route.label || route.id || 'Study question'}`,
+        `Available source chunk count: ${sources.length}`,
         '',
-        'Source chunks:',
+        'BEGIN SOURCE CHUNKS',
         sourceText || 'No source chunks.',
+        'END SOURCE CHUNKS',
         `Valid citation ids: ${validCitationIds.join(', ') || 'none'}`,
         'If you cite sources, cite only those ids. Do not cite selected words or names.',
         '',
-        'Preferred JSON shape:',
-        '{"context":"...","meaning":"...","guardrail":"...","nextQuestion":"...","citations":["source-id"],"confidence":"low|medium|high"}',
-        '',
-        'If you cannot produce JSON, write plain text with Context, Meaning, Guardrail, and Next question headings.',
+        'Output exactly these headings with 1-2 concise sentences each where helpful:',
+        'Context',
+        'Meaning',
+        'Guardrail',
+        'Next question',
+        'Citations',
+        'Confidence',
     ].join('\n');
 }
 
@@ -243,6 +259,29 @@ function hasDraftContent(draft) {
     return !!(draft.context || draft.meaning || draft.guardrail || draft.nextQuestion);
 }
 
+export function isLocalStudyRefusalText(text) {
+    const cleanText = normalizeTextField(text).toLowerCase();
+    if (!cleanText) return false;
+
+    const refusalPatterns = [
+        /\bi'?m sorry\b/,
+        /\bi am sorry\b/,
+        /\bi don'?t have (the )?ability\b/,
+        /\bi do not have (the )?ability\b/,
+        /\bi would need more information\b/,
+        /\bi need more information\b/,
+        /\bi would need to see\b/,
+        /\bi need to see\b/,
+        /\bneed to see the source chunks\b/,
+        /\bnot generate any further interpretation\b/,
+        /\bcannot generate\b/,
+        /\bcan'?t generate\b/,
+        /\bunable to generate\b/,
+    ];
+
+    return refusalPatterns.some(pattern => pattern.test(cleanText));
+}
+
 function makeUnstructuredDraft(rawText, synthesisRequest, parseError = '') {
     const cleanRawText = normalizeTextField(rawText);
 
@@ -299,6 +338,16 @@ function normalizeDraft(parsed, synthesisRequest, rawText, options = {}) {
     return draft;
 }
 
+async function createLocalDraftCompletion(engine, synthesisRequest, options = {}) {
+    const response = await engine.chat.completions.create({
+        messages: buildMessages(synthesisRequest, options),
+        temperature: options.retry ? 0.35 : 0.2,
+        max_tokens: 520,
+    });
+
+    return response?.choices?.[0]?.message?.content ?? '';
+}
+
 export async function draftLocalStudySynthesis({ synthesisRequest, onProgress }) {
     assertCanUseLocalSlm(synthesisRequest);
     onProgress?.({ text: 'Loading local model...', percent: null });
@@ -306,12 +355,19 @@ export async function draftLocalStudySynthesis({ synthesisRequest, onProgress })
     const engine = await getLocalEngine(onProgress);
     onProgress?.({ text: 'Drafting from retrieved chunks...', percent: null });
 
-    const response = await engine.chat.completions.create({
-        messages: buildMessages(synthesisRequest),
-        temperature: 0.2,
-        max_tokens: 520,
-    });
-    const rawText = response?.choices?.[0]?.message?.content ?? '';
+    let rawText = await createLocalDraftCompletion(engine, synthesisRequest);
+
+    if (isLocalStudyRefusalText(rawText)) {
+        onProgress?.({ text: 'Retrying with clearer source chunks...', percent: null });
+        const retryText = await createLocalDraftCompletion(engine, synthesisRequest, {
+            retry: true,
+        });
+
+        if (normalizeTextField(retryText)) {
+            rawText = retryText;
+        }
+    }
+
     let parsed;
 
     try {
