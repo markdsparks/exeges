@@ -92,7 +92,7 @@ export default function App() {
         document.documentElement.classList.toggle('dark-mode', mode === 'dark');
         document.getElementById('theme-color')?.setAttribute(
             'content',
-            mode === 'dark' ? '#1A1510' : '#FAF6EF'
+            mode === 'dark' ? '#15110D' : '#F5EEDB'
         );
     }, [mode]);
 

@@ -13,14 +13,14 @@
     justify-content: space-between;
     height: calc(56px + var(--safe-area-inset-top));
     padding: var(--safe-area-inset-top) var(--space-lg) 0;
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border-soft);
 }
 
 .sidebar-title {
     font-family: var(--font-family-heading);
     font-size: 1.3rem;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0;
     color: var(--color-text-primary);
 }
 
@@ -37,8 +37,8 @@
 }
 
 .sidebar-close:hover {
-    background-color: var(--color-bg-surface);
-    color: var(--color-text-primary);
+    background-color: color-mix(in srgb, var(--color-accent) 9%, transparent);
+    color: var(--color-accent);
 }
 
 /* Sidebar content */
@@ -51,7 +51,7 @@
 
 .reader-state-section {
     padding: var(--space-md) var(--space-lg) var(--space-sm);
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border-soft);
 }
 
 .continue-reading {
@@ -61,18 +61,20 @@
     padding: var(--space-sm) var(--space-md);
     text-align: left;
     border-radius: var(--radius-md);
-    background-color: var(--color-bg-surface);
+    background-color: var(--color-bg-note);
+    border: 1px solid var(--color-border-soft);
 }
 
 .continue-reading:hover {
     color: var(--color-accent);
+    background-color: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg-note));
 }
 
 .continue-label {
     font-size: 0.68rem;
     line-height: 1.2;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: var(--letter-spacing-label);
     color: var(--color-text-muted);
 }
 
@@ -87,7 +89,7 @@
 .notes-section,
 .studies-section {
     padding-bottom: var(--space-sm);
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border-soft);
 }
 
 .bookmark-list,
@@ -110,7 +112,7 @@
 .bookmark-row:hover,
 .note-row:hover,
 .study-row:hover {
-    background-color: var(--color-bg-surface);
+    background-color: color-mix(in srgb, var(--color-accent) 7%, transparent);
 }
 
 .bookmark-reference,
@@ -151,7 +153,7 @@
     font-family: var(--font-family-ui);
     font-size: 0.7rem;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: var(--letter-spacing-label);
     color: var(--color-text-muted);
     padding: var(--space-sm) var(--space-lg);
     margin-top: var(--space-xs);
@@ -159,7 +161,7 @@
 
 /* Book item (in sidebar) */
 .book-item-wrapper {
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border-soft);
 }
 
 .book-item {
@@ -175,12 +177,13 @@
 }
 
 .book-item:hover {
-    background-color: var(--color-bg-surface);
+    background-color: color-mix(in srgb, var(--color-accent) 7%, transparent);
 }
 
 .book-item.active {
-    background-color: var(--color-accent);
-    color: #fff;
+    color: var(--color-accent);
+    background-color: color-mix(in srgb, var(--color-accent) 10%, transparent);
+    box-shadow: inset 2px 0 0 var(--color-accent);
 }
 
 /* Book chapters grid */
@@ -207,21 +210,21 @@
 }
 
 .chapter-item:hover {
-    background-color: var(--color-bg-surface);
+    background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
     color: var(--color-accent);
 }
 
 /* Translation picker */
 .translation-picker {
     padding: var(--space-sm) var(--space-lg);
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border-soft);
 }
 
 .translation-label {
     font-family: var(--font-family-ui);
     font-size: 0.7rem;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: var(--letter-spacing-label);
     color: var(--color-text-muted);
     margin-bottom: var(--space-xs);
 }
@@ -238,17 +241,19 @@
     font-size: 0.8rem;
     cursor: pointer;
     transition: all var(--transition-fast);
-    background-color: var(--color-bg-surface);
+    border: 1px solid var(--color-border-soft);
+    background-color: transparent;
     color: var(--color-text-secondary);
 }
 
 .translation-option:hover {
-    background-color: var(--color-border);
+    background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
+    color: var(--color-accent);
 }
 
 .translation-option.active {
-    background-color: var(--color-accent);
-    color: #fff;
+    background-color: color-mix(in srgb, var(--color-accent) 14%, transparent);
+    color: var(--color-accent);
     font-weight: 600;
 }
 
@@ -262,14 +267,14 @@
 
 .preferences-section {
     padding: var(--space-sm) var(--space-lg);
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border-soft);
 }
 
 .preference-label {
     font-family: var(--font-family-ui);
     font-size: 0.7rem;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: var(--letter-spacing-label);
     color: var(--color-text-muted);
     margin-bottom: var(--space-xs);
 }
@@ -285,13 +290,14 @@
     border-radius: var(--radius-sm);
     font-size: 0.8rem;
     text-transform: capitalize;
-    background-color: var(--color-bg-surface);
+    border: 1px solid var(--color-border-soft);
+    background-color: transparent;
     color: var(--color-text-secondary);
 }
 
 .theme-option.active {
-    background-color: var(--color-accent);
-    color: #fff;
+    background-color: color-mix(in srgb, var(--color-accent) 14%, transparent);
+    color: var(--color-accent);
     font-weight: 600;
 }
 

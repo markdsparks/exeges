@@ -5,8 +5,8 @@
 	"start_url": "/exeges/",
 	"scope": "/exeges/",
 	"display": "standalone",
-	"background_color": "#FAF6EF",
-	"theme_color": "#FAF6EF",
+	"background_color": "#F5EEDB",
+	"theme_color": "#F5EEDB",
 	"orientation": "portrait-primary",
 	"categories": ["books"],
 	"icons": [

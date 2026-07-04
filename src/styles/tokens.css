@@ -1,5 +1,5 @@
 /* ─── Design Tokens ─── */
-/* Warm, book-like palette — aged paper feel, never sterile */
+/* Reverent reading palette: vellum, ink, incense, and quiet copper. */
 
 :root {
      /* Device safe areas */
@@ -7,21 +7,26 @@
      --safe-area-inset-bottom: 0px;
 
      /* Light Mode */
-     --color-bg-primary: #F6EFD3;          /* warm ivory — main reading area            */
-     --color-bg-surface: #EDE5D8;           /* deeper cream — cards, sidebars            */
-     --color-text-primary: #3A2E1F;         /* dark brown — body text                    */
-     --color-text-secondary: #7A6B58;       /* muted brown — verse numbers / labels      */
-     --color-text-muted:    #948776;          /* lighter brown — inline notes (was #B0A494, ~2.9:1) */
-     --color-accent:         #A05D3C;        /* warm terracotta — links, highlights       */
-     --color-accent-hover: #C87E56;         /* lighter terracotta — hover states         */
-     --color-border:         #E4DBCA;         /* subtle ivory border                      */
-     --color-shadow:     rgba(58, 46, 31, 0.06);
+     --color-bg-primary: #F5EEDB;
+     --color-bg-surface: #EDE3D1;
+     --color-bg-elevated: #FBF6E9;
+     --color-bg-note: #EFE5D2;
+     --color-bg-chrome: color-mix(in srgb, var(--color-bg-primary) 86%, transparent);
+     --color-text-primary: #2F271E;
+     --color-text-secondary: #6E604E;
+     --color-text-muted: #7B6E5F;
+     --color-accent: #8F583D;
+     --color-accent-hover: #A66A47;
+     --color-illumination: #8A6538;
+     --color-border: #DCCFB9;
+     --color-border-soft: color-mix(in srgb, var(--color-border) 58%, transparent);
+     --color-shadow: rgba(47, 39, 30, 0.11);
 
      /* Border radius */
      --radius-sm: 4px;
      --radius-md: 8px;
-     --radius-lg: 12px;
-     --radius-xl: 16px;
+     --radius-lg: 10px;
+     --radius-xl: 14px;
 
      /* Typography */
      --font-family-body: 'Source Serif 4', 'Lora', Georgia, serif;
@@ -43,7 +48,8 @@
      --space-3xl: 4.5rem;
 
      /* Letter spacing */
-     --letter-spacing-body: 0.01em;
+     --letter-spacing-body: 0;
+     --letter-spacing-label: 0;
      --word-spacing-body: 0.03em;
 
      /* Transitions */
@@ -61,20 +67,25 @@
 
 /* Dark Mode — triggered by .dark-mode class on html element */
 :root.dark-mode {
-         --color-bg-primary:       #1A1510;     /* warm charcoal                            */
-         --color-bg-surface:      #261E17;      /* slightly lighter — cards                  */
-         --color-text-primary:    #E8DDD3;      /* warm cream                                */
-         --color-text-secondary:#9B8D7E;
-         --color-text-muted:       #8A7F6E;      /* improved contrast on dark bg (was #6A5F50) */
-         --color-accent:          #C87E56;      /* warm terracotta                           */
-         --color-accent-hover:    #E0A87A;
-         --color-border:          #3D342A;
-         --color-shadow:     rgba(0, 0, 0, 0.2);
+         --color-bg-primary: #15110D;
+         --color-bg-surface: #211A14;
+         --color-bg-elevated: #2A2119;
+         --color-bg-note: #251D16;
+         --color-bg-chrome: color-mix(in srgb, var(--color-bg-primary) 86%, transparent);
+         --color-text-primary: #EFE5DA;
+         --color-text-secondary: #B7A795;
+         --color-text-muted: #9B8E7E;
+         --color-accent: #C1845C;
+         --color-accent-hover: #D7A072;
+         --color-illumination: #D2A861;
+         --color-border: #3A3027;
+         --color-border-soft: color-mix(in srgb, var(--color-border) 56%, transparent);
+         --color-shadow: rgba(0, 0, 0, 0.34);
 
          --radius-sm: 4px;
          --radius-md: 8px;
-         --radius-lg: 12px;
-         --radius-xl: 16px;
+         --radius-lg: 10px;
+         --radius-xl: 14px;
      }
 
 /* Typography Scale */
@@ -87,11 +98,11 @@
 
 /* Responsive */
 @media (min-width: 480px) {
-     :root { --font-size-base: 19px; --space-xl: 2.5rem; --space-2xl: 3.5rem; }
+     :root { --space-xl: 2.5rem; --space-2xl: 3.5rem; }
 }
 @media (min-width: 768px) {
-     :root { --font-size-base: 20px; --space-xl: 3rem; --space-2xl: 4rem; --space-3xl: 5.5rem; }
+     :root { --space-xl: 3rem; --space-2xl: 4rem; --space-3xl: 5.5rem; }
 }
 @media (min-width: 1024px) {
-     :root { --font-size-base: 21px; --space-2xl: 4.5rem; --space-3xl: 7rem; }
+     :root { --space-2xl: 4.5rem; --space-3xl: 7rem; }
 }

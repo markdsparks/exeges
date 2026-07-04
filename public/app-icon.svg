@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-	<rect width="512" height="512" rx="96" fill="#F6EFD3"/>
-	<rect x="48" y="48" width="416" height="416" rx="72" fill="#EDE5D8"/>
-	<path d="M151 126h210c20 0 36 16 36 36v230c0 8-7 14-15 11-18-7-42-11-71-11H151c-20 0-36-16-36-36V162c0-20 16-36 36-36Z" fill="#F9F3DF"/>
-	<path d="M151 126h210c20 0 36 16 36 36v230c0 8-7 14-15 11-18-7-42-11-71-11H151c-20 0-36-16-36-36V162c0-20 16-36 36-36Z" fill="none" stroke="#A05D3C" stroke-width="16"/>
-	<path d="M256 153v202" stroke="#A05D3C" stroke-width="14" stroke-linecap="round"/>
-	<path d="M188 230h136" stroke="#A05D3C" stroke-width="14" stroke-linecap="round"/>
-	<path d="M161 172h70M161 318h56M296 172h54M296 318h48" stroke="#7A6B58" stroke-width="10" stroke-linecap="round" opacity="0.55"/>
+	<rect width="512" height="512" rx="96" fill="#F5EEDB"/>
+	<rect x="48" y="48" width="416" height="416" rx="72" fill="#EDE3D1"/>
+	<path d="M151 126h210c20 0 36 16 36 36v230c0 8-7 14-15 11-18-7-42-11-71-11H151c-20 0-36-16-36-36V162c0-20 16-36 36-36Z" fill="#FBF6E9"/>
+	<path d="M151 126h210c20 0 36 16 36 36v230c0 8-7 14-15 11-18-7-42-11-71-11H151c-20 0-36-16-36-36V162c0-20 16-36 36-36Z" fill="none" stroke="#8F583D" stroke-width="16"/>
+	<path d="M256 153v202" stroke="#8F583D" stroke-width="14" stroke-linecap="round"/>
+	<path d="M188 230h136" stroke="#8F583D" stroke-width="14" stroke-linecap="round"/>
+	<path d="M161 172h70M161 318h56M296 172h54M296 318h48" stroke="#6E604E" stroke-width="10" stroke-linecap="round" opacity="0.55"/>
 </svg>
