@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import { buildGroundedStudyDraft } from '../src/lib/groundedStudyDraft.js';
 import { buildStudySynthesisRequest } from '../src/lib/studySynthesisRequest.js';
 import {
+    isLocalStudySelfTalkText,
     isLocalStudyRefusalText,
     normalizeLocalStudyModelDraft,
 } from '../src/lib/localStudySynthesis.js';
@@ -19,6 +21,17 @@ const route = {
 };
 
 const sourceFindings = [
+    {
+        id: 'method-word-name',
+        title: 'Word and name study guardrail',
+        text: 'A word or name study can sharpen an observation, but lexical range is not the same as meaning in context. Give most weight to how the passage uses the word or name.',
+        references: [],
+        source: {
+            id: 'exeges-method',
+            label: 'Exeges method notes',
+            license: 'App-authored',
+        },
+    },
     {
         id: 'adoni-zedek-lexical-note',
         title: 'Adoni-zedek lexical note',
@@ -49,6 +62,17 @@ const synthesisRequest = buildStudySynthesisRequest({
     sourceFindings,
 });
 
+const groundedDraft = buildGroundedStudyDraft(synthesisRequest);
+
+assert.ok(
+    groundedDraft?.meaning.includes('Adoni-zedek is commonly connected'),
+    'grounded draft should produce a usable meaning from evidence cards without model inference',
+);
+assert.ok(
+    groundedDraft?.guardrail.includes('word or name study'),
+    'grounded draft should preserve a passage-first method guardrail',
+);
+
 function countMatches(text, pattern) {
     return text.match(pattern)?.length ?? 0;
 }
@@ -59,6 +83,34 @@ assert.equal(
     ),
     true,
     'refusal detector should catch overly cautious local output',
+);
+
+const selfTalkRaw = [
+    "Okay, let's tackle this task. The user wants a small grounded interpretation helper based on the provided observation and evidence cards.",
+    'First, I need to structure the response with the exact headings: Context, Meaning, Guardrail, Next question, Citations, Confidence.',
+    'Guardrail: The user might be testing if they can apply the method.',
+].join('\n');
+
+assert.equal(
+    isLocalStudySelfTalkText(selfTalkRaw),
+    true,
+    'self-talk detector should catch local reasoning leakage',
+);
+
+const selfTalkDraft = normalizeLocalStudyModelDraft({
+    rawText: selfTalkRaw,
+    synthesisRequest,
+});
+
+assert.equal(
+    selfTalkDraft.meaning,
+    '',
+    'self-talk output should not be promoted into a usable draft field',
+);
+assert.equal(
+    selfTalkDraft.unstructured,
+    true,
+    'self-talk output should stay quarantined as raw debug text',
 );
 
 const repeatedDraft = normalizeLocalStudyModelDraft({

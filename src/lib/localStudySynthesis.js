@@ -1,15 +1,15 @@
 export const LOCAL_STUDY_SLM_MODELS = [
     {
-        id: 'Qwen3-0.6B-q4f16_1-MLC',
-        label: 'Qwen3 0.6B',
-        profile: 'qwen3',
-        description: 'Recommended',
-    },
-    {
         id: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',
         label: 'Qwen2.5 0.5B',
         profile: 'qwen2',
-        description: 'Fallback',
+        description: 'Experimental',
+    },
+    {
+        id: 'Qwen3-0.6B-q4f16_1-MLC',
+        label: 'Qwen3 0.6B',
+        profile: 'qwen3',
+        description: 'Reasoning test',
     },
     {
         id: 'SmolLM2-360M-Instruct-q4f16_1-MLC',
@@ -369,6 +369,51 @@ export function isLocalStudyRefusalText(text) {
     return refusalPatterns.some(pattern => pattern.test(cleanText));
 }
 
+export function isLocalStudySelfTalkText(text) {
+    const cleanText = normalizeTextField(text).toLowerCase();
+    if (!cleanText) return false;
+
+    const selfTalkPatterns = [
+        /\bokay,?\s+let'?s tackle\b/,
+        /\bthe user wants\b/,
+        /\bthe user (mentioned|asked|might be)\b/,
+        /\bprovided observation\b/,
+        /\bprovided evidence cards\b/,
+        /\bexact headings\b/,
+        /\bfirst,?\s+i need\b/,
+        /\bi need to structure\b/,
+        /\bstarting with context\b/,
+        /\bthe .* section should\b/,
+    ];
+
+    return selfTalkPatterns.some(pattern => pattern.test(cleanText));
+}
+
+function hasDraftSelfTalk(draft) {
+    return [
+        draft.context,
+        draft.meaning,
+        draft.guardrail,
+        draft.nextQuestion,
+    ].some(isLocalStudySelfTalkText);
+}
+
+function makeRawOnlyDraft(cleanRawText, synthesisRequest, parseError, modelId) {
+    return {
+        context: '',
+        meaning: '',
+        guardrail: '',
+        nextQuestion: '',
+        citations: [],
+        confidence: 'low',
+        modelId,
+        rawText: cleanRawText,
+        unstructured: true,
+        parseError,
+        sourceCount: synthesisRequest.sources?.length ?? 0,
+    };
+}
+
 function makeUnstructuredDraft(rawText, synthesisRequest, parseError = '', modelId = LOCAL_STUDY_SLM_MODEL_ID) {
     const cleanRawText = stripLocalModelThinking(rawText);
 
@@ -383,23 +428,15 @@ function makeUnstructuredDraft(rawText, synthesisRequest, parseError = '', model
         modelId,
     });
 
-    if (hasDraftContent(normalizedPlainText)) {
+    if (
+        hasDraftContent(normalizedPlainText)
+        && !isLocalStudySelfTalkText(cleanRawText)
+        && !hasDraftSelfTalk(normalizedPlainText)
+    ) {
         return normalizedPlainText;
     }
 
-    return {
-        context: '',
-        meaning: '',
-        guardrail: '',
-        nextQuestion: '',
-        citations: [],
-        confidence: 'low',
-        modelId,
-        rawText: cleanRawText,
-        unstructured: true,
-        parseError,
-        sourceCount: synthesisRequest.sources?.length ?? 0,
-    };
+    return makeRawOnlyDraft(cleanRawText, synthesisRequest, parseError, modelId);
 }
 
 function normalizeDraft(parsed, synthesisRequest, rawText, options = {}) {
@@ -425,6 +462,15 @@ function normalizeDraft(parsed, synthesisRequest, rawText, options = {}) {
             synthesisRequest,
             'Structured response was empty.',
             options.modelId,
+        );
+    }
+
+    if (hasDraftSelfTalk(draft) && !options.unstructured) {
+        return makeRawOnlyDraft(
+            cleanRawText,
+            synthesisRequest,
+            'Local model returned reasoning text instead of a draft.',
+            options.modelId ?? LOCAL_STUDY_SLM_MODEL_ID,
         );
     }
 

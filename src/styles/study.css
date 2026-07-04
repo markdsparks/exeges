@@ -920,6 +920,30 @@
     color: var(--color-text-secondary);
 }
 
+.study-grounded-draft {
+    border-left: 2px solid color-mix(in srgb, var(--color-accent) 58%, transparent);
+    background-color: color-mix(in srgb, var(--color-accent) 9%, var(--color-bg-elevated));
+}
+
+.study-local-experimental {
+    display: grid;
+    gap: var(--space-xs);
+    padding-top: 0.15rem;
+}
+
+.study-local-experimental summary {
+    width: fit-content;
+    cursor: pointer;
+    font-family: var(--font-family-ui);
+    font-size: 0.76rem;
+    line-height: 1.35;
+    color: var(--color-text-muted);
+}
+
+.study-local-experimental[open] summary {
+    color: var(--color-accent-strong);
+}
+
 .study-local-model-control {
     display: grid;
     gap: 0.25rem;

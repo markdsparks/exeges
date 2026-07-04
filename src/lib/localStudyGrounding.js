@@ -156,6 +156,8 @@ export function getLocalStudyCapabilities() {
             webWorker: false,
             indexedDb: false,
             cacheApi: false,
+            localSlmRecommended: false,
+            localSlmRisk: '',
             mode: 'server-render-safe',
         };
     }
@@ -164,12 +166,24 @@ export function getLocalStudyCapabilities() {
     const webWorker = typeof Worker !== 'undefined';
     const indexedDb = typeof indexedDB !== 'undefined';
     const cacheApi = typeof caches !== 'undefined';
+    const userAgent = navigator.userAgent ?? '';
+    const platform = navigator.platform ?? '';
+    const isTouchMac = platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+    const isIosLike = /iPad|iPhone|iPod/.test(userAgent) || isTouchMac;
+    const localSlmRisk = isIosLike ? 'ios-webgpu-memory-risk' : '';
+    const localSlmRecommended = webGpu && webWorker && indexedDb && !isIosLike;
 
     return {
         webGpu,
         webWorker,
         indexedDb,
         cacheApi,
-        mode: webGpu && webWorker ? 'slm-ready' : 'retrieval-only',
+        localSlmRecommended,
+        localSlmRisk,
+        mode: localSlmRecommended
+            ? 'slm-ready'
+            : webGpu && webWorker
+                ? 'stable-grounding'
+                : 'retrieval-only',
     };
 }

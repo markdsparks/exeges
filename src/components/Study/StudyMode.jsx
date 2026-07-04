@@ -6,6 +6,7 @@ import {
     getSelectionQuote,
 } from '../../lib/studyMethod';
 import { getBackgroundGuideForObservation } from '../../lib/backgroundGuides';
+import { buildGroundedStudyDraft } from '../../lib/groundedStudyDraft';
 import { getLocalStudyCapabilities } from '../../lib/localStudyGrounding';
 import {
     LOCAL_STUDY_SLM_MODEL_ID,
@@ -311,11 +312,12 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
     const capabilities = getLocalStudyCapabilities();
     const sourceFindings = guide.sourceFindings ?? [];
     const sourceCount = sourceFindings.length;
-    const canDraftLocally = capabilities.webGpu && sourceCount > 0;
+    const canDraftLocally = capabilities.localSlmRecommended && sourceCount > 0;
     const isDraftingLocally = localDraftState.status === 'loading';
     const selectedLocalModel = LOCAL_STUDY_SLM_MODELS.find(model => (
         model.id === selectedLocalModelId
     )) ?? LOCAL_STUDY_SLM_MODELS[0];
+    const groundedDraft = buildGroundedStudyDraft(guide.grounding.synthesisRequest);
     const localDraft = localDraftState.draft;
     const localDraftHasFields = !!(
         localDraft?.context ||
@@ -324,7 +326,7 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
         localDraft?.nextQuestion
     );
     const localDraftIsRawOnly = !!(localDraft?.unstructured && !localDraftHasFields);
-    const localDraftMeaning = localDraft?.meaning || (localDraftIsRawOnly ? localDraft.rawText : '');
+    const localDraftMeaning = localDraft?.meaning || '';
 
     const handleUseDraft = (key, value) => {
         onHelperChange(key, mergeHelperText(interpretation?.[key], value));
@@ -406,128 +408,65 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
                         : 'No local source chunks matched yet; keep this as a method prompt until the source pack grows.'}
                 </p>
                 <p>
-                    {capabilities.webGpu
-                        ? 'This device exposes WebGPU, and the helper now prepares a grounded packet for future on-device SLM synthesis.'
-                        : 'This device is running retrieval-only guidance until local SLM support is available.'}
+                    {sourceCount
+                        ? 'The draft below is assembled from the retrieved evidence cards without loading a model.'
+                        : 'This device is running retrieval-only guidance until the source pack has enough matching material.'}
                 </p>
             </div>
 
-            <div className="study-local-synthesis">
-                <div>
-                    <span>Experimental local draft</span>
-                    <p>
-                        {capabilities.webGpu
-                            ? `Uses ${selectedLocalModel.label} on this device and only the retrieved evidence cards.`
-                            : 'This browser needs WebGPU before it can run a local study model.'}
-                    </p>
-                    {capabilities.webGpu && (
-                        <label className="study-local-model-control">
-                            <span>Local model</span>
-                            <select
-                                value={selectedLocalModelId}
-                                onChange={(event) => setSelectedLocalModelId(event.target.value)}
-                                disabled={isDraftingLocally}
-                            >
-                                {LOCAL_STUDY_SLM_MODELS.map(model => (
-                                    <option key={model.id} value={model.id}>
-                                        {model.label} · {model.description}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-                    )}
-                    {localDraftState.progress && (
-                        <p>{localDraftState.progress}</p>
-                    )}
-                    {localDraftState.error && (
-                        <p>{localDraftState.error}</p>
-                    )}
-                </div>
-                <button
-                    type="button"
-                    className="study-selection-action primary"
-                    onClick={handleDraftLocally}
-                    disabled={!canDraftLocally || isDraftingLocally}
-                >
-                    {isDraftingLocally ? 'Drafting...' : 'Draft locally'}
-                </button>
-            </div>
-
-            {localDraft && (
-                <div className="study-background-section study-local-draft">
-                    <span>Local model draft</span>
-                    {localDraftIsRawOnly && (
-                        <>
-                            <p className="study-local-draft-note">
-                                Raw local response.
-                            </p>
-                            <pre className="study-local-raw-response">{localDraft.rawText}</pre>
-                        </>
-                    )}
-                    {!localDraftIsRawOnly && localDraft.unstructured && (
-                        <p className="study-local-draft-note">
-                            Plain-text local response, cleaned for review.
+            {groundedDraft && (
+                <div className="study-background-section study-grounded-draft">
+                    <span>Grounded draft</span>
+                    {groundedDraft.context && (
+                        <p>
+                            <strong>Context:</strong> {groundedDraft.context}
                         </p>
                     )}
-                    {localDraft.context && (
+                    {groundedDraft.meaning && (
                         <p>
-                            <strong>Context:</strong> {localDraft.context}
+                            <strong>Meaning:</strong> {groundedDraft.meaning}
                         </p>
                     )}
-                    {localDraft.meaning && (
+                    {groundedDraft.guardrail && (
                         <p>
-                            <strong>Meaning:</strong> {localDraft.meaning}
+                            <strong>Guardrail:</strong> {groundedDraft.guardrail}
                         </p>
                     )}
-                    {localDraft.guardrail && (
+                    {groundedDraft.nextQuestion && (
                         <p>
-                            <strong>Guardrail:</strong> {localDraft.guardrail}
-                        </p>
-                    )}
-                    {localDraft.nextQuestion && (
-                        <p>
-                            <strong>Next question:</strong> {localDraft.nextQuestion}
+                            <strong>Next question:</strong> {groundedDraft.nextQuestion}
                         </p>
                     )}
                     <p>
-                        <strong>Confidence:</strong> {localDraft.confidence}
-                        {localDraft.unstructured && (
-                            <em> Plain text</em>
-                        )}
-                        {localDraft.citations.length > 0 && (
-                            <em> Uses {localDraft.citations.join(', ')}</em>
+                        <strong>Confidence:</strong> {groundedDraft.confidence}
+                        {groundedDraft.citations.length > 0 && (
+                            <em> Uses {groundedDraft.citations.join(', ')}</em>
                         )}
                     </p>
-                    {!localDraftIsRawOnly && localDraft.unstructured && localDraft.rawText && (
-                        <details className="study-local-raw-details">
-                            <summary>Raw response</summary>
-                            <pre className="study-local-raw-response">{localDraft.rawText}</pre>
-                        </details>
-                    )}
-                    <div className="study-background-actions" aria-label="Use local model draft">
-                        {localDraft.context && (
+                    <div className="study-background-actions" aria-label="Use grounded draft">
+                        {groundedDraft.context && (
                             <button
                                 type="button"
                                 className="study-selection-action primary"
-                                onClick={() => handleUseDraft('context', localDraft.context)}
+                                onClick={() => handleUseDraft('context', groundedDraft.context)}
                             >
                                 Add context
                             </button>
                         )}
-                        {localDraftMeaning && (
+                        {groundedDraft.meaning && (
                             <button
                                 type="button"
                                 className="study-selection-action"
-                                onClick={() => handleUseDraft('meaning', localDraftMeaning)}
+                                onClick={() => handleUseDraft('meaning', groundedDraft.meaning)}
                             >
-                                {localDraft.unstructured ? 'Add raw draft' : 'Add meaning'}
+                                Add meaning
                             </button>
                         )}
-                        {localDraft.guardrail && (
+                        {groundedDraft.guardrail && (
                             <button
                                 type="button"
                                 className="study-selection-action"
-                                onClick={() => handleUseDraft('guardrail', localDraft.guardrail)}
+                                onClick={() => handleUseDraft('guardrail', groundedDraft.guardrail)}
                             >
                                 Add caution
                             </button>
@@ -535,6 +474,135 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
                     </div>
                 </div>
             )}
+
+            <details className="study-local-experimental">
+                <summary>Experimental local model</summary>
+                <div className="study-local-synthesis">
+                    <div>
+                        <span>Local model draft</span>
+                        <p>
+                            {capabilities.localSlmRecommended
+                                ? `Downloads ${selectedLocalModel.label} and runs it on this device.`
+                                : capabilities.localSlmRisk === 'ios-webgpu-memory-risk'
+                                    ? 'On-phone model loading is disabled for now; use the grounded draft above.'
+                                    : 'This browser needs WebGPU before it can run a local study model.'}
+                        </p>
+                        {capabilities.webGpu && (
+                            <label className="study-local-model-control">
+                                <span>Local model</span>
+                                <select
+                                    value={selectedLocalModelId}
+                                    onChange={(event) => setSelectedLocalModelId(event.target.value)}
+                                    disabled={isDraftingLocally || !capabilities.localSlmRecommended}
+                                >
+                                    {LOCAL_STUDY_SLM_MODELS.map(model => (
+                                        <option key={model.id} value={model.id}>
+                                            {model.label} · {model.description}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        )}
+                        {localDraftState.progress && (
+                            <p>{localDraftState.progress}</p>
+                        )}
+                        {localDraftState.error && (
+                            <p>{localDraftState.error}</p>
+                        )}
+                    </div>
+                    <button
+                        type="button"
+                        className="study-selection-action"
+                        onClick={handleDraftLocally}
+                        disabled={!canDraftLocally || isDraftingLocally}
+                    >
+                        {isDraftingLocally ? 'Drafting...' : 'Run experimental model'}
+                    </button>
+                </div>
+
+                {localDraft && (
+                    <div className="study-background-section study-local-draft">
+                        <span>Local model draft</span>
+                        {localDraftIsRawOnly && (
+                            <>
+                                <p className="study-local-draft-note">
+                                    Raw local response.
+                                </p>
+                                <pre className="study-local-raw-response">{localDraft.rawText}</pre>
+                            </>
+                        )}
+                        {!localDraftIsRawOnly && localDraft.unstructured && (
+                            <p className="study-local-draft-note">
+                                Plain-text local response, cleaned for review.
+                            </p>
+                        )}
+                        {localDraft.context && (
+                            <p>
+                                <strong>Context:</strong> {localDraft.context}
+                            </p>
+                        )}
+                        {localDraft.meaning && (
+                            <p>
+                                <strong>Meaning:</strong> {localDraft.meaning}
+                            </p>
+                        )}
+                        {localDraft.guardrail && (
+                            <p>
+                                <strong>Guardrail:</strong> {localDraft.guardrail}
+                            </p>
+                        )}
+                        {localDraft.nextQuestion && (
+                            <p>
+                                <strong>Next question:</strong> {localDraft.nextQuestion}
+                            </p>
+                        )}
+                        <p>
+                            <strong>Confidence:</strong> {localDraft.confidence}
+                            {localDraft.unstructured && (
+                                <em> Plain text</em>
+                            )}
+                            {localDraft.citations.length > 0 && (
+                                <em> Uses {localDraft.citations.join(', ')}</em>
+                            )}
+                        </p>
+                        {!localDraftIsRawOnly && localDraft.unstructured && localDraft.rawText && (
+                            <details className="study-local-raw-details">
+                                <summary>Raw response</summary>
+                                <pre className="study-local-raw-response">{localDraft.rawText}</pre>
+                            </details>
+                        )}
+                        <div className="study-background-actions" aria-label="Use local model draft">
+                            {localDraft.context && (
+                                <button
+                                    type="button"
+                                    className="study-selection-action primary"
+                                    onClick={() => handleUseDraft('context', localDraft.context)}
+                                >
+                                    Add context
+                                </button>
+                            )}
+                            {localDraftMeaning && (
+                                <button
+                                    type="button"
+                                    className="study-selection-action"
+                                    onClick={() => handleUseDraft('meaning', localDraftMeaning)}
+                                >
+                                    Add meaning
+                                </button>
+                            )}
+                            {localDraft.guardrail && (
+                                <button
+                                    type="button"
+                                    className="study-selection-action"
+                                    onClick={() => handleUseDraft('guardrail', localDraft.guardrail)}
+                                >
+                                    Add caution
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </details>
 
             {!guide.exact && (
                 <p className="study-background-note">
