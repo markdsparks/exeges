@@ -161,6 +161,11 @@ export default function StudyMode({
         onSaveFields?.({ [field]: value });
     };
 
+    const handleStageSelect = (nextStage) => {
+        onStageChange?.(nextStage);
+        setTrayOpen(nextStage !== 'observe' || !prefersCompactStudyTray());
+    };
+
     return (
         <>
             <header className="study-toolbar">
@@ -176,7 +181,7 @@ export default function StudyMode({
                         <button
                             key={item.id}
                             className={`study-stage-tab ${stage === item.id ? 'active' : ''}`}
-                            onClick={() => onStageChange?.(item.id)}
+                            onClick={() => handleStageSelect(item.id)}
                             aria-selected={stage === item.id}
                             role="tab"
                         >

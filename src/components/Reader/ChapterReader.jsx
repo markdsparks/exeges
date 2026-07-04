@@ -45,6 +45,7 @@ export default function ChapterReader({
     translation,
     translationState,
     studyMode = false,
+    studyCanSelect = false,
     studySelection = [],
     studyWorkflow,
     studyObservationCounts = {},
@@ -118,7 +119,7 @@ export default function ChapterReader({
     };
 
     const handleStudyPhraseSelection = (event, verse) => {
-        if (!studyMode) return;
+        if (!studyCanSelect) return;
 
         const selectedText = getSelectedText(event.currentTarget);
         if (selectedText) {
@@ -128,6 +129,7 @@ export default function ChapterReader({
 
     const handleStudyWordClick = (event, selection) => {
         event.stopPropagation();
+        if (!studyCanSelect) return;
 
         const selectedText = getSelectedText(event.currentTarget.closest('.verse-group'));
         if (selectedText && selectedText !== selection.text) return;
@@ -196,7 +198,7 @@ export default function ChapterReader({
     const lastSelectionVerse = studySelection[studySelection.length - 1]?.verse;
     const workflowSideA = studyWorkflow?.sideA ?? [];
     const lastWorkflowVerse = workflowSideA[workflowSideA.length - 1]?.verse;
-    const inlinePanelVerse = studyMode ? (lastSelectionVerse ?? lastWorkflowVerse ?? null) : null;
+    const inlinePanelVerse = studyMode && studyCanSelect ? (lastSelectionVerse ?? lastWorkflowVerse ?? null) : null;
 
     return (
            <div className="reader-container" ref={ref}>
@@ -218,10 +220,19 @@ export default function ChapterReader({
                     return (
                        <div
                           key={v.verse}
-                         className={`verse-group ${bookmarked && !studyMode ? 'bookmarked' : ''} ${noted && !studyMode ? 'noted' : ''} ${highlightedVerse === v.verse ? 'linked' : ''} ${studyMode ? 'study-enabled' : ''} ${verseObservations.length ? 'studied' : ''} ${selectedForStudy ? 'study-selected' : ''}`}
+                         className={`verse-group ${bookmarked && !studyMode ? 'bookmarked' : ''} ${noted && !studyMode ? 'noted' : ''} ${highlightedVerse === v.verse ? 'linked' : ''} ${studyMode ? 'study-enabled' : ''} ${studyMode && !studyCanSelect ? 'study-readonly' : ''} ${verseObservations.length ? 'studied' : ''} ${selectedForStudy ? 'study-selected' : ''}`}
                           data-verse={v.verse}
                           id={`verse-${v.verse}`}
-                          onClick={() => studyMode ? onToggleStudySelection?.(getVerseSelection(v)) : handleVerseToggle(v.verse)}
+                          onClick={() => {
+                              if (!studyMode) {
+                                  handleVerseToggle(v.verse);
+                                  return;
+                              }
+
+                              if (studyCanSelect) {
+                                  onToggleStudySelection?.(getVerseSelection(v));
+                              }
+                          }}
                        >
                            <span className="verse-number">{v.verse}</span>{' '}
                             {studyMode ? renderStudyText(v, verseObservations) : (

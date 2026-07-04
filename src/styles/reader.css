@@ -72,9 +72,17 @@
     cursor: text;
 }
 
+.verse-group.study-readonly {
+    cursor: default;
+}
+
 .verse-group.study-enabled:hover,
 .verse-group.study-selected {
     background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+
+.verse-group.study-readonly:hover {
+    background-color: transparent;
 }
 
 .verse-group.studied {
@@ -139,8 +147,16 @@
     transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
+.study-readonly .study-word {
+    cursor: default;
+}
+
 .study-word:hover {
     background-color: color-mix(in srgb, var(--color-accent) 14%, transparent);
+}
+
+.study-readonly .study-word:hover {
+    background-color: transparent;
 }
 
 .study-word.observed {

@@ -398,6 +398,15 @@ export default function App() {
         setStudySelection([]);
     }, []);
 
+    const handleStudyStageChange = useCallback((nextStage) => {
+        setStudyStage(nextStage);
+
+        if (nextStage !== 'observe') {
+            setStudySelection([]);
+            setStudyWorkflow(null);
+        }
+    }, []);
+
     const buildObservation = useCallback((observation) => {
         const selections = sortSelectionItems(observation.selections ?? studySelection);
         const quote = observation.quote ?? getSelectionQuote(selections);
@@ -536,6 +545,7 @@ export default function App() {
                 translation={selectedTranslation}
                 translationState={translationState}
                 studyMode={!!studyTarget}
+                studyCanSelect={!!studyTarget && studyStage === 'observe'}
                 studySelection={studySelection}
                 studyWorkflow={studyWorkflow}
                 studyObservationCounts={studyObservationCounts}
@@ -646,7 +656,7 @@ export default function App() {
                                     selection={studySelection}
                                     workflow={studyWorkflow}
                                     observationCounts={studyObservationCounts}
-                                    onStageChange={setStudyStage}
+                                    onStageChange={handleStudyStageChange}
                                     onAddObservation={handleAddStudyObservation}
                                     onClearSelection={handleClearStudySelection}
                                     onSelectSameWord={handleSelectSameWord}
