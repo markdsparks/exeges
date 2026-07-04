@@ -26,7 +26,7 @@ export default function App() {
     const { book, bibles, selectedBookId, selectedChapterNum, navigateTo } = useBibleData();
     const { isBookmarked, toggleBookmark, getAllBookmarks } = useBookmarks();
     const { getNote, hasNote, saveNote, deleteNote, getAllNotes } = useNotes();
-    const { mode, toggleMode, fontSize, cycleFontSize } = useTheme();
+    const { mode, themePreference, toggleMode, fontSize, cycleFontSize } = useTheme();
     const {
         selectedTranslation,
         selectedTranslationId,
@@ -51,6 +51,10 @@ export default function App() {
     // Sync dark-mode class on documentElement with theme state
     useEffect(() => {
         document.documentElement.classList.toggle('dark-mode', mode === 'dark');
+        document.getElementById('theme-color')?.setAttribute(
+            'content',
+            mode === 'dark' ? '#1A1510' : '#FAF6EF'
+        );
     }, [mode]);
 
     // Apply the persisted reader font size to the document root.
@@ -337,8 +341,12 @@ export default function App() {
                 <span>
                     {book?.name} &middot; Chapter {selectedChapterNum}
                 </span>
-                <button onClick={toggleMode} aria-label="Theme">
-                    {mode === 'dark' ? '☀' : '☾'}
+                <button
+                    onClick={toggleMode}
+                    aria-label={`Theme: ${themePreference}`}
+                    title={`Theme: ${themePreference}`}
+                >
+                    {themePreference === 'auto' ? '◐' : mode === 'dark' ? '☀' : '☾'}
                 </button>
             </header>
 

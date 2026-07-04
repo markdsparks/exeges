@@ -10,16 +10,20 @@ const FONT_SIZE_KEY = 'exes-font-size';
  * Respects system preference by default, allows override.
  */
 export function useTheme() {
-   const [mode, setMode] = useState(() => {
+   const [themePreference, setThemePreference] = useState(() => {
       try {
          const stored = localStorage.getItem(STORAGE_KEY);
          if (stored === 'dark') return 'dark';
          if (stored === 'light') return 'light';
+         if (stored === 'auto') return 'auto';
        } catch {}
 
-        // Detect system preference
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      return 'auto';
      });
+   const [systemMode, setSystemMode] = useState(() => (
+      window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+   ));
+   const mode = themePreference === 'auto' ? systemMode : themePreference;
 
    const [fontSize, setFontSize] = useState(() => {
          try {
@@ -33,25 +37,24 @@ export function useTheme() {
     // Listen for system preference changes
    useEffect(() => {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handler = (e) => {
-         // Only auto-switch if user hasn't explicitly set a mode
-         if (!localStorage.getItem(STORAGE_KEY)) {
-            setMode(e.matches ? 'dark' : 'light');
-          }
-        };
+      const handler = (e) => setSystemMode(e.matches ? 'dark' : 'light');
 
       mediaQuery.addEventListener('change', handler);
       return () => mediaQuery.removeEventListener('change', handler);
      }, []);
 
    const toggleMode = useCallback(() => {
-      const newMode = mode === 'dark' ? 'light' : 'dark';
-      setMode(newMode);
+      const nextPreference = themePreference === 'auto'
+         ? 'light'
+         : themePreference === 'light'
+            ? 'dark'
+            : 'auto';
+      setThemePreference(nextPreference);
          try {
-            localStorage.setItem(STORAGE_KEY, newMode);
+            localStorage.setItem(STORAGE_KEY, nextPreference);
          } catch {}
        },
-       [mode]
+       [themePreference]
      );
 
    const cycleFontSize = useCallback((direction) => {
@@ -75,9 +78,10 @@ export function useTheme() {
 
    return {
       mode,
+      themePreference,
       toggleMode,
       fontSize,
       cycleFontSize,
-       setMode,
+       setMode: setThemePreference,
      };
 }
