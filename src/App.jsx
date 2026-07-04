@@ -15,7 +15,7 @@ import ReadingProgress from './components/Navigation/ReadingProgress';
 import FontSizeControl from './components/Shared/FontSizeControl';
 import SearchPanel from './components/Search/SearchPanel';
 import NoteEditor from './components/Notes/NoteEditor';
-import StudyEditor from './components/Study/StudyEditor';
+import StudyMode from './components/Study/StudyMode';
 
 import { useBibleData } from './hooks/useBibleData';
 import { useBookmarks } from './hooks/useBookmarks';
@@ -29,7 +29,14 @@ export default function App() {
     const { book, bibles, selectedBookId, selectedChapterNum, navigateTo } = useBibleData();
     const { isBookmarked, toggleBookmark, getAllBookmarks } = useBookmarks();
     const { getNote, hasNote, saveNote, deleteNote, getAllNotes } = useNotes();
-    const { getStudy, saveStudy, deleteStudy, getAllStudies } = useStudies();
+    const {
+        getStudy,
+        saveStudy,
+        addObservation,
+        removeObservation,
+        deleteStudy,
+        getAllStudies,
+    } = useStudies();
     const { mode, themePreference, toggleMode, fontSize, cycleFontSize } = useTheme();
     const {
         selectedTranslation,
@@ -47,6 +54,8 @@ export default function App() {
     const [searchQuery, setSearchQuery] = useState('');
     const [noteTarget, setNoteTarget] = useState(null);
     const [studyTarget, setStudyTarget] = useState(null);
+    const [studyStage, setStudyStage] = useState('observe');
+    const [studySelection, setStudySelection] = useState(null);
 
     // Shared ref for the reader container — used by ChapterReader and BackToTop
     const readerRef = useRef(null);
@@ -151,7 +160,11 @@ export default function App() {
             const studyBook = bibles.find(b => b.id === study.bookId);
             if (!studyBook) return null;
 
-            const summary = study.observe || study.interpret || study.apply;
+            const observationCount = study.observations?.length ?? 0;
+            const firstObservation = study.observations?.[0]?.quote;
+            const summary = observationCount > 0
+                ? `${observationCount} observation${observationCount === 1 ? '' : 's'}${firstObservation ? `: ${firstObservation}` : ''}`
+                : study.observe || study.interpret || study.apply;
 
             return {
                 ...study,
@@ -224,6 +237,8 @@ export default function App() {
         setTargetVerse(null);
         navigateTo(bookId, chapterNum);
         setSidebarOpen(false);
+        setStudyTarget(null);
+        setStudySelection(null);
         window.history.pushState(null, '', `#${bookId}/${chapterNum}`);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, [navigateTo]);
@@ -233,6 +248,8 @@ export default function App() {
         navigateTo(bookId, chapterNum);
         setSidebarOpen(false);
         setSearchOpen(false);
+        setStudyTarget(null);
+        setStudySelection(null);
         window.history.pushState(null, '', `#${bookId}/${chapterNum}/v${verseNum}`);
     }, [navigateTo]);
 
@@ -285,12 +302,44 @@ export default function App() {
 
         setHideControls(false);
         setSidebarOpen(false);
+        setStudyStage('observe');
+        setStudySelection(null);
         setStudyTarget({
             bookId,
             bookName: studyBook.name,
             chapter: chapterNum,
         });
     }, [bibles, navigateTo, selectedBookId, selectedChapterNum]);
+
+    const handleAddStudyObservation = useCallback((observation) => {
+        if (!studyTarget) return;
+
+        addObservation(studyTarget.bookId, studyTarget.chapter, observation);
+        setStudySelection(null);
+    }, [addObservation, studyTarget]);
+
+    const handleRemoveStudyObservation = useCallback((observationId) => {
+        if (!studyTarget) return;
+        removeObservation(studyTarget.bookId, studyTarget.chapter, observationId);
+    }, [removeObservation, studyTarget]);
+
+    const handleSaveStudyFields = useCallback((fields) => {
+        if (!studyTarget) return;
+        saveStudy(studyTarget.bookId, studyTarget.chapter, fields);
+    }, [saveStudy, studyTarget]);
+
+    const handleDeleteActiveStudy = useCallback(() => {
+        if (!studyTarget) return;
+
+        deleteStudy(studyTarget.bookId, studyTarget.chapter);
+        setStudySelection(null);
+    }, [deleteStudy, studyTarget]);
+
+    const handleCloseStudy = useCallback(() => {
+        setStudyTarget(null);
+        setStudySelection(null);
+        setHideControls(false);
+    }, []);
 
     // Chapter navigation — prev/next with book-boundary logic
     const chapterNav = useMemo(() => {
@@ -326,8 +375,41 @@ export default function App() {
         return { prevChapter: prevInfo, nextChapter: nextInfo };
     }, [bibles, book, selectedBookId, selectedChapterNum]);
 
+    const activeChapter = readerBook?.chapters?.find(c => c.chapter === selectedChapterNum);
+    const readerContent = book ? (
+        <>
+            <ChapterReader
+                book={readerBook}
+                chapterNum={selectedChapterNum}
+                readerRef={readerRef}
+                targetVerse={targetVerse}
+                isBookmarked={isBookmarked}
+                onToggleBookmark={toggleBookmark}
+                hasNote={hasNote}
+                onOpenNote={handleOpenNote}
+                translation={selectedTranslation}
+                translationState={translationState}
+                studyMode={!!studyTarget}
+                studySelection={studySelection}
+                studyObservations={activeStudy?.observations ?? []}
+                onStudySelection={setStudySelection}
+                onAddStudyObservation={handleAddStudyObservation}
+            />
+            {(chapterNav?.prevChapter || chapterNav?.nextChapter) && (
+                <ChapterNav
+                    prevChapter={chapterNav.prevChapter}
+                    nextChapter={chapterNav.nextChapter}
+                    currentReference={`${book.name} ${selectedChapterNum}`}
+                    onPrev={() => chapterNav.prevChapter && handleNavigate(chapterNav.prevChapter.bookId, chapterNav.prevChapter.chapterNum)}
+                    onNext={() => chapterNav.nextChapter && handleNavigate(chapterNav.nextChapter.bookId, chapterNav.nextChapter.chapterNum)}
+                />
+            )}
+            <BackToTop />
+        </>
+    ) : null;
+
     return (
-        <div className={`app ${hideControls ? 'reading-mode' : ''}`}>
+        <div className={`app ${hideControls ? 'reading-mode' : ''} ${studyTarget ? 'study-mode' : ''}`}>
             {/* Progress Bar */}
             <ReadingProgress />
 
@@ -385,15 +467,6 @@ export default function App() {
                 onClose={() => setNoteTarget(null)}
             />
 
-            <StudyEditor
-                open={!!studyTarget}
-                studyTarget={studyTarget}
-                study={activeStudy}
-                onSave={(fields) => studyTarget && saveStudy(studyTarget.bookId, studyTarget.chapter, fields)}
-                onDelete={() => studyTarget && deleteStudy(studyTarget.bookId, studyTarget.chapter)}
-                onClose={() => setStudyTarget(null)}
-            />
-
             {/* Header */}
             <header className={`app-header ${hideControls ? 'hidden' : ''}`}>
                 <button onClick={() => setSidebarOpen(true)} aria-label="Menu">☰</button>
@@ -406,30 +479,27 @@ export default function App() {
             <main className="app-main">
                 {bookGroups ? (
                     book ? (
-                        <>
-                            <ChapterReader
-                                book={readerBook}
-                                chapterNum={selectedChapterNum}
-                                readerRef={readerRef}
-                                targetVerse={targetVerse}
-                                isBookmarked={isBookmarked}
-                                onToggleBookmark={toggleBookmark}
-                                hasNote={hasNote}
-                                onOpenNote={handleOpenNote}
-                                translation={selectedTranslation}
-                                translationState={translationState}
-                            />
-                            {(chapterNav?.prevChapter || chapterNav?.nextChapter) && (
-                                <ChapterNav
-                                    prevChapter={chapterNav.prevChapter}
-                                    nextChapter={chapterNav.nextChapter}
-                                    currentReference={`${book.name} ${selectedChapterNum}`}
-                                    onPrev={() => chapterNav.prevChapter && handleNavigate(chapterNav.prevChapter.bookId, chapterNav.prevChapter.chapterNum)}
-                                    onNext={() => chapterNav.nextChapter && handleNavigate(chapterNav.nextChapter.bookId, chapterNav.nextChapter.chapterNum)}
+                        studyTarget ? (
+                            <div className="study-layout">
+                                <div className="study-reader-pane">
+                                    {readerContent}
+                                </div>
+                                <StudyMode
+                                    book={readerBook}
+                                    chapter={activeChapter}
+                                    reference={`${studyTarget.bookName} ${studyTarget.chapter}`}
+                                    study={activeStudy}
+                                    stage={studyStage}
+                                    selection={studySelection}
+                                    onStageChange={setStudyStage}
+                                    onAddObservation={handleAddStudyObservation}
+                                    onRemoveObservation={handleRemoveStudyObservation}
+                                    onSaveFields={handleSaveStudyFields}
+                                    onDeleteStudy={handleDeleteActiveStudy}
+                                    onClose={handleCloseStudy}
                                 />
-                            )}
-                            <BackToTop />
-                        </>
+                            </div>
+                        ) : readerContent
                     ) : (
                         <div style={{ textAlign: 'center', marginTop: '15vh' }}>
                             <h2 style={{ fontSize: '1.4em', color: 'var(--color-text-secondary)', fontWeight: 400, marginBottom: '1rem' }}>
@@ -460,7 +530,7 @@ export default function App() {
                     onClick={() => handleOpenStudy()}
                     title="Study"
                     aria-label={`Study ${book?.name ?? 'current book'} ${selectedChapterNum ?? ''}`}
-                >S</button>
+                >Study</button>
                 <FontSizeControl fontSize={fontSize} onCycle={cycleFontSize} />
             </div>
         </div>

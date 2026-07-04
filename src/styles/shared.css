@@ -132,6 +132,23 @@ button {
     align-items: center;
 }
 
+.app.study-mode .app-main {
+    align-items: stretch;
+    margin-top: calc(58px + var(--safe-area-inset-top));
+    padding-bottom: var(--space-3xl);
+}
+
+.app.study-mode .app-header,
+.app.study-mode .controls-bar {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.app.study-mode .controls-bar {
+    transform: translateY(100%);
+}
+
 /* Sidebar overlay */
 .sidebar-overlay {
     position: fixed;
@@ -266,6 +283,11 @@ button {
 
     .app-main {
         padding-bottom: calc(72px + var(--space-2xl) + var(--safe-area-inset-bottom));
+    }
+
+    .app.study-mode .app-main {
+        margin-top: calc(104px + var(--safe-area-inset-top));
+        padding-bottom: calc(180px + var(--safe-area-inset-bottom));
     }
 
     .reader-container {
