@@ -34,3 +34,5 @@ Each source chunk should include:
 The retrieval layer can run fully local. A future on-device SLM should only synthesize from the selected passage context plus retrieved source chunks, and should return structured fields for context, meaning, guardrail, citations, and confidence.
 
 `src/lib/studySynthesisRequest.js` defines the model-facing request shape. The important constraint is that a model receives an observation, a route, and retrieved source chunks. It should not browse freely or answer from uncited memory.
+
+`src/lib/localStudySynthesis.js` is the experimental on-device synthesis adapter. It lazy-loads WebLLM only after the user taps the local draft action, uses a small WebGPU model, and asks for structured output from the grounded packet.

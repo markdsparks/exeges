@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     STUDY_STAGES,
     getBookGenre,
@@ -7,6 +7,7 @@ import {
 } from '../../lib/studyMethod';
 import { getBackgroundGuideForObservation } from '../../lib/backgroundGuides';
 import { getLocalStudyCapabilities } from '../../lib/localStudyGrounding';
+import { LOCAL_STUDY_SLM_MODEL_ID, draftLocalStudySynthesis } from '../../lib/localStudySynthesis';
 import StudySelectionPanel from './StudySelectionPanel';
 
 const EMPTY_DRAFT = {
@@ -282,14 +283,84 @@ function mergeHelperText(current = '', next = '') {
 
 function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
     const guide = getBackgroundGuideForObservation(observation);
+    const localDraftRequestRef = useRef(0);
+    const [localDraftState, setLocalDraftState] = useState({
+        status: 'idle',
+        progress: '',
+        draft: null,
+        error: '',
+    });
+
+    useEffect(() => {
+        localDraftRequestRef.current += 1;
+        setLocalDraftState({
+            status: 'idle',
+            progress: '',
+            draft: null,
+            error: '',
+        });
+    }, [observation?.id]);
+
     if (!guide) return null;
 
     const capabilities = getLocalStudyCapabilities();
     const sourceFindings = guide.sourceFindings ?? [];
     const sourceCount = sourceFindings.length;
+    const canDraftLocally = capabilities.webGpu && sourceCount > 0;
+    const isDraftingLocally = localDraftState.status === 'loading';
 
     const handleUseDraft = (key, value) => {
         onHelperChange(key, mergeHelperText(interpretation?.[key], value));
+    };
+
+    const handleDraftLocally = async () => {
+        if (!canDraftLocally || isDraftingLocally) return;
+
+        const requestId = localDraftRequestRef.current + 1;
+        localDraftRequestRef.current = requestId;
+
+        setLocalDraftState({
+            status: 'loading',
+            progress: 'Preparing local model...',
+            draft: null,
+            error: '',
+        });
+
+        try {
+            const draft = await draftLocalStudySynthesis({
+                synthesisRequest: guide.grounding.synthesisRequest,
+                onProgress: (progress) => {
+                    if (localDraftRequestRef.current !== requestId) return;
+
+                    setLocalDraftState(current => ({
+                        ...current,
+                        progress: progress.percent
+                            ? `${progress.text} ${progress.percent}%`
+                            : progress.text,
+                    }));
+                },
+            });
+
+            if (localDraftRequestRef.current !== requestId) return;
+
+            setLocalDraftState({
+                status: 'ready',
+                progress: '',
+                draft,
+                error: '',
+            });
+        } catch (error) {
+            if (localDraftRequestRef.current !== requestId) return;
+
+            setLocalDraftState({
+                status: 'error',
+                progress: '',
+                draft: null,
+                error: error instanceof Error
+                    ? error.message
+                    : 'Local synthesis was not available on this device.',
+            });
+        }
     };
 
     return (
@@ -322,6 +393,84 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
                         : 'This device is running retrieval-only guidance until local SLM support is available.'}
                 </p>
             </div>
+
+            <div className="study-local-synthesis">
+                <div>
+                    <span>Experimental local draft</span>
+                    <p>
+                        {capabilities.webGpu
+                            ? `Uses ${LOCAL_STUDY_SLM_MODEL_ID} on this device and only the retrieved chunks above.`
+                            : 'This browser needs WebGPU before it can run a local study model.'}
+                    </p>
+                    {localDraftState.progress && (
+                        <p>{localDraftState.progress}</p>
+                    )}
+                    {localDraftState.error && (
+                        <p>{localDraftState.error}</p>
+                    )}
+                </div>
+                <button
+                    type="button"
+                    className="study-selection-action primary"
+                    onClick={handleDraftLocally}
+                    disabled={!canDraftLocally || isDraftingLocally}
+                >
+                    {isDraftingLocally ? 'Drafting...' : 'Draft locally'}
+                </button>
+            </div>
+
+            {localDraftState.draft && (
+                <div className="study-background-section study-local-draft">
+                    <span>Local model draft</span>
+                    <p>
+                        <strong>Context:</strong> {localDraftState.draft.context}
+                    </p>
+                    <p>
+                        <strong>Meaning:</strong> {localDraftState.draft.meaning}
+                    </p>
+                    <p>
+                        <strong>Guardrail:</strong> {localDraftState.draft.guardrail}
+                    </p>
+                    <p>
+                        <strong>Next question:</strong> {localDraftState.draft.nextQuestion}
+                    </p>
+                    <p>
+                        <strong>Confidence:</strong> {localDraftState.draft.confidence}
+                        {localDraftState.draft.citations.length > 0 && (
+                            <em> Uses {localDraftState.draft.citations.join(', ')}</em>
+                        )}
+                    </p>
+                    <div className="study-background-actions" aria-label="Use local model draft">
+                        {localDraftState.draft.context && (
+                            <button
+                                type="button"
+                                className="study-selection-action primary"
+                                onClick={() => handleUseDraft('context', localDraftState.draft.context)}
+                            >
+                                Add context
+                            </button>
+                        )}
+                        {localDraftState.draft.meaning && (
+                            <button
+                                type="button"
+                                className="study-selection-action"
+                                onClick={() => handleUseDraft('meaning', localDraftState.draft.meaning)}
+                            >
+                                Add meaning
+                            </button>
+                        )}
+                        {localDraftState.draft.guardrail && (
+                            <button
+                                type="button"
+                                className="study-selection-action"
+                                onClick={() => handleUseDraft('guardrail', localDraftState.draft.guardrail)}
+                            >
+                                Add caution
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {!guide.exact && (
                 <p className="study-background-note">
