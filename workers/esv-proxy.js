@@ -51,6 +51,32 @@ function parseReference(reference) {
     };
 }
 
+function getSearchQueries(query) {
+    const normalizedQuery = query.replace(/\s+/g, ' ').trim();
+    const queries = [normalizedQuery];
+    const words = normalizedQuery.split(' ');
+
+    for (const [index, word] of words.entries()) {
+        const match = word.match(/^([A-Za-z]{3,})s$/);
+        if (!match || /(ss|us|is)$/i.test(word)) continue;
+
+        const variantWords = [...words];
+        variantWords[index] = `${match[1]}'s`;
+        const variant = variantWords.join(' ');
+        if (!queries.includes(variant)) queries.push(variant);
+    }
+
+    return queries;
+}
+
+async function searchEsv(query, env) {
+    const esvSearchUrl = new URL(ESV_SEARCH_ENDPOINT);
+    esvSearchUrl.searchParams.set('q', query);
+    esvSearchUrl.searchParams.set('page-size', SEARCH_PAGE_SIZE);
+
+    return fetchFromEsv(esvSearchUrl, env);
+}
+
 async function fetchFromEsv(url, env) {
     const response = await fetch(url, {
         headers: {
@@ -94,18 +120,24 @@ export default {
         }
 
         if (query) {
-            const esvSearchUrl = new URL(ESV_SEARCH_ENDPOINT);
-            esvSearchUrl.searchParams.set('q', query);
-            esvSearchUrl.searchParams.set('page-size', SEARCH_PAGE_SIZE);
+            let result = null;
+            let matchedQuery = query;
+            const searchQueries = getSearchQueries(query);
+            for (const [index, searchQuery] of searchQueries.entries()) {
+                result = await searchEsv(searchQuery, env);
+                if (!result.ok) return result.response;
 
-            const result = await fetchFromEsv(esvSearchUrl, env);
-            if (!result.ok) return result.response;
+                const results = Array.isArray(result.payload.results) ? result.payload.results : [];
+                matchedQuery = searchQuery;
+                if (results.length || index === searchQueries.length - 1) break;
+            }
 
             const results = Array.isArray(result.payload.results) ? result.payload.results : [];
 
             return json({
                 translation: 'esv',
                 query,
+                matchedQuery,
                 totalResults: result.payload.total_results ?? results.length,
                 page: result.payload.page ?? 1,
                 totalPages: result.payload.total_pages ?? 1,

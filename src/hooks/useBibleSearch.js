@@ -11,7 +11,9 @@ function normalize(value) {
 }
 
 function normalizeForSearch(value) {
-    return normalize(value).replace(/[^a-z0-9\s]+/g, ' ');
+    return normalize(value)
+        .replace(/['’]/g, '')
+        .replace(/[^a-z0-9\s]+/g, ' ');
 }
 
 function getQueryParts(query) {
