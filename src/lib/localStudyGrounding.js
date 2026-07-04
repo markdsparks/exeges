@@ -156,6 +156,7 @@ export function getLocalStudyCapabilities() {
             webWorker: false,
             indexedDb: false,
             cacheApi: false,
+            localSlmAvailable: false,
             localSlmRecommended: false,
             localSlmRisk: '',
             mode: 'server-render-safe',
@@ -171,18 +172,22 @@ export function getLocalStudyCapabilities() {
     const isTouchMac = platform === 'MacIntel' && navigator.maxTouchPoints > 1;
     const isIosLike = /iPad|iPhone|iPod/.test(userAgent) || isTouchMac;
     const localSlmRisk = isIosLike ? 'ios-webgpu-memory-risk' : '';
-    const localSlmRecommended = webGpu && webWorker && indexedDb && !isIosLike;
+    const localSlmAvailable = webGpu && webWorker && indexedDb;
+    const localSlmRecommended = localSlmAvailable && !isIosLike;
 
     return {
         webGpu,
         webWorker,
         indexedDb,
         cacheApi,
+        localSlmAvailable,
         localSlmRecommended,
         localSlmRisk,
         mode: localSlmRecommended
             ? 'slm-ready'
-            : webGpu && webWorker
+            : localSlmAvailable
+                ? 'slm-experimental-risk'
+                : webGpu && webWorker
                 ? 'stable-grounding'
                 : 'retrieval-only',
     };

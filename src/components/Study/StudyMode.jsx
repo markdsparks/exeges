@@ -312,7 +312,7 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
     const capabilities = getLocalStudyCapabilities();
     const sourceFindings = guide.sourceFindings ?? [];
     const sourceCount = sourceFindings.length;
-    const canDraftLocally = capabilities.localSlmRecommended && sourceCount > 0;
+    const canDraftLocally = capabilities.localSlmAvailable && sourceCount > 0;
     const isDraftingLocally = localDraftState.status === 'loading';
     const selectedLocalModel = LOCAL_STUDY_SLM_MODELS.find(model => (
         model.id === selectedLocalModelId
@@ -484,7 +484,7 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
                             {capabilities.localSlmRecommended
                                 ? `Downloads ${selectedLocalModel.label} and runs it on this device.`
                                 : capabilities.localSlmRisk === 'ios-webgpu-memory-risk'
-                                    ? 'On-phone model loading is disabled for now; use the grounded draft above.'
+                                    ? `Can download ${selectedLocalModel.label} and run it here, but on-phone model loading may crash or reload Safari.`
                                     : 'This browser needs WebGPU before it can run a local study model.'}
                         </p>
                         {capabilities.webGpu && (
@@ -493,7 +493,7 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
                                 <select
                                     value={selectedLocalModelId}
                                     onChange={(event) => setSelectedLocalModelId(event.target.value)}
-                                    disabled={isDraftingLocally || !capabilities.localSlmRecommended}
+                                    disabled={isDraftingLocally || !capabilities.localSlmAvailable}
                                 >
                                     {LOCAL_STUDY_SLM_MODELS.map(model => (
                                         <option key={model.id} value={model.id}>
