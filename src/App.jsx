@@ -301,6 +301,8 @@ export default function App() {
                     activeChapterNum={selectedChapterNum}
                     activeTranslationId={selectedTranslationId}
                     translationStatus={translationStatus}
+                    themePreference={themePreference}
+                    onSelectTheme={toggleMode}
                     bookmarks={bookmarkedVerses}
                     notes={notedVerses}
                     onSelectTranslation={selectTranslation}
@@ -341,13 +343,6 @@ export default function App() {
                 <span>
                     {book?.name} &middot; Chapter {selectedChapterNum}
                 </span>
-                <button
-                    onClick={toggleMode}
-                    aria-label={`Theme: ${themePreference}`}
-                    title={`Theme: ${themePreference}`}
-                >
-                    {themePreference === 'auto' ? '◐' : mode === 'dark' ? '☀' : '☾'}
-                </button>
             </header>
 
             {/* Reader */}

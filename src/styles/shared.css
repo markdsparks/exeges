@@ -83,6 +83,13 @@ button {
     transition: transform var(--transition-slow), opacity var(--transition-base);
 }
 
+.app-header::after {
+    content: '';
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+}
+
 .app-header.hidden {
     transform: translateY(-100%);
     opacity: 0;
@@ -90,8 +97,7 @@ button {
 }
 
 /* Header menu button */
-.app-header > button:first-child,
-.app-header > button:last-child {
+.app-header > button {
     width: 44px;
     height: 44px;
     display: flex;
@@ -101,8 +107,7 @@ button {
     font-size: 1.3em;
 }
 
-.app-header > button:first-child:hover,
-.app-header > button:last-child:hover {
+.app-header > button:hover {
     background-color: var(--color-bg-surface);
 }
 

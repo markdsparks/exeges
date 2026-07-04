@@ -43,12 +43,14 @@ export function useTheme() {
       return () => mediaQuery.removeEventListener('change', handler);
      }, []);
 
-   const toggleMode = useCallback(() => {
-      const nextPreference = themePreference === 'auto'
-         ? 'light'
-         : themePreference === 'light'
-            ? 'dark'
-            : 'auto';
+   const setPreference = useCallback((preference) => {
+      const nextPreference = ['auto', 'light', 'dark'].includes(preference)
+         ? preference
+         : themePreference === 'auto'
+            ? 'light'
+            : themePreference === 'light'
+               ? 'dark'
+               : 'auto';
       setThemePreference(nextPreference);
          try {
             localStorage.setItem(STORAGE_KEY, nextPreference);
@@ -79,7 +81,7 @@ export function useTheme() {
    return {
       mode,
       themePreference,
-      toggleMode,
+      toggleMode: setPreference,
       fontSize,
       cycleFontSize,
        setMode: setThemePreference,

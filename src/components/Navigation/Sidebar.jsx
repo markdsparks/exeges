@@ -102,8 +102,10 @@ export default function Sidebar({
     activeChapterNum,
     activeTranslationId,
     translationStatus,
+    themePreference,
     bookmarks = [],
     notes = [],
+    onSelectTheme,
     onSelectTranslation,
     onNavigate,
     onNavigateToVerse,
@@ -140,6 +142,22 @@ export default function Sidebar({
                     status={translationStatus}
                     onToggle={onSelectTranslation}
                 />
+
+                <section className="preferences-section">
+                    <h3 className="preference-label">Theme</h3>
+                    <div className="theme-options" role="group" aria-label="Theme">
+                        {['auto', 'light', 'dark'].map(theme => (
+                            <button
+                                key={theme}
+                                className={`theme-option ${themePreference === theme ? 'active' : ''}`}
+                                onClick={() => onSelectTheme?.(theme)}
+                                aria-pressed={themePreference === theme}
+                            >
+                                {theme}
+                            </button>
+                        ))}
+                    </div>
+                </section>
 
                 <section className="bookmarks-section">
                     <h3 className="testament-label">Bookmarks</h3>
