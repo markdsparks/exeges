@@ -9,6 +9,18 @@ import {
     sortSelectionItems,
 } from '../../lib/studyMethod';
 
+const NOTE_REQUIRED_TYPES = new Set(['question', 'key-term', 'note']);
+
+function stopPanelEvent(event) {
+    event.stopPropagation();
+}
+
+function getSaveLabel(type) {
+    if (type === 'question') return 'Save question';
+    if (type === 'note') return 'Save note';
+    return 'Save observation';
+}
+
 export function SelectionChips({ items, sideA = [], sideB = [], onAssignSide }) {
     const sideAIds = new Set(sideA.map(item => item.id));
     const sideBIds = new Set(sideB.map(item => item.id));
@@ -21,6 +33,7 @@ export function SelectionChips({ items, sideA = [], sideB = [], onAssignSide }) 
                     {onAssignSide && (
                         <span className="study-chip-actions">
                             <button
+                                type="button"
                                 className={sideAIds.has(item.id) ? 'active' : ''}
                                 onClick={() => onAssignSide(item, 'sideA')}
                                 aria-label={`Assign ${item.text} to contrast side A`}
@@ -28,6 +41,7 @@ export function SelectionChips({ items, sideA = [], sideB = [], onAssignSide }) 
                                 A
                             </button>
                             <button
+                                type="button"
                                 className={sideBIds.has(item.id) ? 'active' : ''}
                                 onClick={() => onAssignSide(item, 'sideB')}
                                 aria-label={`Assign ${item.text} to contrast side B`}
@@ -63,6 +77,9 @@ export default function StudySelectionPanel({
     const uniqueWords = getUniqueSelectionWords(selection);
     const canSelectSame = uniqueWords.length === 1;
     const selectionSignature = selection.map(item => item.id).join('|');
+    const pendingRequiresNote = pendingObservation && NOTE_REQUIRED_TYPES.has(pendingObservation.type);
+    const pendingCanSave = pendingObservation
+        && (!pendingRequiresNote || pendingObservation.note.trim().length > 0);
 
     useEffect(() => {
         setPendingObservation(null);
@@ -151,7 +168,7 @@ export default function StudySelectionPanel({
 
     if (workflow?.type === 'contrast') {
         return (
-            <section className={`study-selection-card ${className}`}>
+            <section className={`study-selection-card ${className}`} onClick={stopPanelEvent}>
                 <span className="study-selection-reference">Contrast</span>
                 <p>
                     First side: <strong>{getSelectionQuote(workflow.sideA)}</strong>
@@ -166,16 +183,16 @@ export default function StudySelectionPanel({
                         </span>
                         <SelectionChips items={selection} />
                         <div className="study-selection-actions">
-                            <button className="study-selection-action primary" onClick={handleSaveWorkflowContrast}>
+                            <button type="button" className="study-selection-action primary" onClick={handleSaveWorkflowContrast}>
                                 Save contrast
                             </button>
-                            <button className="study-selection-action" onClick={onClearSelection}>
+                            <button type="button" className="study-selection-action" onClick={onClearSelection}>
                                 Clear second side
                             </button>
                         </div>
                     </>
                 )}
-                <button className="study-inline-cancel" onClick={onCancelWorkflow}>
+                <button type="button" className="study-inline-cancel" onClick={onCancelWorkflow}>
                     Cancel contrast
                 </button>
             </section>
@@ -191,35 +208,50 @@ export default function StudySelectionPanel({
     }
 
     return (
-        <section className={`study-selection-card ${className}`}>
-            <span className="study-selection-reference">
-                {selection.length} selected &middot; {selectionReference}
-            </span>
-            <p>&ldquo;{selectionQuote}&rdquo;</p>
+        <section className={`study-selection-card ${className}`} onClick={stopPanelEvent}>
+            <div className="study-selection-current">
+                <span className="study-selection-reference">
+                    Selection &middot; {selectionReference}
+                </span>
+                <p>&ldquo;{selectionQuote}&rdquo;</p>
+            </div>
             <SelectionChips items={selection} />
-            <div className="study-selection-tools">
-                {canSelectSame && (
-                    <button onClick={onSelectSameWord}>
-                        Select all &ldquo;{uniqueWords[0].text}&rdquo;
-                    </button>
-                )}
-                <button onClick={onClearSelection}>Deselect all</button>
-            </div>
-            <div className="study-selection-actions">
-                {OBSERVATION_TYPES.map(type => (
-                    <button
-                        key={type.id}
-                        className="study-selection-action"
-                        onClick={() => handleAddObservation(type.id)}
-                        disabled={type.id === 'repeated-word' && uniqueWords.length !== 1}
-                    >
-                        {type.label}
-                        {observationCounts[type.id] ? (
-                            <span>{observationCounts[type.id]}</span>
-                        ) : null}
-                    </button>
-                ))}
-            </div>
+
+            {!pendingObservation && !contrastChoice && (
+                <>
+                    <div className="study-selection-actions" aria-label="Observation types">
+                        <span className="study-selection-reference study-selection-action-label">
+                            Mark as
+                        </span>
+                        {OBSERVATION_TYPES.map(type => (
+                            <button
+                                type="button"
+                                key={type.id}
+                                className="study-selection-action"
+                                onClick={() => handleAddObservation(type.id)}
+                                disabled={type.id === 'repeated-word' && uniqueWords.length !== 1}
+                                title={type.id === 'repeated-word' && uniqueWords.length !== 1
+                                    ? 'Repeated word works on one selected word.'
+                                    : undefined}
+                            >
+                                {type.label}
+                                {observationCounts[type.id] ? (
+                                    <span>{observationCounts[type.id]}</span>
+                                ) : null}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="study-selection-tools" aria-label="Selection options">
+                        {canSelectSame && (
+                            <button type="button" onClick={onSelectSameWord}>
+                                Include every &ldquo;{uniqueWords[0].text}&rdquo; in this chapter
+                            </button>
+                        )}
+                        <button type="button" onClick={onClearSelection}>Clear selection</button>
+                    </div>
+                </>
+            )}
+
             {contrastChoice === 'ambiguous' && (
                 <div className="study-followup-card">
                     <span className="study-selection-reference">Contrast helper</span>
@@ -228,6 +260,7 @@ export default function StudySelectionPanel({
                     </p>
                     <div className="study-selection-actions">
                         <button
+                            type="button"
                             className="study-selection-action primary"
                             onClick={() => {
                                 onStartContrast?.(selection);
@@ -237,6 +270,7 @@ export default function StudySelectionPanel({
                             Use as first side
                         </button>
                         <button
+                            type="button"
                             className="study-selection-action"
                             onClick={() => {
                                 setContrastChoice('split');
@@ -244,6 +278,9 @@ export default function StudySelectionPanel({
                             }}
                         >
                             Split into two sides
+                        </button>
+                        <button type="button" className="study-selection-action" onClick={() => setContrastChoice(null)}>
+                            Back
                         </button>
                     </div>
                 </div>
@@ -262,14 +299,15 @@ export default function StudySelectionPanel({
                     />
                     <div className="study-selection-actions">
                         <button
+                            type="button"
                             className="study-selection-action primary"
                             onClick={handleSaveSplitContrast}
                             disabled={!contrastSplit.sideA.length || !contrastSplit.sideB.length}
                         >
                             Save contrast
                         </button>
-                        <button className="study-selection-action" onClick={() => setContrastChoice(null)}>
-                            Cancel
+                        <button type="button" className="study-selection-action" onClick={() => setContrastChoice(null)}>
+                            Back
                         </button>
                     </div>
                 </div>
@@ -283,6 +321,7 @@ export default function StudySelectionPanel({
                         <span>{OBSERVATION_PROMPTS[pendingObservation.type]}</span>
                         <textarea
                             value={pendingObservation.note}
+                            autoFocus
                             onChange={(event) => setPendingObservation(prev => ({
                                 ...prev,
                                 note: event.target.value,
@@ -291,13 +330,15 @@ export default function StudySelectionPanel({
                     </label>
                     <div className="study-selection-actions">
                         <button
+                            type="button"
                             className="study-selection-action primary"
                             onClick={handleSavePendingObservation}
+                            disabled={!pendingCanSave}
                         >
-                            Save observation
+                            {getSaveLabel(pendingObservation.type)}
                         </button>
-                        <button className="study-selection-action" onClick={() => setPendingObservation(null)}>
-                            Cancel
+                        <button type="button" className="study-selection-action" onClick={() => setPendingObservation(null)}>
+                            Back
                         </button>
                     </div>
                 </div>

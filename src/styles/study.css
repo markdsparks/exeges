@@ -335,6 +335,11 @@
     padding: var(--space-md);
 }
 
+.study-selection-current {
+    display: grid;
+    gap: 0.18rem;
+}
+
 .study-selection-reference,
 .study-context-card-label,
 .study-mode-field-label {
@@ -434,6 +439,10 @@
     gap: var(--space-xs);
 }
 
+.study-selection-action-label {
+    width: 100%;
+}
+
 .study-selection-action {
     display: inline-flex;
     align-items: center;
@@ -485,7 +494,7 @@
     padding: var(--space-sm);
     border: 1px solid color-mix(in srgb, var(--color-accent) 28%, var(--color-border));
     border-radius: var(--radius-md);
-    background-color: var(--color-bg-primary);
+    background-color: color-mix(in srgb, var(--color-bg-primary) 88%, var(--color-accent));
 }
 
 .study-followup-field {
