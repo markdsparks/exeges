@@ -34,6 +34,20 @@ function normalizeStudy(study) {
 function normalizeObservation(observation) {
     const verse = parseInt(observation?.verse, 10);
     const quote = (observation?.quote ?? observation?.text ?? '').trim();
+    const selections = Array.isArray(observation?.selections)
+        ? observation.selections.map(normalizeSelectionItem).filter(Boolean)
+        : [];
+    const relatedSelections = Array.isArray(observation?.relatedSelections)
+        ? observation.relatedSelections.map(normalizeSelectionItem).filter(Boolean)
+        : [];
+    const contrast = observation?.contrast ? {
+        sideA: Array.isArray(observation.contrast.sideA)
+            ? observation.contrast.sideA.map(normalizeSelectionItem).filter(Boolean)
+            : [],
+        sideB: Array.isArray(observation.contrast.sideB)
+            ? observation.contrast.sideB.map(normalizeSelectionItem).filter(Boolean)
+            : [],
+    } : null;
 
     if (Number.isNaN(verse) || !quote) return null;
 
@@ -43,8 +57,31 @@ function normalizeObservation(observation) {
         scope: observation?.scope ?? 'verse',
         verse,
         quote,
+        selections,
+        relatedSelections,
+        contrast,
         note: observation?.note?.trim() ?? '',
         createdAt: observation?.createdAt ?? Date.now(),
+    };
+}
+
+function normalizeSelectionItem(item) {
+    const verse = parseInt(item?.verse, 10);
+    const chapter = parseInt(item?.chapter, 10);
+    const text = (item?.text ?? item?.quote ?? '').trim();
+
+    if (Number.isNaN(verse) || Number.isNaN(chapter) || !text) return null;
+
+    return {
+        id: item?.id ?? `${item?.bookId ?? 'book'}-${chapter}-${verse}-${item?.tokenIndex ?? text}`,
+        bookId: item?.bookId ?? '',
+        bookName: item?.bookName ?? '',
+        chapter,
+        verse,
+        tokenIndex: item?.tokenIndex ?? Number.MAX_SAFE_INTEGER,
+        scope: item?.scope ?? 'word',
+        text,
+        normalized: item?.normalized ?? text.toLowerCase(),
     };
 }
 
@@ -113,6 +150,7 @@ export function useStudies() {
                 item.type === cleanObservation.type
                 && item.verse === cleanObservation.verse
                 && item.quote.toLowerCase() === cleanObservation.quote.toLowerCase()
+                && item.note.toLowerCase() === cleanObservation.note.toLowerCase()
             ));
             const observations = alreadySaved
                 ? previousStudy.observations

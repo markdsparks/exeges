@@ -24,6 +24,30 @@ import { useStudies } from './hooks/useStudies';
 import { useTheme } from './hooks/useTheme';
 import { useBibleSearch, useEsvSearch } from './hooks/useBibleSearch';
 import { useTranslation } from './hooks/useTranslation';
+import {
+    getSelectionQuote,
+    getSelectionReference,
+    getUniqueSelectionWords,
+    makeWordSelection,
+    sortSelectionItems,
+    tokenizeStudyText,
+} from './lib/studyMethod';
+
+function getChapterWordSelections(book, chapter) {
+    if (!book || !chapter) return [];
+
+    return chapter.verses.flatMap(verse => (
+        tokenizeStudyText(verse.text)
+            .filter(token => !token.whitespace && token.normalized)
+            .map(token => makeWordSelection({
+                bookId: book.id,
+                bookName: book.name,
+                chapter: chapter.chapter,
+                verse: verse.verse,
+                token,
+            }))
+    ));
+}
 
 export default function App() {
     const { book, bibles, selectedBookId, selectedChapterNum, navigateTo } = useBibleData();
@@ -55,7 +79,8 @@ export default function App() {
     const [noteTarget, setNoteTarget] = useState(null);
     const [studyTarget, setStudyTarget] = useState(null);
     const [studyStage, setStudyStage] = useState('observe');
-    const [studySelection, setStudySelection] = useState(null);
+    const [studySelection, setStudySelection] = useState([]);
+    const [studyWorkflow, setStudyWorkflow] = useState(null);
 
     // Shared ref for the reader container — used by ChapterReader and BackToTop
     const readerRef = useRef(null);
@@ -187,6 +212,11 @@ export default function App() {
             ? 'Loading ESV...'
             : '';
     const readerBook = selectedTranslation.source === 'remote' ? displayBook : localBook;
+    const activeChapter = readerBook?.chapters?.find(c => c.chapter === selectedChapterNum);
+    const chapterWordSelections = useMemo(
+        () => getChapterWordSelections(readerBook, activeChapter),
+        [readerBook, activeChapter]
+    );
 
     // Load last reading position from localStorage on mount
     useEffect(() => {
@@ -238,7 +268,8 @@ export default function App() {
         navigateTo(bookId, chapterNum);
         setSidebarOpen(false);
         setStudyTarget(null);
-        setStudySelection(null);
+        setStudySelection([]);
+        setStudyWorkflow(null);
         window.history.pushState(null, '', `#${bookId}/${chapterNum}`);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, [navigateTo]);
@@ -249,7 +280,8 @@ export default function App() {
         setSidebarOpen(false);
         setSearchOpen(false);
         setStudyTarget(null);
-        setStudySelection(null);
+        setStudySelection([]);
+        setStudyWorkflow(null);
         window.history.pushState(null, '', `#${bookId}/${chapterNum}/v${verseNum}`);
     }, [navigateTo]);
 
@@ -303,7 +335,8 @@ export default function App() {
         setHideControls(false);
         setSidebarOpen(false);
         setStudyStage('observe');
-        setStudySelection(null);
+        setStudySelection([]);
+        setStudyWorkflow(null);
         setStudyTarget({
             bookId,
             bookName: studyBook.name,
@@ -311,12 +344,117 @@ export default function App() {
         });
     }, [bibles, navigateTo, selectedBookId, selectedChapterNum]);
 
+    const handleToggleStudySelection = useCallback((item) => {
+        if (!item?.id) return;
+
+        setStudySelection(prev => {
+            const alreadySelected = prev.some(selection => selection.id === item.id);
+            if (alreadySelected) {
+                return prev.filter(selection => selection.id !== item.id);
+            }
+
+            return sortSelectionItems([...prev, item]);
+        });
+    }, []);
+
+    const handleAddStudySelections = useCallback((items) => {
+        const cleanItems = (Array.isArray(items) ? items : [items]).filter(item => item?.id);
+        if (!cleanItems.length) return;
+
+        setStudySelection(prev => {
+            const byId = new Map(prev.map(item => [item.id, item]));
+            cleanItems.forEach(item => byId.set(item.id, item));
+            return sortSelectionItems([...byId.values()]);
+        });
+    }, []);
+
+    const handleClearStudySelection = useCallback(() => {
+        setStudySelection([]);
+    }, []);
+
+    const handleSelectSameWord = useCallback(() => {
+        const uniqueWords = getUniqueSelectionWords(studySelection);
+        if (uniqueWords.length !== 1) return;
+
+        const [selectedWord] = uniqueWords;
+        setStudySelection(chapterWordSelections.filter(item => item.normalized === selectedWord.normalized));
+    }, [chapterWordSelections, studySelection]);
+
+    const handleStartContrast = useCallback((sideA) => {
+        const cleanSideA = sortSelectionItems(sideA);
+        if (!cleanSideA.length) return;
+
+        setStudyWorkflow({
+            type: 'contrast',
+            sideA: cleanSideA,
+        });
+        setStudySelection([]);
+    }, []);
+
+    const buildObservation = useCallback((observation) => {
+        const selections = sortSelectionItems(observation.selections ?? studySelection);
+        const quote = observation.quote ?? getSelectionQuote(selections);
+        const reference = getSelectionReference(selections);
+        const verse = selections[0]?.verse ?? selectedChapterNum;
+        const uniqueWords = getUniqueSelectionWords(selections);
+
+        if (!quote) return null;
+
+        if (observation.type === 'repeated-word' && uniqueWords.length === 1) {
+            const [selectedWord] = uniqueWords;
+            const relatedSelections = chapterWordSelections.filter(item => item.normalized === selectedWord.normalized);
+
+            return {
+                ...observation,
+                verse,
+                quote: selectedWord.text,
+                scope: 'word-group',
+                selections,
+                relatedSelections,
+                note: relatedSelections.length > 1
+                    ? `Found ${relatedSelections.length} uses in this chapter.`
+                    : 'Only one use found in this chapter.',
+            };
+        }
+
+        if (observation.type === 'contrast' && observation.contrast) {
+            const sideA = sortSelectionItems(observation.contrast.sideA);
+            const sideB = sortSelectionItems(observation.contrast.sideB);
+            const sideAQuote = getSelectionQuote(sideA);
+            const sideBQuote = getSelectionQuote(sideB);
+
+            if (!sideAQuote || !sideBQuote) return null;
+
+            return {
+                ...observation,
+                verse: sideA[0]?.verse ?? sideB[0]?.verse ?? verse,
+                quote: `${sideAQuote} / ${sideBQuote}`,
+                scope: 'contrast',
+                selections: [...sideA, ...sideB],
+                contrast: { sideA, sideB },
+            };
+        }
+
+        return {
+            ...observation,
+            verse,
+            quote,
+            scope: selections.length > 1 ? 'selection' : selections[0]?.scope ?? 'word',
+            reference,
+            selections,
+        };
+    }, [chapterWordSelections, selectedChapterNum, studySelection]);
+
     const handleAddStudyObservation = useCallback((observation) => {
         if (!studyTarget) return;
 
-        addObservation(studyTarget.bookId, studyTarget.chapter, observation);
-        setStudySelection(null);
-    }, [addObservation, studyTarget]);
+        const cleanObservation = buildObservation(observation);
+        if (!cleanObservation) return;
+
+        addObservation(studyTarget.bookId, studyTarget.chapter, cleanObservation);
+        setStudySelection([]);
+        setStudyWorkflow(null);
+    }, [addObservation, buildObservation, studyTarget]);
 
     const handleRemoveStudyObservation = useCallback((observationId) => {
         if (!studyTarget) return;
@@ -332,12 +470,14 @@ export default function App() {
         if (!studyTarget) return;
 
         deleteStudy(studyTarget.bookId, studyTarget.chapter);
-        setStudySelection(null);
+        setStudySelection([]);
+        setStudyWorkflow(null);
     }, [deleteStudy, studyTarget]);
 
     const handleCloseStudy = useCallback(() => {
         setStudyTarget(null);
-        setStudySelection(null);
+        setStudySelection([]);
+        setStudyWorkflow(null);
         setHideControls(false);
     }, []);
 
@@ -375,7 +515,6 @@ export default function App() {
         return { prevChapter: prevInfo, nextChapter: nextInfo };
     }, [bibles, book, selectedBookId, selectedChapterNum]);
 
-    const activeChapter = readerBook?.chapters?.find(c => c.chapter === selectedChapterNum);
     const readerContent = book ? (
         <>
             <ChapterReader
@@ -392,8 +531,8 @@ export default function App() {
                 studyMode={!!studyTarget}
                 studySelection={studySelection}
                 studyObservations={activeStudy?.observations ?? []}
-                onStudySelection={setStudySelection}
-                onAddStudyObservation={handleAddStudyObservation}
+                onToggleStudySelection={handleToggleStudySelection}
+                onAddStudySelections={handleAddStudySelections}
             />
             {(chapterNav?.prevChapter || chapterNav?.nextChapter) && (
                 <ChapterNav
@@ -491,8 +630,13 @@ export default function App() {
                                     study={activeStudy}
                                     stage={studyStage}
                                     selection={studySelection}
+                                    workflow={studyWorkflow}
                                     onStageChange={setStudyStage}
                                     onAddObservation={handleAddStudyObservation}
+                                    onClearSelection={handleClearStudySelection}
+                                    onSelectSameWord={handleSelectSameWord}
+                                    onStartContrast={handleStartContrast}
+                                    onCancelWorkflow={() => setStudyWorkflow(null)}
                                     onRemoveObservation={handleRemoveStudyObservation}
                                     onSaveFields={handleSaveStudyFields}
                                     onDeleteStudy={handleDeleteActiveStudy}

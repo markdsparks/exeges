@@ -147,6 +147,19 @@
     box-shadow: inset 0 -0.22em 0 color-mix(in srgb, var(--color-accent) 28%, transparent);
 }
 
+.study-word.selected {
+    background-color: color-mix(in srgb, var(--color-accent) 24%, transparent);
+    box-shadow: inset 0 -0.22em 0 color-mix(in srgb, var(--color-accent) 50%, transparent);
+}
+
+.study-verse-selection {
+    margin: var(--space-xs) 0 0 1.15rem;
+    font-family: var(--font-family-ui);
+    font-size: 0.7rem;
+    line-height: 1.35;
+    color: var(--color-text-muted);
+}
+
 .study-verse-markers {
     display: flex;
     flex-wrap: wrap;

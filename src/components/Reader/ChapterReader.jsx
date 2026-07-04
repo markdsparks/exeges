@@ -1,15 +1,13 @@
 import { useRef, useEffect, useState } from 'react';
 import '../../styles/reader.css';
 import BookmarkButton from '../Shared/BookmarkButton';
-import { OBSERVATION_TYPES } from '../../lib/studyMethod';
-
-function getTextTokens(text) {
-    return text.match(/\s+|[^\s]+/g) ?? [];
-}
-
-function cleanToken(token) {
-    return token.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, '').trim();
-}
+import {
+    getObservationTypeLabel,
+    getSelectionQuote,
+    makePhraseSelection,
+    makeWordSelection,
+    tokenizeStudyText,
+} from '../../lib/studyMethod';
 
 function getSelectedText(container) {
     const selection = window.getSelection?.();
@@ -46,10 +44,10 @@ export default function ChapterReader({
     translation,
     translationState,
     studyMode = false,
-    studySelection,
+    studySelection = [],
     studyObservations = [],
-    onStudySelection,
-    onAddStudyObservation,
+    onToggleStudySelection,
+    onAddStudySelections,
 }) {
     const fallbackRef = useRef(null);
     const ref = readerRef ?? fallbackRef;
@@ -99,18 +97,16 @@ export default function ChapterReader({
         onToggleBookmark?.(book.id, chapterNum, verse);
     };
 
-    const selectStudyText = (verse, quote, scope) => {
-        const cleanQuote = quote.replace(/\s+/g, ' ').trim();
-        if (!cleanQuote) return;
-
-        onStudySelection?.({
+    const addStudyPhrase = (verse, quote) => {
+        const selection = makePhraseSelection({
             bookId: book.id,
             bookName: book.name,
             chapter: chapterNum,
             verse,
-            quote: cleanQuote,
-            scope,
+            quote,
         });
+
+        if (selection) onAddStudySelections?.([selection]);
     };
 
     const handleStudyPhraseSelection = (event, verse) => {
@@ -118,26 +114,43 @@ export default function ChapterReader({
 
         const selectedText = getSelectedText(event.currentTarget);
         if (selectedText) {
-            selectStudyText(verse, selectedText, 'phrase');
+            addStudyPhrase(verse, selectedText);
         }
     };
 
-    const handleStudyWordClick = (event, verse, token) => {
+    const handleStudyWordClick = (event, selection) => {
         event.stopPropagation();
 
         const selectedText = getSelectedText(event.currentTarget.closest('.verse-group'));
-        if (selectedText && selectedText !== token) return;
+        if (selectedText && selectedText !== selection.text) return;
 
-        selectStudyText(verse, cleanToken(token) || token, 'word');
+        onToggleStudySelection?.(selection);
     };
 
-    const handleAddObservation = (type) => {
-        if (!studySelection) return;
-        onAddStudyObservation?.({ ...studySelection, type });
+    const getVerseSelection = (v) => {
+        return {
+            id: `${book.id}-${chapterNum}-${v.verse}-verse`,
+            bookId: book.id,
+            bookName: book.name,
+            chapter: chapterNum,
+            verse: v.verse,
+            tokenIndex: Number.MAX_SAFE_INTEGER,
+            scope: 'verse',
+            text: v.text,
+            normalized: '',
+        };
     };
 
     const renderStudyText = (v, verseObservations) => {
-        const observedQuotes = verseObservations.map(item => item.quote.toLowerCase());
+        const selectedIds = new Set(studySelection.map(item => item.id));
+        const observedIds = new Set(
+            verseObservations.flatMap(item => [
+                ...(item.selections ?? []),
+                ...(item.relatedSelections ?? []),
+                ...(item.contrast?.sideA ?? []),
+                ...(item.contrast?.sideB ?? []),
+            ]).map(item => item.id)
+        );
 
         return (
             <span
@@ -145,19 +158,26 @@ export default function ChapterReader({
                 onMouseUp={(event) => handleStudyPhraseSelection(event, v.verse)}
                 onTouchEnd={(event) => handleStudyPhraseSelection(event, v.verse)}
             >
-                {getTextTokens(v.text).map((token, index) => {
-                    if (/^\s+$/.test(token)) return token;
+                {tokenizeStudyText(v.text).map((token, index) => {
+                    if (token.whitespace) return token.text;
 
-                    const clean = cleanToken(token);
-                    const observed = clean && observedQuotes.includes(clean.toLowerCase());
+                    const selection = makeWordSelection({
+                        bookId: book.id,
+                        bookName: book.name,
+                        chapter: chapterNum,
+                        verse: v.verse,
+                        token,
+                    });
+                    const observed = observedIds.has(selection.id);
+                    const selected = selectedIds.has(selection.id);
 
                     return (
                         <span
-                            key={`${v.verse}-${index}-${token}`}
-                            className={`study-word ${observed ? 'observed' : ''}`}
-                            onClick={(event) => handleStudyWordClick(event, v.verse, token)}
+                            key={`${v.verse}-${index}-${token.text}`}
+                            className={`study-word ${observed ? 'observed' : ''} ${selected ? 'selected' : ''}`}
+                            onClick={(event) => handleStudyWordClick(event, selection)}
                         >
-                            {token}
+                            {token.text}
                         </span>
                     );
                 })}
@@ -179,7 +199,8 @@ export default function ChapterReader({
                     const bookmarked = isBookmarked?.(book.id, chapterNum, v.verse) ?? false;
                     const noted = hasNote?.(book.id, chapterNum, v.verse) ?? false;
                     const verseObservations = studyObservations.filter(item => item.verse === v.verse);
-                    const selectedForStudy = studySelection?.verse === v.verse;
+                    const verseSelectedItems = studySelection.filter(item => item.verse === v.verse);
+                    const selectedForStudy = verseSelectedItems.length > 0;
 
                     return (
                        <div
@@ -187,7 +208,7 @@ export default function ChapterReader({
                          className={`verse-group ${bookmarked && !studyMode ? 'bookmarked' : ''} ${noted && !studyMode ? 'noted' : ''} ${highlightedVerse === v.verse ? 'linked' : ''} ${studyMode ? 'study-enabled' : ''} ${verseObservations.length ? 'studied' : ''} ${selectedForStudy ? 'study-selected' : ''}`}
                           data-verse={v.verse}
                           id={`verse-${v.verse}`}
-                          onClick={() => studyMode ? selectStudyText(v.verse, v.text, 'verse') : handleVerseToggle(v.verse)}
+                          onClick={() => studyMode ? onToggleStudySelection?.(getVerseSelection(v)) : handleVerseToggle(v.verse)}
                        >
                            <span className="verse-number">{v.verse}</span>{' '}
                             {studyMode ? renderStudyText(v, verseObservations) : (
@@ -219,28 +240,15 @@ export default function ChapterReader({
                                 <div className="study-verse-markers" aria-label={`${verseObservations.length} study observations`}>
                                     {verseObservations.slice(0, 4).map(item => (
                                         <span key={item.id} className={`study-verse-marker type-${item.type}`}>
-                                            {OBSERVATION_TYPES.find(type => type.id === item.type)?.label ?? 'Observation'}
+                                            {getObservationTypeLabel(item.type)}
                                         </span>
                                     ))}
                                 </div>
                             )}
                             {studyMode && selectedForStudy && (
-                                <div className="study-context-popover" onClick={(event) => event.stopPropagation()}>
-                                    <p className="study-context-selection">
-                                        &ldquo;{studySelection.quote}&rdquo;
-                                    </p>
-                                    <div className="study-context-actions" aria-label="Observation types">
-                                        {OBSERVATION_TYPES.map(type => (
-                                            <button
-                                                key={type.id}
-                                                className="study-context-action"
-                                                onClick={() => handleAddObservation(type.id)}
-                                            >
-                                                {type.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
+                                <p className="study-verse-selection">
+                                    Selected: {getSelectionQuote(verseSelectedItems)}
+                                </p>
                             )}
                         </div>
                     );

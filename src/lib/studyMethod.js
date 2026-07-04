@@ -28,6 +28,18 @@ export const OBSERVATION_TYPES = [
     { id: 'note', label: 'Note' },
 ];
 
+export const OBSERVATION_PROMPTS = {
+    command: 'Who is commanded, and what action is required?',
+    question: 'What question do you have about this?',
+    structure: 'How does this shape the structure of the passage?',
+    'key-term': 'Why does this seem key here?',
+    person: 'What role does this person play here?',
+    place: 'What role does this place play here?',
+    note: 'What do you notice?',
+};
+
+const WORD_PATTERN = /\s+|[^\s]+/g;
+
 const PENTATEUCH = new Set(['genesis', 'exodus', 'leviticus', 'numbers', 'deuteronomy']);
 const HISTORY = new Set([
     'joshua',
@@ -91,6 +103,105 @@ const LETTERS = new Set([
 
 export function getObservationTypeLabel(type) {
     return OBSERVATION_TYPES.find(item => item.id === type)?.label ?? 'Observation';
+}
+
+export function cleanStudyToken(token) {
+    return (token ?? '').replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, '').trim();
+}
+
+export function normalizeStudyToken(token) {
+    return cleanStudyToken(token).replace(/[’']/g, '').toLowerCase();
+}
+
+export function tokenizeStudyText(text) {
+    let wordIndex = 0;
+
+    return (text.match(WORD_PATTERN) ?? []).map((token) => {
+        if (/^\s+$/.test(token)) {
+            return { text: token, whitespace: true };
+        }
+
+        const clean = cleanStudyToken(token);
+        const normalized = normalizeStudyToken(token);
+        const currentIndex = wordIndex;
+        wordIndex += 1;
+
+        return {
+            text: token,
+            clean,
+            normalized,
+            tokenIndex: currentIndex,
+            whitespace: false,
+        };
+    });
+}
+
+export function makeWordSelection({ bookId, bookName, chapter, verse, token }) {
+    return {
+        id: `${bookId}-${chapter}-${verse}-${token.tokenIndex}`,
+        bookId,
+        bookName,
+        chapter,
+        verse,
+        tokenIndex: token.tokenIndex,
+        scope: 'word',
+        text: token.clean || token.text,
+        normalized: token.normalized,
+    };
+}
+
+export function makePhraseSelection({ bookId, bookName, chapter, verse, quote }) {
+    const cleanQuote = (quote ?? '').replace(/\s+/g, ' ').trim();
+    if (!cleanQuote) return null;
+
+    return {
+        id: `${bookId}-${chapter}-${verse}-phrase-${normalizeStudyToken(cleanQuote)}-${cleanQuote.length}`,
+        bookId,
+        bookName,
+        chapter,
+        verse,
+        tokenIndex: Number.MAX_SAFE_INTEGER,
+        scope: 'phrase',
+        text: cleanQuote,
+        normalized: normalizeStudyToken(cleanQuote),
+    };
+}
+
+export function sortSelectionItems(items = []) {
+    return [...items].sort((a, b) => (
+        (a.chapter - b.chapter)
+        || (a.verse - b.verse)
+        || ((a.tokenIndex ?? Number.MAX_SAFE_INTEGER) - (b.tokenIndex ?? Number.MAX_SAFE_INTEGER))
+        || a.text.localeCompare(b.text)
+    ));
+}
+
+export function getSelectionQuote(items = []) {
+    const sorted = sortSelectionItems(items);
+    return sorted.map(item => item.text).join(' ').replace(/\s+/g, ' ').trim();
+}
+
+export function getSelectionReference(items = []) {
+    const sorted = sortSelectionItems(items);
+    if (!sorted.length) return '';
+
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    if (first.verse === last.verse) return `${first.bookName} ${first.chapter}:${first.verse}`;
+    return `${first.bookName} ${first.chapter}:${first.verse}-${last.verse}`;
+}
+
+export function getUniqueSelectionWords(items = []) {
+    const words = new Map();
+
+    for (const item of items) {
+        if (item.scope !== 'word' || !item.normalized) continue;
+        if (!words.has(item.normalized)) {
+            words.set(item.normalized, item);
+        }
+    }
+
+    return [...words.values()];
 }
 
 export function getBookGenre(bookId) {

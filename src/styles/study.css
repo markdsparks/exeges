@@ -354,6 +354,80 @@
     color: var(--color-text-primary);
 }
 
+.study-selection-card strong {
+    color: var(--color-text-primary);
+}
+
+.study-selection-help {
+    font-family: var(--font-family-ui) !important;
+    font-size: 0.78rem !important;
+    color: var(--color-text-muted) !important;
+}
+
+.study-selection-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+}
+
+.study-selection-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    min-height: 28px;
+    padding: 0.22rem 0.45rem;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-family-ui);
+    font-size: 0.74rem;
+    line-height: 1.2;
+    color: var(--color-text-primary);
+    background-color: color-mix(in srgb, var(--color-accent) 13%, var(--color-bg-primary));
+}
+
+.study-chip-actions {
+    display: inline-flex;
+    gap: 2px;
+}
+
+.study-chip-actions button {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    font-size: 0.68rem;
+    color: var(--color-text-secondary);
+    background-color: var(--color-bg-primary);
+}
+
+.study-chip-actions button.active {
+    color: #fff;
+    background-color: var(--color-accent);
+}
+
+.study-selection-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+}
+
+.study-selection-tools button,
+.study-inline-cancel {
+    padding: 0.32rem 0.5rem;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-family-ui);
+    font-size: 0.72rem;
+    line-height: 1.2;
+    color: var(--color-text-muted);
+    background-color: var(--color-bg-primary);
+}
+
+.study-selection-tools button:hover,
+.study-inline-cancel:hover {
+    color: var(--color-text-primary);
+}
+
 .study-selection-actions {
     display: flex;
     flex-wrap: wrap;
@@ -378,6 +452,21 @@
     background-color: var(--color-accent);
 }
 
+.study-selection-action.primary {
+    color: #fff;
+    background-color: var(--color-accent);
+}
+
+.study-selection-action:disabled {
+    cursor: default;
+    opacity: 0.42;
+}
+
+.study-selection-action:disabled:hover {
+    color: var(--color-text-secondary);
+    background-color: var(--color-bg-primary);
+}
+
 .study-selection-action span {
     min-width: 1.1rem;
     height: 1.1rem;
@@ -388,6 +477,46 @@
     font-size: 0.62rem;
     color: var(--color-accent);
     background-color: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.study-followup-card {
+    display: grid;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 28%, var(--color-border));
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg-primary);
+}
+
+.study-followup-field {
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.study-followup-field span {
+    font-family: var(--font-family-ui);
+    font-size: 0.76rem;
+    line-height: 1.35;
+    color: var(--color-text-secondary);
+}
+
+.study-followup-field textarea {
+    width: 100%;
+    min-height: 74px;
+    padding: var(--space-sm);
+    resize: vertical;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    outline: none;
+    font-family: var(--font-family-ui);
+    font-size: 0.86rem;
+    line-height: 1.45;
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-surface);
+}
+
+.study-followup-field textarea:focus {
+    border-color: var(--color-accent);
 }
 
 .study-mode-field {
@@ -461,6 +590,19 @@
     font-size: 0.9rem;
     line-height: 1.45;
     color: var(--color-text-primary);
+}
+
+.study-observation-note,
+.study-observation-detail {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.76rem;
+    line-height: 1.4;
+    color: var(--color-text-secondary);
+}
+
+.study-observation-detail {
+    color: var(--color-text-muted);
 }
 
 .study-observation-remove {
