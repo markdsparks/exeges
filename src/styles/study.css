@@ -942,6 +942,20 @@
     overflow-wrap: anywhere;
 }
 
+.study-local-raw-details {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.study-local-raw-details summary {
+    width: fit-content;
+    cursor: pointer;
+    font-family: var(--font-family-ui);
+    font-size: 0.76rem;
+    line-height: 1.35;
+    color: var(--color-accent-strong);
+}
+
 .study-background-section {
     display: grid;
     gap: 0.3rem;

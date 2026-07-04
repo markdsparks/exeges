@@ -309,7 +309,14 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
     const canDraftLocally = capabilities.webGpu && sourceCount > 0;
     const isDraftingLocally = localDraftState.status === 'loading';
     const localDraft = localDraftState.draft;
-    const localDraftMeaning = localDraft?.meaning || (localDraft?.unstructured ? localDraft.rawText : '');
+    const localDraftHasFields = !!(
+        localDraft?.context ||
+        localDraft?.meaning ||
+        localDraft?.guardrail ||
+        localDraft?.nextQuestion
+    );
+    const localDraftIsRawOnly = !!(localDraft?.unstructured && !localDraftHasFields);
+    const localDraftMeaning = localDraft?.meaning || (localDraftIsRawOnly ? localDraft.rawText : '');
 
     const handleUseDraft = (key, value) => {
         onHelperChange(key, mergeHelperText(interpretation?.[key], value));
@@ -424,30 +431,35 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
             {localDraft && (
                 <div className="study-background-section study-local-draft">
                     <span>Local model draft</span>
-                    {localDraft.unstructured && (
+                    {localDraftIsRawOnly && (
                         <>
                             <p className="study-local-draft-note">
-                                Raw local response shown for testing because the model skipped the requested structure.
+                                Raw local response.
                             </p>
                             <pre className="study-local-raw-response">{localDraft.rawText}</pre>
                         </>
                     )}
-                    {!localDraft.unstructured && localDraft.context && (
+                    {!localDraftIsRawOnly && localDraft.unstructured && (
+                        <p className="study-local-draft-note">
+                            Plain-text local response, cleaned for review.
+                        </p>
+                    )}
+                    {localDraft.context && (
                         <p>
                             <strong>Context:</strong> {localDraft.context}
                         </p>
                     )}
-                    {!localDraft.unstructured && localDraft.meaning && (
+                    {localDraft.meaning && (
                         <p>
                             <strong>Meaning:</strong> {localDraft.meaning}
                         </p>
                     )}
-                    {!localDraft.unstructured && localDraft.guardrail && (
+                    {localDraft.guardrail && (
                         <p>
                             <strong>Guardrail:</strong> {localDraft.guardrail}
                         </p>
                     )}
-                    {!localDraft.unstructured && localDraft.nextQuestion && (
+                    {localDraft.nextQuestion && (
                         <p>
                             <strong>Next question:</strong> {localDraft.nextQuestion}
                         </p>
@@ -455,12 +467,18 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
                     <p>
                         <strong>Confidence:</strong> {localDraft.confidence}
                         {localDraft.unstructured && (
-                            <em> Raw response</em>
+                            <em> Plain text</em>
                         )}
                         {localDraft.citations.length > 0 && (
                             <em> Uses {localDraft.citations.join(', ')}</em>
                         )}
                     </p>
+                    {!localDraftIsRawOnly && localDraft.unstructured && localDraft.rawText && (
+                        <details className="study-local-raw-details">
+                            <summary>Raw response</summary>
+                            <pre className="study-local-raw-response">{localDraft.rawText}</pre>
+                        </details>
+                    )}
                     <div className="study-background-actions" aria-label="Use local model draft">
                         {localDraft.context && (
                             <button

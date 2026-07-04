@@ -87,6 +87,7 @@ function formatSynthesisPrompt(synthesisRequest) {
     const observation = synthesisRequest.observation ?? {};
     const route = synthesisRequest.route ?? {};
     const sources = synthesisRequest.sources ?? [];
+    const validCitationIds = sources.map(source => source.id).filter(Boolean);
     const sourceText = sources.map(source => (
         `[${source.id}] ${source.title}: ${source.text}`
     )).join('\n');
@@ -103,6 +104,8 @@ function formatSynthesisPrompt(synthesisRequest) {
         '',
         'Source chunks:',
         sourceText || 'No source chunks.',
+        `Valid citation ids: ${validCitationIds.join(', ') || 'none'}`,
+        'If you cite sources, cite only those ids. Do not cite selected words or names.',
         '',
         'Preferred JSON shape:',
         '{"context":"...","meaning":"...","guardrail":"...","nextQuestion":"...","citations":["source-id"],"confidence":"low|medium|high"}',
@@ -131,16 +134,113 @@ function normalizeTextField(value) {
 }
 
 function normalizeConfidence(value) {
-    return ['low', 'medium', 'high'].includes(value) ? value : 'low';
+    const clean = normalizeTextField(value).toLowerCase().replace(/[^\w]/g, '');
+
+    return ['low', 'medium', 'high'].includes(clean) ? clean : 'low';
 }
 
 function normalizeCitations(value, sourceIds) {
-    if (!Array.isArray(value)) return [];
+    const items = Array.isArray(value)
+        ? value
+        : normalizeTextField(value).split(/[\n,]+/);
+    const seen = new Set();
 
-    return value
+    return items
         .filter(item => typeof item === 'string')
         .map(item => item.trim())
-        .filter(item => sourceIds.has(item));
+        .filter(item => sourceIds.has(item))
+        .filter((item) => {
+            if (seen.has(item)) return false;
+            seen.add(item);
+            return true;
+        });
+}
+
+function getPlainTextHeading(line) {
+    const cleanLine = line
+        .trim()
+        .replace(/^#{1,6}\s*/, '')
+        .replace(/^\*\*/, '')
+        .replace(/\*\*$/, '')
+        .replace(/^[*-]\s+/, '')
+        .trim();
+    const colonIndex = cleanLine.indexOf(':');
+    const headingText = colonIndex >= 0 ? cleanLine.slice(0, colonIndex) : cleanLine;
+    const content = colonIndex >= 0 ? cleanLine.slice(colonIndex + 1).trim() : '';
+    const key = headingText.toLowerCase().replace(/\s+/g, ' ').replace(/[?.!]+$/g, '');
+    const fieldByHeading = {
+        context: 'context',
+        meaning: 'meaning',
+        interpretation: 'meaning',
+        guardrail: 'guardrail',
+        caution: 'guardrail',
+        'next question': 'nextQuestion',
+        'next study question': 'nextQuestion',
+        confidence: 'confidence',
+        citations: 'citations',
+        citation: 'citations',
+    };
+
+    if (!fieldByHeading[key]) return null;
+
+    return {
+        field: fieldByHeading[key],
+        content,
+    };
+}
+
+function appendPlainTextSection(sections, field, line) {
+    const cleanLine = line
+        .trim()
+        .replace(/^[*-]\s+/, '')
+        .trim();
+
+    if (cleanLine) {
+        sections[field].push(cleanLine);
+    }
+}
+
+export function parseLocalStudyPlainTextDraft(text) {
+    const sections = {
+        context: [],
+        meaning: [],
+        guardrail: [],
+        nextQuestion: [],
+        citations: [],
+        confidence: [],
+    };
+    let currentField = '';
+
+    for (const rawLine of normalizeTextField(text).split(/\n+/)) {
+        const line = rawLine.trim();
+        if (!line) continue;
+
+        const heading = getPlainTextHeading(line);
+        if (heading) {
+            currentField = heading.field;
+            if (heading.content) {
+                appendPlainTextSection(sections, currentField, heading.content);
+            }
+            continue;
+        }
+
+        if (currentField && sections[currentField]) {
+            appendPlainTextSection(sections, currentField, line);
+        }
+    }
+
+    return {
+        context: sections.context.join('\n'),
+        meaning: sections.meaning.join('\n'),
+        guardrail: sections.guardrail.join('\n'),
+        nextQuestion: sections.nextQuestion.join('\n'),
+        citations: sections.citations,
+        confidence: sections.confidence[0] ?? '',
+    };
+}
+
+function hasDraftContent(draft) {
+    return !!(draft.context || draft.meaning || draft.guardrail || draft.nextQuestion);
 }
 
 function makeUnstructuredDraft(rawText, synthesisRequest, parseError = '') {
@@ -148,6 +248,16 @@ function makeUnstructuredDraft(rawText, synthesisRequest, parseError = '') {
 
     if (!cleanRawText) {
         throw new Error('The local model did not return text. Try again, or keep using the retrieved source chunks.');
+    }
+
+    const parsedPlainText = parseLocalStudyPlainTextDraft(cleanRawText);
+    const normalizedPlainText = normalizeDraft(parsedPlainText, synthesisRequest, cleanRawText, {
+        unstructured: true,
+        parseError,
+    });
+
+    if (hasDraftContent(normalizedPlainText)) {
+        return normalizedPlainText;
     }
 
     return {
@@ -165,7 +275,7 @@ function makeUnstructuredDraft(rawText, synthesisRequest, parseError = '') {
     };
 }
 
-function normalizeDraft(parsed, synthesisRequest, rawText) {
+function normalizeDraft(parsed, synthesisRequest, rawText, options = {}) {
     const sourceIds = new Set((synthesisRequest.sources ?? []).map(source => source.id));
     const cleanRawText = normalizeTextField(rawText);
     const draft = {
@@ -177,10 +287,12 @@ function normalizeDraft(parsed, synthesisRequest, rawText) {
         confidence: normalizeConfidence(parsed.confidence),
         modelId: LOCAL_STUDY_SLM_MODEL_ID,
         rawText: cleanRawText,
-        unstructured: false,
+        unstructured: !!options.unstructured,
+        parseError: options.parseError ?? '',
+        sourceCount: synthesisRequest.sources?.length ?? 0,
     };
 
-    if (!draft.context && !draft.meaning && !draft.guardrail && !draft.nextQuestion) {
+    if (!hasDraftContent(draft) && !options.unstructured) {
         return makeUnstructuredDraft(cleanRawText, synthesisRequest, 'Structured response was empty.');
     }
 
