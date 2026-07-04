@@ -318,7 +318,7 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
                 </p>
                 <p>
                     {capabilities.webGpu
-                        ? 'This device exposes WebGPU, so it is a candidate for future on-device SLM synthesis.'
+                        ? 'This device exposes WebGPU, and the helper now prepares a grounded packet for future on-device SLM synthesis.'
                         : 'This device is running retrieval-only guidance until local SLM support is available.'}
                 </p>
             </div>

@@ -1,5 +1,6 @@
-import { STUDY_SOURCE_CHUNKS, STUDY_SOURCES } from '../data/studySourcePacks';
+import { STUDY_SOURCE_CHUNKS, STUDY_SOURCE_PACK_VERSION, STUDY_SOURCES } from '../data/studySourcePacks';
 import { cleanStudyToken } from './studyMethod';
+import { buildStudySynthesisRequest } from './studySynthesisRequest';
 
 const STOPWORDS = new Set([
     'a',
@@ -79,6 +80,7 @@ function hydrateChunk(chunk, score) {
         text: chunk.text,
         references: chunk.references ?? [],
         score,
+        generated: !!chunk.generated,
         source: source ? {
             id: source.id,
             label: source.label,
@@ -131,12 +133,15 @@ export function retrieveStudySourceChunks({ observation, route, limit = 4 }) {
 
 export function getLocalStudyGrounding({ observation, route }) {
     const sourceFindings = retrieveStudySourceChunks({ observation, route });
+    const synthesisRequest = buildStudySynthesisRequest({ observation, route, sourceFindings });
 
     return {
         provider: 'local-source-pack',
+        version: STUDY_SOURCE_PACK_VERSION,
         status: sourceFindings.length ? 'ready' : 'needs-sources',
         confidence: sourceFindings.length >= 3 ? 'medium' : 'low',
         sourceFindings,
+        synthesisRequest,
         citations: sourceFindings
             .map(finding => finding.source)
             .filter(Boolean)

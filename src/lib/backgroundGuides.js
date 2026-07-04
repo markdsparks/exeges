@@ -1,30 +1,6 @@
 import { cleanStudyToken } from './studyMethod';
 import { getLocalStudyGrounding } from './localStudyGrounding';
 
-const BACKGROUND_SOURCES = {
-    bibleHubHebrew139: {
-        label: "BibleHub Strong's Hebrew 139",
-        href: 'https://biblehub.com/hebrew/139.htm',
-    },
-    bibleHubBdbHebrew139: {
-        label: 'BDB summary via BibleHub',
-        href: 'https://biblehub.com/hebrew/139.htm',
-    },
-};
-
-function attachSource(note) {
-    if (!note.sourceId) return note;
-
-    const source = BACKGROUND_SOURCES[note.sourceId];
-    if (!source) return note;
-
-    return {
-        ...note,
-        sourceLabel: source.label,
-        href: source.href,
-    };
-}
-
 const EXACT_BACKGROUND_GUIDES = [
     {
         id: 'adoni-zedek',
@@ -34,16 +10,16 @@ const EXACT_BACKGROUND_GUIDES = [
         matches: ['adoni-zedek', 'adonizedek', 'adoni zedek'],
         reason: 'Matched a curated lexical card for Adoni-zedek.',
         sourceNotes: [
-            attachSource({
+            {
                 label: 'Lexical note',
                 text: 'The name is commonly connected with terms for lord and righteousness or justice.',
-                sourceId: 'bibleHubHebrew139',
-            }),
-            attachSource({
+                sourceLabel: 'Local source pack',
+            },
+            {
                 label: 'Caution',
-                text: 'Lexicons give a few possible readings, including Lord of righteousness, my lord is righteous, or a divine-name reading.',
-                sourceId: 'bibleHubBdbHebrew139',
-            }),
+                text: 'Treat the name as a modest clue. Joshua 10 gives more interpretive weight to what Adoni-zedek hears and does.',
+                sourceLabel: 'Passage-first guardrail',
+            },
         ],
         contextNotes: [
             'In Joshua 10, Adoni-zedek hears about Joshua, Ai, and Gibeon, then gathers a coalition against Gibeon.',

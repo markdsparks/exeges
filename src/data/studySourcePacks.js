@@ -1,3 +1,5 @@
+import { GENERATED_STUDY_SOURCE_CHUNKS, GENERATED_STUDY_SOURCE_VERSION } from './generatedStudySourceChunks';
+
 export const STUDY_SOURCES = {
     exegesMethod: {
         id: 'exeges-method',
@@ -17,6 +19,12 @@ export const STUDY_SOURCES = {
         license: 'Public domain',
         href: 'https://en.wikipedia.org/wiki/Easton%27s_Bible_Dictionary',
     },
+    smithDictionary: {
+        id: 'smith-dictionary',
+        label: "Smith's Bible Dictionary",
+        license: 'Public domain',
+        href: 'https://en.wikipedia.org/wiki/Smith%27s_Bible_Dictionary',
+    },
     openBibleCrossReferences: {
         id: 'openbible-cross-references',
         label: 'OpenBible.info Cross References',
@@ -31,7 +39,7 @@ export const STUDY_SOURCES = {
     },
 };
 
-export const STUDY_SOURCE_CHUNKS = [
+const HAND_AUTHORED_STUDY_SOURCE_CHUNKS = [
     {
         id: 'method-passage-first',
         sourceId: 'exegesMethod',
@@ -113,4 +121,11 @@ export const STUDY_SOURCE_CHUNKS = [
         references: [],
         text: 'Theological claims should rise from the passage. Name what this text specifically reveals before turning it into a broad doctrine.',
     },
+];
+
+export const STUDY_SOURCE_PACK_VERSION = GENERATED_STUDY_SOURCE_VERSION;
+
+export const STUDY_SOURCE_CHUNKS = [
+    ...HAND_AUTHORED_STUDY_SOURCE_CHUNKS,
+    ...GENERATED_STUDY_SOURCE_CHUNKS,
 ];

@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:study-sources": "node scripts/build-study-source-pack.mjs",
     "lint": "oxlint",
+    "prebuild": "npm run build:study-sources",
     "preview": "vite preview"
   },
   "dependencies": {

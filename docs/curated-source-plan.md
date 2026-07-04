@@ -17,6 +17,9 @@ This is the source plan for Exeges study grounding. The core rule: the model is 
 
 ## Engineering Shape
 
+Raw curated source records live in `sources/study/curated-records.json`.
+Run `npm run build:study-sources` to regenerate `src/data/generatedStudySourceChunks.js`.
+
 Each source chunk should include:
 
 - `id`
@@ -29,3 +32,5 @@ Each source chunk should include:
 - source metadata: label, URL, license, attribution needs
 
 The retrieval layer can run fully local. A future on-device SLM should only synthesize from the selected passage context plus retrieved source chunks, and should return structured fields for context, meaning, guardrail, citations, and confidence.
+
+`src/lib/studySynthesisRequest.js` defines the model-facing request shape. The important constraint is that a model receives an observation, a route, and retrieved source chunks. It should not browse freely or answer from uncited memory.
