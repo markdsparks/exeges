@@ -308,6 +308,8 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
     const sourceCount = sourceFindings.length;
     const canDraftLocally = capabilities.webGpu && sourceCount > 0;
     const isDraftingLocally = localDraftState.status === 'loading';
+    const localDraft = localDraftState.draft;
+    const localDraftMeaning = localDraft?.meaning || (localDraft?.unstructured ? localDraft.rawText : '');
 
     const handleUseDraft = (key, value) => {
         onHelperChange(key, mergeHelperText(interpretation?.[key], value));
@@ -419,59 +421,70 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
                 </button>
             </div>
 
-            {localDraftState.draft && (
+            {localDraft && (
                 <div className="study-background-section study-local-draft">
                     <span>Local model draft</span>
-                    {localDraftState.draft.context && (
+                    {localDraft.unstructured && (
+                        <>
+                            <p className="study-local-draft-note">
+                                Raw local response shown for testing because the model skipped the requested structure.
+                            </p>
+                            <pre className="study-local-raw-response">{localDraft.rawText}</pre>
+                        </>
+                    )}
+                    {!localDraft.unstructured && localDraft.context && (
                         <p>
-                            <strong>Context:</strong> {localDraftState.draft.context}
+                            <strong>Context:</strong> {localDraft.context}
                         </p>
                     )}
-                    {localDraftState.draft.meaning && (
+                    {!localDraft.unstructured && localDraft.meaning && (
                         <p>
-                            <strong>Meaning:</strong> {localDraftState.draft.meaning}
+                            <strong>Meaning:</strong> {localDraft.meaning}
                         </p>
                     )}
-                    {localDraftState.draft.guardrail && (
+                    {!localDraft.unstructured && localDraft.guardrail && (
                         <p>
-                            <strong>Guardrail:</strong> {localDraftState.draft.guardrail}
+                            <strong>Guardrail:</strong> {localDraft.guardrail}
                         </p>
                     )}
-                    {localDraftState.draft.nextQuestion && (
+                    {!localDraft.unstructured && localDraft.nextQuestion && (
                         <p>
-                            <strong>Next question:</strong> {localDraftState.draft.nextQuestion}
+                            <strong>Next question:</strong> {localDraft.nextQuestion}
                         </p>
                     )}
                     <p>
-                        <strong>Confidence:</strong> {localDraftState.draft.confidence}
-                        {localDraftState.draft.citations.length > 0 && (
-                            <em> Uses {localDraftState.draft.citations.join(', ')}</em>
+                        <strong>Confidence:</strong> {localDraft.confidence}
+                        {localDraft.unstructured && (
+                            <em> Raw response</em>
+                        )}
+                        {localDraft.citations.length > 0 && (
+                            <em> Uses {localDraft.citations.join(', ')}</em>
                         )}
                     </p>
                     <div className="study-background-actions" aria-label="Use local model draft">
-                        {localDraftState.draft.context && (
+                        {localDraft.context && (
                             <button
                                 type="button"
                                 className="study-selection-action primary"
-                                onClick={() => handleUseDraft('context', localDraftState.draft.context)}
+                                onClick={() => handleUseDraft('context', localDraft.context)}
                             >
                                 Add context
                             </button>
                         )}
-                        {localDraftState.draft.meaning && (
+                        {localDraftMeaning && (
                             <button
                                 type="button"
                                 className="study-selection-action"
-                                onClick={() => handleUseDraft('meaning', localDraftState.draft.meaning)}
+                                onClick={() => handleUseDraft('meaning', localDraftMeaning)}
                             >
-                                Add meaning
+                                {localDraft.unstructured ? 'Add raw draft' : 'Add meaning'}
                             </button>
                         )}
-                        {localDraftState.draft.guardrail && (
+                        {localDraft.guardrail && (
                             <button
                                 type="button"
                                 className="study-selection-action"
-                                onClick={() => handleUseDraft('guardrail', localDraftState.draft.guardrail)}
+                                onClick={() => handleUseDraft('guardrail', localDraft.guardrail)}
                             >
                                 Add caution
                             </button>

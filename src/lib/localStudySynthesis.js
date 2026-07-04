@@ -67,23 +67,48 @@ function buildMessages(synthesisRequest) {
         {
             role: 'system',
             content: [
-                'You are an experimental local Bible study synthesis helper.',
-                'You are not the authority. The passage and supplied source chunks are the authority.',
-                'Use only the JSON packet supplied by the user.',
-                'Do not add facts, definitions, historical claims, cross references, or lexical claims unless they appear in the packet.',
-                'Return only valid JSON with these string fields: context, meaning, guardrail, nextQuestion, confidence.',
-                'Return citations as an array of source chunk ids used.',
-                'Confidence must be low, medium, or high.',
+                'You are an experimental local Bible study helper.',
+                'Use only the observation and source chunks supplied by the user.',
+                'Do not invent facts, definitions, history, cross references, or lexical claims.',
+                'Write a concise, useful interpretation draft, even when it must stay tentative.',
+                'Do not return empty labels. If the grounding is thin, say what is safe to say and what to check next.',
+                'Prefer JSON with fields context, meaning, guardrail, nextQuestion, citations, confidence.',
+                'If JSON is difficult, answer in plain text with short headings.',
             ].join(' '),
         },
         {
             role: 'user',
-            content: JSON.stringify({
-                task: 'Draft a small grounded interpretation helper.',
-                packet: synthesisRequest,
-            }),
+            content: formatSynthesisPrompt(synthesisRequest),
         },
     ];
+}
+
+function formatSynthesisPrompt(synthesisRequest) {
+    const observation = synthesisRequest.observation ?? {};
+    const route = synthesisRequest.route ?? {};
+    const sources = synthesisRequest.sources ?? [];
+    const sourceText = sources.map(source => (
+        `[${source.id}] ${source.title}: ${source.text}`
+    )).join('\n');
+
+    return [
+        'Task: Draft a small grounded interpretation helper for testing.',
+        'Give a real response the user can evaluate, not only a warning or an empty schema.',
+        '',
+        `Observation: ${observation.label || observation.reference || observation.quote}`,
+        `Type: ${observation.type || 'observation'}`,
+        `Question or note: ${observation.note || 'none'}`,
+        `Selected text: ${observation.quote || 'none'}`,
+        `Study route: ${route.label || route.id || 'Study question'}`,
+        '',
+        'Source chunks:',
+        sourceText || 'No source chunks.',
+        '',
+        'Preferred JSON shape:',
+        '{"context":"...","meaning":"...","guardrail":"...","nextQuestion":"...","citations":["source-id"],"confidence":"low|medium|high"}',
+        '',
+        'If you cannot produce JSON, write plain text with Context, Meaning, Guardrail, and Next question headings.',
+    ].join('\n');
 }
 
 function parseJsonObject(text) {
@@ -118,8 +143,31 @@ function normalizeCitations(value, sourceIds) {
         .filter(item => sourceIds.has(item));
 }
 
+function makeUnstructuredDraft(rawText, synthesisRequest, parseError = '') {
+    const cleanRawText = normalizeTextField(rawText);
+
+    if (!cleanRawText) {
+        throw new Error('The local model did not return text. Try again, or keep using the retrieved source chunks.');
+    }
+
+    return {
+        context: '',
+        meaning: '',
+        guardrail: '',
+        nextQuestion: '',
+        citations: [],
+        confidence: 'low',
+        modelId: LOCAL_STUDY_SLM_MODEL_ID,
+        rawText: cleanRawText,
+        unstructured: true,
+        parseError,
+        sourceCount: synthesisRequest.sources?.length ?? 0,
+    };
+}
+
 function normalizeDraft(parsed, synthesisRequest, rawText) {
     const sourceIds = new Set((synthesisRequest.sources ?? []).map(source => source.id));
+    const cleanRawText = normalizeTextField(rawText);
     const draft = {
         context: normalizeTextField(parsed.context),
         meaning: normalizeTextField(parsed.meaning),
@@ -128,11 +176,12 @@ function normalizeDraft(parsed, synthesisRequest, rawText) {
         citations: normalizeCitations(parsed.citations, sourceIds),
         confidence: normalizeConfidence(parsed.confidence),
         modelId: LOCAL_STUDY_SLM_MODEL_ID,
-        rawText,
+        rawText: cleanRawText,
+        unstructured: false,
     };
 
     if (!draft.context && !draft.meaning && !draft.guardrail && !draft.nextQuestion) {
-        throw new Error('The local model did not produce a usable draft. Try again, or keep using the retrieved source chunks.');
+        return makeUnstructuredDraft(cleanRawText, synthesisRequest, 'Structured response was empty.');
     }
 
     return draft;
@@ -147,11 +196,21 @@ export async function draftLocalStudySynthesis({ synthesisRequest, onProgress })
 
     const response = await engine.chat.completions.create({
         messages: buildMessages(synthesisRequest),
-        temperature: 0.1,
-        max_tokens: 360,
+        temperature: 0.2,
+        max_tokens: 520,
     });
     const rawText = response?.choices?.[0]?.message?.content ?? '';
-    const parsed = parseJsonObject(rawText);
+    let parsed;
+
+    try {
+        parsed = parseJsonObject(rawText);
+    } catch (error) {
+        return makeUnstructuredDraft(
+            rawText,
+            synthesisRequest,
+            error instanceof Error ? error.message : 'Structured parsing failed.',
+        );
+    }
 
     return normalizeDraft(parsed, synthesisRequest, rawText);
 }
