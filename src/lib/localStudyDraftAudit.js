@@ -66,6 +66,8 @@ const BIBLE_BOOK_PATTERN = [
     'Proverbs',
     'Ecclesiastes',
     'Song of Songs',
+    'Song of Solomon',
+    "Solomon's Song",
     'Isaiah',
     'Jeremiah',
     'Lamentations',
@@ -113,9 +115,20 @@ const BIBLE_BOOK_PATTERN = [
 ].join('|');
 
 const BIBLE_REFERENCE_REGEX = new RegExp(
-    `\\b(?:${BIBLE_BOOK_PATTERN})\\s+\\d+:\\d+(?:[-\\u2013]\\d+)?\\b`,
+    `\\b(${BIBLE_BOOK_PATTERN})\\s+(\\d+):(\\d+)(?:[-\\u2013](\\d+))?\\b`,
     'gi',
 );
+
+const BIBLE_REFERENCE_PARSE_REGEX = new RegExp(
+    `^(${BIBLE_BOOK_PATTERN})\\s+(\\d+):(\\d+)(?:[-\\u2013](\\d+))?$`,
+    'i',
+);
+
+const BOOK_ALIASES = {
+    psalm: 'Psalms',
+    songofsolomon: 'Solomon\'s Song',
+    songofsongs: 'Solomon\'s Song',
+};
 
 function cleanText(value) {
     return typeof value === 'string' ? value.trim() : '';
@@ -128,6 +141,10 @@ function normalizeText(value) {
         .replace(/[^a-z0-9]+/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
+}
+
+function normalizeBookKey(value) {
+    return normalizeText(value).replace(/\s+/g, '');
 }
 
 function tokenize(value) {
@@ -166,24 +183,191 @@ function getEvidenceText(cards) {
 }
 
 function getReferences(text) {
-    return unique(cleanText(text).match(BIBLE_REFERENCE_REGEX) ?? []);
+    return unique([...cleanText(text).matchAll(BIBLE_REFERENCE_REGEX)].map(match => match[0]));
 }
 
-function getUnsupportedReferences(text, evidenceText) {
-    const normalizedEvidence = normalizeText(evidenceText);
+function parseBibleReference(reference) {
+    const match = cleanText(reference).match(BIBLE_REFERENCE_PARSE_REGEX);
+    if (!match) return null;
 
-    return getReferences(text).filter(reference => (
-        !normalizedEvidence.includes(normalizeText(reference))
-    ));
+    const [, bookName, chapterRaw, startVerseRaw, endVerseRaw] = match;
+    const rawBookKey = normalizeBookKey(bookName);
+    const canonicalBookName = BOOK_ALIASES[rawBookKey] ?? bookName;
+    const chapter = parseInt(chapterRaw, 10);
+    const startVerse = parseInt(startVerseRaw, 10);
+    const endVerse = endVerseRaw ? parseInt(endVerseRaw, 10) : startVerse;
+
+    return {
+        reference: cleanText(reference),
+        bookName,
+        bookKey: normalizeBookKey(canonicalBookName),
+        chapter,
+        startVerse,
+        endVerse,
+    };
 }
 
-function getDetailsToVerify(text, evidenceText) {
+function buildBookLookup(bibles) {
+    const books = Array.isArray(bibles) ? bibles : [];
+    const lookup = new Map();
+
+    for (const book of books) {
+        lookup.set(normalizeBookKey(book.name), book);
+        lookup.set(normalizeBookKey(book.id), book);
+    }
+
+    for (const [alias, canonicalName] of Object.entries(BOOK_ALIASES)) {
+        const book = lookup.get(normalizeBookKey(canonicalName));
+        if (book) lookup.set(alias, book);
+    }
+
+    return lookup;
+}
+
+function resolveBibleReference(reference, bibles) {
+    const parsed = parseBibleReference(reference);
+
+    if (!parsed) {
+        return {
+            reference,
+            status: 'unparsed',
+            reason: 'Could not parse this Bible reference.',
+        };
+    }
+
+    if (!Array.isArray(bibles) || !bibles.length) {
+        return {
+            ...parsed,
+            status: 'unknown',
+            reason: 'The local Bible corpus was not available for this audit.',
+        };
+    }
+
+    const book = buildBookLookup(bibles).get(parsed.bookKey);
+    if (!book) {
+        return {
+            ...parsed,
+            status: 'missing',
+            reason: 'Book was not found in the local Bible corpus.',
+        };
+    }
+
+    const chapter = book.chapters?.find(item => item.chapter === parsed.chapter);
+    if (!chapter) {
+        return {
+            ...parsed,
+            status: 'missing',
+            bookName: book.name,
+            reason: `${book.name} ${parsed.chapter} was not found in the local Bible corpus.`,
+        };
+    }
+
+    if (parsed.endVerse < parsed.startVerse) {
+        return {
+            ...parsed,
+            status: 'missing',
+            bookName: book.name,
+            reason: 'Verse range is backwards.',
+        };
+    }
+
+    const verses = chapter.verses?.filter(verse => (
+        verse.verse >= parsed.startVerse && verse.verse <= parsed.endVerse
+    )) ?? [];
+    const expectedVerseCount = parsed.endVerse - parsed.startVerse + 1;
+
+    if (verses.length !== expectedVerseCount) {
+        return {
+            ...parsed,
+            status: 'missing',
+            bookName: book.name,
+            reason: `${book.name} ${parsed.chapter}:${parsed.startVerse}-${parsed.endVerse} was not fully found in the local Bible corpus.`,
+        };
+    }
+
+    return {
+        ...parsed,
+        status: 'valid',
+        bookName: book.name,
+        verses,
+    };
+}
+
+function referenceContains(candidate, target) {
+    const candidateRef = parseBibleReference(candidate);
+    const targetRef = parseBibleReference(target);
+
+    return !!(
+        candidateRef &&
+        targetRef &&
+        candidateRef.bookKey === targetRef.bookKey &&
+        candidateRef.chapter === targetRef.chapter &&
+        candidateRef.startVerse <= targetRef.startVerse &&
+        candidateRef.endVerse >= targetRef.endVerse
+    );
+}
+
+function getEvidenceReferences(cards) {
+    return unique(cards.flatMap(card => getReferences([
+        card.scope,
+        card.claim,
+    ].join(' '))));
+}
+
+function isReferenceInEvidence(reference, evidenceReferences, evidenceText) {
     const normalizedEvidence = normalizeText(evidenceText);
-    const references = getUnsupportedReferences(text, evidenceText);
+
+    return normalizedEvidence.includes(normalizeText(reference)) ||
+        evidenceReferences.some(evidenceReference => referenceContains(evidenceReference, reference));
+}
+
+function getReferenceChecks(text, { evidenceReferences, evidenceText, bibles }) {
+    return getReferences(text).map(reference => {
+        const validation = resolveBibleReference(reference, bibles);
+        const inEvidence = isReferenceInEvidence(reference, evidenceReferences, evidenceText);
+
+        if (validation.status === 'valid' && inEvidence) {
+            return {
+                reference,
+                status: 'grounded',
+                detail: `${reference}: valid and included in the retrieved evidence.`,
+            };
+        }
+
+        if (validation.status === 'valid') {
+            return {
+                reference,
+                status: 'valid-unretrieved',
+                detail: `${reference}: valid Bible reference, but not in the retrieved evidence.`,
+            };
+        }
+
+        if (validation.status === 'unknown') {
+            return {
+                reference,
+                status: 'unknown',
+                detail: `${reference}: could not be checked against the local Bible corpus.`,
+            };
+        }
+
+        return {
+            reference,
+            status: 'missing',
+            detail: `${reference}: not found in the local Bible corpus.`,
+            reason: validation.reason,
+        };
+    });
+}
+
+function getDetailsToVerify(text, evidenceText, referenceChecks) {
+    const normalizedEvidence = normalizeText(evidenceText);
+    const referenceDetails = referenceChecks
+        .filter(check => check.status !== 'grounded')
+        .map(check => check.detail);
     const properNouns = cleanText(text).match(/\b[A-Z][a-z]+(?:-[A-Z]?[a-z]+)?(?:'s)?\b/g) ?? [];
 
     return unique([
-        ...references,
+        ...referenceDetails,
         ...properNouns.filter(item => {
             const normalized = normalizeText(item);
             return normalized.length > 3
@@ -192,6 +376,22 @@ function getDetailsToVerify(text, evidenceText) {
                 && !['context', 'meaning', 'guardrail', 'confidence', 'next', 'question'].includes(normalized);
         }),
     ]).slice(0, 6);
+}
+
+function getReviewReason(referenceChecks) {
+    if (referenceChecks.some(check => check.status === 'missing')) {
+        return 'Contains a Bible reference that was not found in the local Bible corpus.';
+    }
+
+    if (referenceChecks.some(check => check.status === 'valid-unretrieved')) {
+        return 'Contains a valid Bible reference that was not part of the retrieved evidence packet.';
+    }
+
+    if (referenceChecks.some(check => check.status === 'unknown')) {
+        return 'Contains a Bible reference that could not be checked locally.';
+    }
+
+    return 'Contains details not found in the retrieved evidence cards.';
 }
 
 function scoreCardMatch(sectionText, card) {
@@ -212,9 +412,14 @@ function scoreCardMatch(sectionText, card) {
     return matches / sectionTokens.size;
 }
 
-function auditSection(key, text, cards, draftCitations, allEvidenceText) {
+function auditSection(key, text, cards, draftCitations, evidenceContext) {
     const sectionText = cleanText(text);
-    const detailsToVerify = getDetailsToVerify(sectionText, allEvidenceText);
+    const referenceChecks = getReferenceChecks(sectionText, evidenceContext);
+    const detailsToVerify = getDetailsToVerify(
+        sectionText,
+        evidenceContext.evidenceText,
+        referenceChecks,
+    );
 
     if (!sectionText) {
         return {
@@ -224,6 +429,7 @@ function auditSection(key, text, cards, draftCitations, allEvidenceText) {
             reason: 'No draft text for this section.',
             matchedCards: [],
             detailsToVerify,
+            referenceChecks,
         };
     }
 
@@ -247,9 +453,10 @@ function auditSection(key, text, cards, draftCitations, allEvidenceText) {
             key,
             label: SECTION_LABELS[key],
             status: 'review',
-            reason: 'Contains details not found in the retrieved evidence cards.',
+            reason: getReviewReason(referenceChecks),
             matchedCards,
             detailsToVerify,
+            referenceChecks,
         };
     }
 
@@ -263,6 +470,7 @@ function auditSection(key, text, cards, draftCitations, allEvidenceText) {
                 : 'Seems related to retrieved evidence, but the model did not cite a card id.',
             matchedCards,
             detailsToVerify,
+            referenceChecks,
         };
     }
 
@@ -273,17 +481,46 @@ function auditSection(key, text, cards, draftCitations, allEvidenceText) {
         reason: 'No close evidence-card match found.',
         matchedCards: [],
         detailsToVerify,
+        referenceChecks,
     };
 }
 
-export function auditLocalStudyDraft(draft, synthesisRequest) {
+function getAuditSummary(sections, reviewCount, uncitedCount) {
+    const referenceChecks = sections.flatMap(section => section.referenceChecks ?? []);
+
+    if (referenceChecks.some(check => check.status === 'missing')) {
+        return 'Some Bible references could not be found in the local Bible.';
+    }
+
+    if (referenceChecks.some(check => check.status === 'valid-unretrieved')) {
+        return 'Some Bible references are valid, but were not part of the grounding packet.';
+    }
+
+    if (reviewCount) {
+        return 'Some claims need checking against the evidence cards.';
+    }
+
+    if (uncitedCount) {
+        return 'Draft is related to the evidence, but citations are thin.';
+    }
+
+    return 'Draft appears grounded in the retrieved evidence cards.';
+}
+
+export function auditLocalStudyDraft(draft, synthesisRequest, options = {}) {
     if (!draft) return null;
 
     const cards = getEvidenceCards(synthesisRequest);
     const evidenceText = getEvidenceText(cards);
+    const evidenceReferences = getEvidenceReferences(cards);
     const draftCitations = draft.citations ?? [];
+    const evidenceContext = {
+        evidenceText,
+        evidenceReferences,
+        bibles: options.bibles ?? synthesisRequest?.bibles ?? [],
+    };
     const sections = Object.keys(SECTION_LABELS).map(key => (
-        auditSection(key, draft[key], cards, draftCitations, evidenceText)
+        auditSection(key, draft[key], cards, draftCitations, evidenceContext)
     ));
     const reviewCount = sections.filter(section => (
         ['review', 'thin'].includes(section.status)
@@ -296,11 +533,7 @@ export function auditLocalStudyDraft(draft, synthesisRequest) {
             : uncitedCount
                 ? 'uncited'
                 : 'supported',
-        summary: reviewCount
-            ? 'Some claims need checking against the evidence cards.'
-            : uncitedCount
-                ? 'Draft is related to the evidence, but citations are thin.'
-                : 'Draft appears grounded in the retrieved evidence cards.',
+        summary: getAuditSummary(sections, reviewCount, uncitedCount),
         sections,
     };
 }

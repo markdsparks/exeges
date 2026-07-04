@@ -171,7 +171,7 @@ function LocalDraftAudit({ audit }) {
                                 <em>Cards: {section.matchedCards.join(', ')}</em>
                             )}
                             {section.detailsToVerify.length > 0 && (
-                                <em>Check: {section.detailsToVerify.join(', ')}</em>
+                                <em>Check: {section.detailsToVerify.join('; ')}</em>
                             )}
                         </div>
                     ))}
@@ -321,7 +321,7 @@ function mergeHelperText(current = '', next = '') {
     return cleanCurrent ? `${cleanCurrent}\n\n${cleanNext}` : cleanNext;
 }
 
-function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
+function BackgroundGuideCard({ observation, interpretation, bibles, onHelperChange }) {
     const guide = getBackgroundGuideForObservation(observation);
     const localDraftRequestRef = useRef(0);
     const [localDraftState, setLocalDraftState] = useState({
@@ -363,7 +363,7 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
     const localDraftIsRawOnly = !!(localDraft?.unstructured && !localDraftHasFields);
     const localDraftMeaning = localDraft?.meaning || '';
     const localDraftAudit = localDraft
-        ? auditLocalStudyDraft(localDraft, guide.grounding.synthesisRequest)
+        ? auditLocalStudyDraft(localDraft, guide.grounding.synthesisRequest, { bibles })
         : null;
 
     const handleUseDraft = (key, value) => {
@@ -740,6 +740,7 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
 
 function InterpretWorkbench({
     book,
+    bibles,
     chapter,
     observations,
     activeObservation,
@@ -778,6 +779,7 @@ function InterpretWorkbench({
                 <BackgroundGuideCard
                     observation={activeObservation}
                     interpretation={interpretation}
+                    bibles={bibles}
                     onHelperChange={handleHelperChange}
                 />
                 <div className="study-helper-stack">
@@ -858,6 +860,7 @@ function ApplicationWorkbench({
 
 export default function StudyMode({
     book,
+    bibles = [],
     chapter,
     reference,
     study,
@@ -997,6 +1000,7 @@ export default function StudyMode({
                         <div className="study-stage-panel">
                             <InterpretWorkbench
                                 book={book}
+                                bibles={bibles}
                                 chapter={chapter}
                                 observations={observations}
                                 activeObservation={activeObservation}

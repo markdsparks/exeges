@@ -645,6 +645,7 @@ export default function App() {
                                 </div>
                                 <StudyMode
                                     book={readerBook}
+                                    bibles={bibles}
                                     chapter={activeChapter}
                                     reference={`${studyTarget.bookName} ${studyTarget.chapter}`}
                                     study={activeStudy}

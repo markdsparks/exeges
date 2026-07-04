@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { buildGroundedStudyDraft } from '../src/lib/groundedStudyDraft.js';
 import { auditLocalStudyDraft } from '../src/lib/localStudyDraftAudit.js';
 import { buildStudySynthesisRequest } from '../src/lib/studySynthesisRequest.js';
@@ -7,6 +8,8 @@ import {
     isLocalStudyRefusalText,
     normalizeLocalStudyModelDraft,
 } from '../src/lib/localStudySynthesis.js';
+
+const bibles = JSON.parse(readFileSync(new URL('../src/data/bible.json', import.meta.url), 'utf8'));
 
 const observation = {
     id: 'bench-joshua-10-1-adoni-zedek',
@@ -188,7 +191,7 @@ const promisingButShakyDraft = normalizeLocalStudyModelDraft({
     ].join('\n'),
     synthesisRequest,
 });
-const shakyAudit = auditLocalStudyDraft(promisingButShakyDraft, synthesisRequest);
+const shakyAudit = auditLocalStudyDraft(promisingButShakyDraft, synthesisRequest, { bibles });
 
 assert.equal(
     shakyAudit.status,
@@ -196,12 +199,84 @@ assert.equal(
     'audit should flag drafts with unsupported claims or references',
 );
 assert.ok(
-    shakyAudit.sections.some(section => section.detailsToVerify.includes('Exodus 23:4')),
-    'audit should flag unsupported Bible references',
+    shakyAudit.sections.some(section => (
+        section.detailsToVerify.includes('Exodus 23:4: valid Bible reference, but not in the retrieved evidence.')
+    )),
+    'audit should distinguish valid but unretrieved Bible references',
+);
+assert.ok(
+    !shakyAudit.sections.some(section => (
+        section.detailsToVerify.some(detail => detail.startsWith('Joshua 10:1-5'))
+    )),
+    'audit should not flag passage references covered by retrieved evidence',
 );
 assert.ok(
     !shakyAudit.sections.some(section => section.detailsToVerify.includes('What')),
     'audit should not flag ordinary question starters',
+);
+
+const invalidReferenceDraft = normalizeLocalStudyModelDraft({
+    rawText: [
+        'Context: Joshua 10:99 says Adoni-zedek was a king.',
+        'Meaning: The passage should be checked carefully.',
+        'Guardrail: Stay close to the text.',
+        'Next question: What does Joshua 10 actually say?',
+        'Confidence: low',
+    ].join('\n'),
+    synthesisRequest,
+});
+const invalidReferenceAudit = auditLocalStudyDraft(invalidReferenceDraft, synthesisRequest, { bibles });
+
+assert.equal(
+    invalidReferenceAudit.status,
+    'review',
+    'audit should review drafts with impossible Bible references',
+);
+assert.ok(
+    invalidReferenceAudit.sections.some(section => (
+        section.detailsToVerify.includes('Joshua 10:99: not found in the local Bible corpus.')
+    )),
+    'audit should flag impossible Bible references against the local Bible corpus',
+);
+
+const psalmAliasRequest = buildStudySynthesisRequest({
+    observation: {
+        id: 'bench-psalm-alias',
+        type: 'note',
+        quote: 'shepherd',
+        reference: 'Psalms 23:1',
+    },
+    route,
+    sourceFindings: [{
+        id: 'psalm-23-local-context',
+        title: 'Psalm 23 local context',
+        text: 'Psalms 23:1 presents the LORD as shepherd.',
+        references: ['Psalms 23:1'],
+        source: {
+            id: 'passage-context',
+            label: 'Passage context',
+            license: 'Derived from the visible Bible passage',
+        },
+    }],
+});
+const psalmAliasDraft = normalizeLocalStudyModelDraft({
+    rawText: [
+        'Context: Psalm 23:1 presents the LORD as shepherd.',
+        'Meaning: The image should be read from the psalm first.',
+        'Guardrail: Do not outrun the local image.',
+        'Next question: How does the rest of the psalm develop shepherd care?',
+        'Citations: psalm-23-local-context',
+        'Confidence: medium',
+    ].join('\n'),
+    synthesisRequest: psalmAliasRequest,
+});
+const psalmAliasAudit = auditLocalStudyDraft(psalmAliasDraft, psalmAliasRequest, { bibles });
+
+assert.ok(
+    !psalmAliasAudit.sections.some(section => (
+        section.detailsToVerify.some(detail => detail.startsWith('Psalm 23:1'))
+    )),
+    'audit should treat Psalm and Psalms aliases as the same book when evidence covers the verse',
 );
 
 console.log('local study synthesis benchmark passed');
