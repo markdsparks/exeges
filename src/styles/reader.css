@@ -285,7 +285,12 @@
 }
 
 .note-indicator {
-    font-size: 1em !important;
+    font-size: 1.12em !important;
+    opacity: 0.48 !important;
+}
+
+.verse-group:hover .note-indicator {
+    opacity: 0.85 !important;
 }
 
 /* Reading mode */

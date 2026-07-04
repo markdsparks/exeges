@@ -390,7 +390,7 @@ export default function App() {
             {/* Bottom Controls */}
             <div className={`controls-bar ${hideControls ? 'hidden' : ''}`}>
                 <button
-                    className="control-button"
+                    className="control-button search-control-button"
                     onClick={handleOpenSearch}
                     title="Search"
                     aria-label="Search scripture"

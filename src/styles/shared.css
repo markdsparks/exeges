@@ -223,6 +223,11 @@ button {
     transform: scale(0.92);
 }
 
+.search-control-button {
+    font-size: 1.75rem;
+    line-height: 1;
+}
+
 /* Progress bar */
 .progress-bar-container {
     position: fixed;
