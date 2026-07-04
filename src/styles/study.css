@@ -860,6 +860,32 @@
     color: var(--color-text-secondary);
 }
 
+.study-background-grounding {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.6rem 0.7rem;
+    border-left: 2px solid color-mix(in srgb, var(--color-accent) 52%, transparent);
+    border-radius: var(--radius-sm);
+    background-color: color-mix(in srgb, var(--color-bg-primary) 72%, transparent);
+}
+
+.study-background-grounding span {
+    font-family: var(--font-family-ui);
+    font-size: 0.68rem;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-label);
+    color: var(--color-text-muted);
+}
+
+.study-background-grounding p {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.76rem;
+    line-height: 1.42;
+    color: var(--color-text-secondary);
+}
+
 .study-background-section {
     display: grid;
     gap: 0.3rem;

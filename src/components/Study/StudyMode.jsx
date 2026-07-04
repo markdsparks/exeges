@@ -6,6 +6,7 @@ import {
     getSelectionQuote,
 } from '../../lib/studyMethod';
 import { getBackgroundGuideForObservation } from '../../lib/backgroundGuides';
+import { getLocalStudyCapabilities } from '../../lib/localStudyGrounding';
 import StudySelectionPanel from './StudySelectionPanel';
 
 const EMPTY_DRAFT = {
@@ -283,6 +284,10 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
     const guide = getBackgroundGuideForObservation(observation);
     if (!guide) return null;
 
+    const capabilities = getLocalStudyCapabilities();
+    const sourceFindings = guide.sourceFindings ?? [];
+    const sourceCount = sourceFindings.length;
+
     const handleUseDraft = (key, value) => {
         onHelperChange(key, mergeHelperText(interpretation?.[key], value));
     };
@@ -300,6 +305,22 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
             <div className="study-background-route">
                 <span>{guide.routeLabel}</span>
                 <p>{guide.reason}</p>
+            </div>
+
+            <div className="study-background-grounding">
+                <span>
+                    Local grounding &middot; {sourceCount} chunk{sourceCount === 1 ? '' : 's'}
+                </span>
+                <p>
+                    {sourceCount
+                        ? 'This helper is using local source-pack retrieval before any model synthesis.'
+                        : 'No local source chunks matched yet; keep this as a method prompt until the source pack grows.'}
+                </p>
+                <p>
+                    {capabilities.webGpu
+                        ? 'This device exposes WebGPU, so it is a candidate for future on-device SLM synthesis.'
+                        : 'This device is running retrieval-only guidance until local SLM support is available.'}
+                </p>
             </div>
 
             {!guide.exact && (
@@ -334,6 +355,28 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
                     </p>
                 ))}
             </div>
+
+            {sourceFindings.length > 0 && (
+                <div className="study-background-section">
+                    <span>Retrieved source chunks</span>
+                    {sourceFindings.map(finding => (
+                        <p key={finding.id}>
+                            <strong>{finding.title}:</strong> {finding.text}
+                            {finding.source?.href && (
+                                <>
+                                    {' '}
+                                    <a href={finding.source.href} target="_blank" rel="noreferrer">
+                                        {finding.source.label}
+                                    </a>
+                                </>
+                            )}
+                            {finding.source && (
+                                <em> {finding.source.license}</em>
+                            )}
+                        </p>
+                    ))}
+                </div>
+            )}
 
             <div className="study-background-section">
                 <span>Careful synthesis</span>

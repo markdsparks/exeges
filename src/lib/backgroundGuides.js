@@ -1,4 +1,5 @@
 import { cleanStudyToken } from './studyMethod';
+import { getLocalStudyGrounding } from './localStudyGrounding';
 
 const BACKGROUND_SOURCES = {
     bibleHubHebrew139: {
@@ -365,8 +366,7 @@ function shouldShowRoutedGuide(observation, route) {
 function buildRoutedGuide(observation, route) {
     const focus = getObservationFocus(observation);
     const drafts = route.drafts(focus);
-
-    return {
+    const guide = {
         id: `routed-${route.id}`,
         title: focus,
         subtitle: route.subtitle,
@@ -379,23 +379,36 @@ function buildRoutedGuide(observation, route) {
         synthesis: route.synthesis,
         ...drafts,
     };
+
+    return attachGrounding(guide, observation, route);
 }
 
-function hydrateExactGuide(guide) {
-    const route = BACKGROUND_ROUTES[guide.routeId] ?? BACKGROUND_ROUTES.general;
+function attachGrounding(guide, observation, route) {
+    const grounding = getLocalStudyGrounding({ observation, route });
 
     return {
         ...guide,
+        grounding,
+        sourceFindings: grounding.sourceFindings,
+        citations: grounding.citations,
+    };
+}
+
+function hydrateExactGuide(guide, observation) {
+    const route = BACKGROUND_ROUTES[guide.routeId] ?? BACKGROUND_ROUTES.general;
+
+    return attachGrounding({
+        ...guide,
         routeLabel: route.label,
         exact: true,
-    };
+    }, observation, route);
 }
 
 export function getBackgroundGuideForObservation(observation) {
     if (!observation) return null;
 
     const exactGuide = EXACT_BACKGROUND_GUIDES.find(guide => guideMatchesObservation(guide, observation));
-    if (exactGuide) return hydrateExactGuide(exactGuide);
+    if (exactGuide) return hydrateExactGuide(exactGuide, observation);
 
     const route = classifyBackgroundQuestion(observation);
     if (!shouldShowRoutedGuide(observation, route)) return null;
