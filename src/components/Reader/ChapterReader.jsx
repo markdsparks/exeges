@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import '../../styles/reader.css';
 import BookmarkButton from '../Shared/BookmarkButton';
+import StudySelectionPanel from '../Study/StudySelectionPanel';
 import {
     getObservationTypeLabel,
     getSelectionQuote,
@@ -45,9 +46,16 @@ export default function ChapterReader({
     translationState,
     studyMode = false,
     studySelection = [],
+    studyWorkflow,
+    studyObservationCounts = {},
     studyObservations = [],
     onToggleStudySelection,
     onAddStudySelections,
+    onAddStudyObservation,
+    onClearStudySelection,
+    onSelectSameStudyWord,
+    onStartStudyContrast,
+    onCancelStudyWorkflow,
 }) {
     const fallbackRef = useRef(null);
     const ref = readerRef ?? fallbackRef;
@@ -185,6 +193,11 @@ export default function ChapterReader({
         );
     };
 
+    const lastSelectionVerse = studySelection[studySelection.length - 1]?.verse;
+    const workflowSideA = studyWorkflow?.sideA ?? [];
+    const lastWorkflowVerse = workflowSideA[workflowSideA.length - 1]?.verse;
+    const inlinePanelVerse = studyMode ? (lastSelectionVerse ?? lastWorkflowVerse ?? null) : null;
+
     return (
            <div className="reader-container" ref={ref}>
                {/* Chapter header */}
@@ -249,6 +262,19 @@ export default function ChapterReader({
                                 <p className="study-verse-selection">
                                     Selected: {getSelectionQuote(verseSelectedItems)}
                                 </p>
+                            )}
+                            {studyMode && inlinePanelVerse === v.verse && (
+                                <StudySelectionPanel
+                                    className="study-inline-selection-panel"
+                                    selection={studySelection}
+                                    workflow={studyWorkflow}
+                                    observationCounts={studyObservationCounts}
+                                    onAddObservation={onAddStudyObservation}
+                                    onClearSelection={onClearStudySelection}
+                                    onSelectSameWord={onSelectSameStudyWord}
+                                    onStartContrast={onStartStudyContrast}
+                                    onCancelWorkflow={onCancelStudyWorkflow}
+                                />
                             )}
                         </div>
                     );

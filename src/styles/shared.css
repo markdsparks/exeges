@@ -287,7 +287,7 @@ button {
 
     .app.study-mode .app-main {
         margin-top: calc(104px + var(--safe-area-inset-top));
-        padding-bottom: calc(180px + var(--safe-area-inset-bottom));
+        padding-bottom: calc(76px + var(--safe-area-inset-bottom));
     }
 
     .reader-container {
@@ -299,6 +299,17 @@ button {
     .controls-bar {
         justify-content: center;
         gap: var(--space-md);
+    }
+}
+
+@media (max-width: 860px) {
+    .app.study-mode .app-main {
+        margin-top: calc(104px + var(--safe-area-inset-top));
+        padding-bottom: calc(76px + var(--safe-area-inset-bottom));
+    }
+
+    .app.study-mode:has(.study-tray.expanded) .app-main {
+        padding-bottom: calc(min(46dvh, 390px) + var(--space-xl) + var(--safe-area-inset-bottom));
     }
 }
 

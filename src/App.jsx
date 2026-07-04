@@ -316,6 +316,13 @@ export default function App() {
         ? getStudy(studyTarget.bookId, studyTarget.chapter)
         : null;
 
+    const studyObservationCounts = useMemo(() => {
+        return (activeStudy?.observations ?? []).reduce((counts, observation) => {
+            counts[observation.type] = (counts[observation.type] ?? 0) + 1;
+            return counts;
+        }, {});
+    }, [activeStudy?.observations]);
+
     const handleOpenSearch = useCallback(() => {
         setHideControls(false);
         setSearchOpen(true);
@@ -530,9 +537,16 @@ export default function App() {
                 translationState={translationState}
                 studyMode={!!studyTarget}
                 studySelection={studySelection}
+                studyWorkflow={studyWorkflow}
+                studyObservationCounts={studyObservationCounts}
                 studyObservations={activeStudy?.observations ?? []}
                 onToggleStudySelection={handleToggleStudySelection}
                 onAddStudySelections={handleAddStudySelections}
+                onAddStudyObservation={handleAddStudyObservation}
+                onClearStudySelection={handleClearStudySelection}
+                onSelectSameStudyWord={handleSelectSameWord}
+                onStartStudyContrast={handleStartContrast}
+                onCancelStudyWorkflow={() => setStudyWorkflow(null)}
             />
             {(chapterNav?.prevChapter || chapterNav?.nextChapter) && (
                 <ChapterNav
@@ -631,6 +645,7 @@ export default function App() {
                                     stage={studyStage}
                                     selection={studySelection}
                                     workflow={studyWorkflow}
+                                    observationCounts={studyObservationCounts}
                                     onStageChange={setStudyStage}
                                     onAddObservation={handleAddStudyObservation}
                                     onClearSelection={handleClearStudySelection}

@@ -555,6 +555,10 @@
     color: var(--color-text-muted);
 }
 
+.study-inline-selection-panel {
+    display: none;
+}
+
 .study-observation-list {
     display: grid;
     gap: var(--space-sm);
@@ -743,11 +747,12 @@
 
     .study-tray {
         position: fixed;
+        top: auto;
         left: 0;
         right: 0;
         bottom: 0;
         z-index: 121;
-        max-height: min(62dvh, 520px);
+        max-height: min(46dvh, 390px);
         border-right: 0;
         border-bottom: 0;
         border-left: 0;
@@ -756,7 +761,7 @@
     }
 
     .study-tray.collapsed {
-        max-height: calc(58px + var(--safe-area-inset-bottom));
+        max-height: calc(54px + var(--safe-area-inset-bottom));
     }
 
     .study-tray.collapsed .study-tray-content {
@@ -764,12 +769,45 @@
     }
 
     .study-tray-handle {
-        min-height: 58px;
-        padding-bottom: max(var(--space-sm), var(--safe-area-inset-bottom));
+        min-height: 54px;
+        padding: var(--space-xs) var(--space-md) max(var(--space-xs), var(--safe-area-inset-bottom));
     }
 
     .study-tray-content {
-        max-height: calc(min(62dvh, 520px) - 58px);
+        max-height: calc(min(46dvh, 390px) - 54px);
         padding-bottom: calc(var(--space-md) + var(--safe-area-inset-bottom));
+    }
+
+    .study-tray-selection-panel,
+    .study-tray .study-stage-prompt,
+    .study-tray .study-observe-notes-field {
+        display: none;
+    }
+
+    .study-selection-card.study-inline-selection-panel {
+        width: min(100%, 520px);
+        display: grid;
+        gap: var(--space-xs);
+        margin: var(--space-sm) 0 var(--space-xs) 1.15rem;
+        padding: var(--space-sm);
+        border-color: color-mix(in srgb, var(--color-accent) 36%, var(--color-border));
+        background-color: color-mix(in srgb, var(--color-bg-primary) 90%, var(--color-accent));
+        box-shadow: 0 10px 28px var(--color-shadow);
+        cursor: default;
+    }
+
+    .study-inline-selection-panel .study-selection-actions {
+        gap: 0.35rem;
+    }
+
+    .study-inline-selection-panel .study-selection-action,
+    .study-inline-selection-panel .study-selection-tools button,
+    .study-inline-selection-panel .study-inline-cancel {
+        min-height: 34px;
+        padding-inline: 0.58rem;
+    }
+
+    .study-inline-selection-panel .study-followup-card {
+        padding: var(--space-xs);
     }
 }
