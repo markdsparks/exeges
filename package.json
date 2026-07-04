@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "bench:study-synthesis": "node scripts/bench-local-study-synthesis.mjs",
     "build": "vite build",
     "build:study-sources": "node scripts/build-study-source-pack.mjs",
     "lint": "oxlint",

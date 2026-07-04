@@ -7,7 +7,11 @@ import {
 } from '../../lib/studyMethod';
 import { getBackgroundGuideForObservation } from '../../lib/backgroundGuides';
 import { getLocalStudyCapabilities } from '../../lib/localStudyGrounding';
-import { LOCAL_STUDY_SLM_MODEL_ID, draftLocalStudySynthesis } from '../../lib/localStudySynthesis';
+import {
+    LOCAL_STUDY_SLM_MODEL_ID,
+    LOCAL_STUDY_SLM_MODELS,
+    draftLocalStudySynthesis,
+} from '../../lib/localStudySynthesis';
 import StudySelectionPanel from './StudySelectionPanel';
 
 const EMPTY_DRAFT = {
@@ -290,6 +294,7 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
         draft: null,
         error: '',
     });
+    const [selectedLocalModelId, setSelectedLocalModelId] = useState(LOCAL_STUDY_SLM_MODEL_ID);
 
     useEffect(() => {
         localDraftRequestRef.current += 1;
@@ -299,7 +304,7 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
             draft: null,
             error: '',
         });
-    }, [observation?.id]);
+    }, [observation?.id, selectedLocalModelId]);
 
     if (!guide) return null;
 
@@ -308,6 +313,9 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
     const sourceCount = sourceFindings.length;
     const canDraftLocally = capabilities.webGpu && sourceCount > 0;
     const isDraftingLocally = localDraftState.status === 'loading';
+    const selectedLocalModel = LOCAL_STUDY_SLM_MODELS.find(model => (
+        model.id === selectedLocalModelId
+    )) ?? LOCAL_STUDY_SLM_MODELS[0];
     const localDraft = localDraftState.draft;
     const localDraftHasFields = !!(
         localDraft?.context ||
@@ -338,6 +346,7 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
         try {
             const draft = await draftLocalStudySynthesis({
                 synthesisRequest: guide.grounding.synthesisRequest,
+                modelId: selectedLocalModelId,
                 onProgress: (progress) => {
                     if (localDraftRequestRef.current !== requestId) return;
 
@@ -408,9 +417,25 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
                     <span>Experimental local draft</span>
                     <p>
                         {capabilities.webGpu
-                            ? `Uses ${LOCAL_STUDY_SLM_MODEL_ID} on this device and only the retrieved chunks above.`
+                            ? `Uses ${selectedLocalModel.label} on this device and only the retrieved evidence cards.`
                             : 'This browser needs WebGPU before it can run a local study model.'}
                     </p>
+                    {capabilities.webGpu && (
+                        <label className="study-local-model-control">
+                            <span>Local model</span>
+                            <select
+                                value={selectedLocalModelId}
+                                onChange={(event) => setSelectedLocalModelId(event.target.value)}
+                                disabled={isDraftingLocally}
+                            >
+                                {LOCAL_STUDY_SLM_MODELS.map(model => (
+                                    <option key={model.id} value={model.id}>
+                                        {model.label} · {model.description}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                    )}
                     {localDraftState.progress && (
                         <p>{localDraftState.progress}</p>
                     )}

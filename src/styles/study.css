@@ -920,6 +920,28 @@
     color: var(--color-text-secondary);
 }
 
+.study-local-model-control {
+    display: grid;
+    gap: 0.25rem;
+    margin-top: 0.2rem;
+}
+
+.study-local-model-control select {
+    width: min(100%, 18rem);
+    min-height: 2.35rem;
+    padding: 0 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 32%, var(--color-border));
+    border-radius: var(--radius-sm);
+    background-color: color-mix(in srgb, var(--color-bg-primary) 88%, transparent);
+    color: var(--color-text-primary);
+    font-family: var(--font-family-ui);
+    font-size: 0.82rem;
+}
+
+.study-local-model-control select:disabled {
+    opacity: 0.62;
+}
+
 .study-local-draft {
     border-top-color: color-mix(in srgb, var(--color-accent) 35%, transparent);
 }
