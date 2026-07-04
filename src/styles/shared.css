@@ -73,11 +73,11 @@ button {
     left: 0;
     right: 0;
     z-index: 100;
-    height: 52px;
+    height: calc(52px + var(--safe-area-inset-top));
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 var(--space-md);
+    padding: var(--safe-area-inset-top) var(--space-md) 0;
     background-color: var(--color-bg-primary);
     border-bottom: 1px solid var(--color-border);
     transition: transform var(--transition-slow), opacity var(--transition-base);
@@ -123,8 +123,8 @@ button {
 /* Main reading area */
 .app-main {
     flex: 1;
-    margin-top: 52px;
-    padding-bottom: calc(56px + var(--space-3xl));
+    margin-top: calc(52px + var(--safe-area-inset-top));
+    padding-bottom: calc(72px + var(--space-3xl) + var(--safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -194,7 +194,7 @@ button {
     align-items: center;
     justify-content: space-evenly;
     gap: var(--space-sm);
-    padding: var(--space-sm) var(--space-md);
+    padding: var(--space-sm) var(--space-md) max(var(--space-sm), var(--safe-area-inset-bottom));
     background-color: var(--color-bg-primary);
     border-top: 1px solid var(--color-border);
     transition: transform var(--transition-slow), opacity var(--transition-base);
@@ -251,21 +251,6 @@ button {
     transition: width 80ms linear;
 }
 
-/* Safe area insets */
-@supports (padding: env(safe-area-inset-top)) {
-    .app-header {
-        padding-top: env(safe-area-inset-top);
-        height: calc(52px + env(safe-area-inset-top));
-    }
-    .app-main {
-        margin-top: calc(52px + env(safe-area-inset-top));
-        padding-bottom: calc(72px + var(--space-3xl) + env(safe-area-inset-bottom));
-    }
-    .controls-bar {
-        padding-bottom: max(var(--space-sm), env(safe-area-inset-bottom));
-    }
-}
-
 @media (max-width: 520px) {
     .app-header {
         padding-inline: var(--space-sm);
@@ -279,7 +264,7 @@ button {
     }
 
     .app-main {
-        padding-bottom: calc(72px + var(--space-2xl) + env(safe-area-inset-bottom));
+        padding-bottom: calc(72px + var(--space-2xl) + var(--safe-area-inset-bottom));
     }
 
     .reader-container {

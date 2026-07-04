@@ -2,6 +2,10 @@
 /* Warm, book-like palette — aged paper feel, never sterile */
 
 :root {
+     /* Device safe areas */
+     --safe-area-inset-top: 0px;
+     --safe-area-inset-bottom: 0px;
+
      /* Light Mode */
      --color-bg-primary: #F6EFD3;          /* warm ivory — main reading area            */
      --color-bg-surface: #EDE5D8;           /* deeper cream — cards, sidebars            */
@@ -46,6 +50,13 @@
      --transition-fast: 150ms ease;
      --transition-base: 250ms ease;
      --transition-slow: 400ms ease;
+}
+
+@supports (top: env(safe-area-inset-top)) {
+     :root {
+          --safe-area-inset-top: env(safe-area-inset-top);
+          --safe-area-inset-bottom: env(safe-area-inset-bottom);
+     }
 }
 
 /* Dark Mode — triggered by .dark-mode class on html element */

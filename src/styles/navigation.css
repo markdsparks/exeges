@@ -11,8 +11,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 56px;
-    padding: 0 var(--space-lg);
+    height: calc(56px + var(--safe-area-inset-top));
+    padding: var(--safe-area-inset-top) var(--space-lg) 0;
     border-bottom: 1px solid var(--color-border);
 }
 
@@ -45,7 +45,7 @@
 .sidebar-content {
     padding: var(--space-sm) 0;
     overflow-y: auto;
-    height: calc(100vh - 56px);
+    height: calc(100dvh - 56px - var(--safe-area-inset-top));
     -webkit-overflow-scrolling: touch;
 }
 
