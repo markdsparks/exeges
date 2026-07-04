@@ -105,10 +105,12 @@ export default function Sidebar({
     themePreference,
     bookmarks = [],
     notes = [],
+    studies = [],
     onSelectTheme,
     onSelectTranslation,
     onNavigate,
     onNavigateToVerse,
+    onOpenStudy,
     onClose
 }) {
     const [openBookId, setOpenBookId] = useState(null);
@@ -200,6 +202,28 @@ export default function Sidebar({
                         </div>
                     ) : (
                         <p className="note-empty">Notes you write will appear here.</p>
+                    )}
+                </section>
+
+                <section className="studies-section">
+                    <h3 className="testament-label">Studies</h3>
+                    {studies.length > 0 ? (
+                        <div className="study-list">
+                            {studies.slice(0, 12).map(study => (
+                                <button
+                                    key={`${study.bookId}-${study.chapter}`}
+                                    className="study-row"
+                                    onClick={() => onOpenStudy?.(study.bookId, study.chapter)}
+                                >
+                                    <span className="study-row-reference">
+                                        {study.bookName} {study.chapter}
+                                    </span>
+                                    <span className="study-row-snippet">{study.summary}</span>
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="study-empty">Guided studies will appear here.</p>
                     )}
                 </section>
 

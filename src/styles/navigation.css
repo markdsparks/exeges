@@ -84,19 +84,22 @@
 }
 
 .bookmarks-section,
-.notes-section {
+.notes-section,
+.studies-section {
     padding-bottom: var(--space-sm);
     border-bottom: 1px solid var(--color-border);
 }
 
 .bookmark-list,
-.note-list {
+.note-list,
+.study-list {
     display: grid;
     gap: 1px;
 }
 
 .bookmark-row,
-.note-row {
+.note-row,
+.study-row {
     width: 100%;
     display: grid;
     gap: 3px;
@@ -105,12 +108,14 @@
 }
 
 .bookmark-row:hover,
-.note-row:hover {
+.note-row:hover,
+.study-row:hover {
     background-color: var(--color-bg-surface);
 }
 
 .bookmark-reference,
-.note-row-reference {
+.note-row-reference,
+.study-row-reference {
     font-family: var(--font-family-ui);
     font-size: 0.75rem;
     font-weight: 700;
@@ -119,7 +124,8 @@
 }
 
 .bookmark-snippet,
-.note-row-snippet {
+.note-row-snippet,
+.study-row-snippet {
     display: -webkit-box;
     overflow: hidden;
     -webkit-box-orient: vertical;
@@ -131,7 +137,8 @@
 }
 
 .bookmark-empty,
-.note-empty {
+.note-empty,
+.study-empty {
     padding: 0 var(--space-lg) var(--space-sm);
     font-family: var(--font-family-ui);
     font-size: 0.8rem;

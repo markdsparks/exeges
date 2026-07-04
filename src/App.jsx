@@ -5,6 +5,7 @@ import './styles/reader.css';
 import './styles/navigation.css';
 import './styles/search.css';
 import './styles/notes.css';
+import './styles/study.css';
 
 import ChapterReader from './components/Reader/ChapterReader';
 import ChapterNav from './components/Navigation/ChapterNav';
@@ -14,10 +15,12 @@ import ReadingProgress from './components/Navigation/ReadingProgress';
 import FontSizeControl from './components/Shared/FontSizeControl';
 import SearchPanel from './components/Search/SearchPanel';
 import NoteEditor from './components/Notes/NoteEditor';
+import StudyEditor from './components/Study/StudyEditor';
 
 import { useBibleData } from './hooks/useBibleData';
 import { useBookmarks } from './hooks/useBookmarks';
 import { useNotes } from './hooks/useNotes';
+import { useStudies } from './hooks/useStudies';
 import { useTheme } from './hooks/useTheme';
 import { useBibleSearch, useEsvSearch } from './hooks/useBibleSearch';
 import { useTranslation } from './hooks/useTranslation';
@@ -26,6 +29,7 @@ export default function App() {
     const { book, bibles, selectedBookId, selectedChapterNum, navigateTo } = useBibleData();
     const { isBookmarked, toggleBookmark, getAllBookmarks } = useBookmarks();
     const { getNote, hasNote, saveNote, deleteNote, getAllNotes } = useNotes();
+    const { getStudy, saveStudy, deleteStudy, getAllStudies } = useStudies();
     const { mode, themePreference, toggleMode, fontSize, cycleFontSize } = useTheme();
     const {
         selectedTranslation,
@@ -42,6 +46,7 @@ export default function App() {
     const [searchOpen, setSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [noteTarget, setNoteTarget] = useState(null);
+    const [studyTarget, setStudyTarget] = useState(null);
 
     // Shared ref for the reader container — used by ChapterReader and BackToTop
     const readerRef = useRef(null);
@@ -138,6 +143,23 @@ export default function App() {
             };
         }).filter(Boolean);
     }, [bibles, getAllNotes]);
+
+    const savedStudies = useMemo(() => {
+        if (!bibles) return [];
+
+        return getAllStudies().map(study => {
+            const studyBook = bibles.find(b => b.id === study.bookId);
+            if (!studyBook) return null;
+
+            const summary = study.observe || study.interpret || study.apply;
+
+            return {
+                ...study,
+                bookName: studyBook.name,
+                summary,
+            };
+        }).filter(Boolean);
+    }, [bibles, getAllStudies]);
 
     const searchContext = useMemo(() => ({
         bookId: selectedBookId,
@@ -241,10 +263,34 @@ export default function App() {
         ? getNote(noteTarget.bookId, noteTarget.chapter, noteTarget.verse)
         : null;
 
+    const activeStudy = studyTarget
+        ? getStudy(studyTarget.bookId, studyTarget.chapter)
+        : null;
+
     const handleOpenSearch = useCallback(() => {
         setHideControls(false);
         setSearchOpen(true);
     }, []);
+
+    const handleOpenStudy = useCallback((bookId = selectedBookId, chapterNum = selectedChapterNum) => {
+        const studyBook = bibles?.find(b => b.id === bookId);
+        if (!studyBook || !chapterNum) return;
+
+        if (bookId !== selectedBookId || chapterNum !== selectedChapterNum) {
+            setTargetVerse(null);
+            navigateTo(bookId, chapterNum);
+            window.history.pushState(null, '', `#${bookId}/${chapterNum}`);
+            window.scrollTo({ top: 0, behavior: 'auto' });
+        }
+
+        setHideControls(false);
+        setSidebarOpen(false);
+        setStudyTarget({
+            bookId,
+            bookName: studyBook.name,
+            chapter: chapterNum,
+        });
+    }, [bibles, navigateTo, selectedBookId, selectedChapterNum]);
 
     // Chapter navigation — prev/next with book-boundary logic
     const chapterNav = useMemo(() => {
@@ -305,9 +351,11 @@ export default function App() {
                     onSelectTheme={toggleMode}
                     bookmarks={bookmarkedVerses}
                     notes={notedVerses}
+                    studies={savedStudies}
                     onSelectTranslation={selectTranslation}
                     onNavigate={handleNavigate}
                     onNavigateToVerse={handleNavigateToVerse}
+                    onOpenStudy={handleOpenStudy}
                     onClose={() => setSidebarOpen(false)}
                 />
             </div>
@@ -335,6 +383,15 @@ export default function App() {
                 onSave={(text) => noteTarget && saveNote(noteTarget.bookId, noteTarget.chapter, noteTarget.verse, text)}
                 onDelete={() => noteTarget && deleteNote(noteTarget.bookId, noteTarget.chapter, noteTarget.verse)}
                 onClose={() => setNoteTarget(null)}
+            />
+
+            <StudyEditor
+                open={!!studyTarget}
+                studyTarget={studyTarget}
+                study={activeStudy}
+                onSave={(fields) => studyTarget && saveStudy(studyTarget.bookId, studyTarget.chapter, fields)}
+                onDelete={() => studyTarget && deleteStudy(studyTarget.bookId, studyTarget.chapter)}
+                onClose={() => setStudyTarget(null)}
             />
 
             {/* Header */}
@@ -398,6 +455,12 @@ export default function App() {
                     title="Search"
                     aria-label="Search scripture"
                 >⌕</button>
+                <button
+                    className="control-button study-control-button"
+                    onClick={() => handleOpenStudy()}
+                    title="Study"
+                    aria-label={`Study ${book?.name ?? 'current book'} ${selectedChapterNum ?? ''}`}
+                >S</button>
                 <FontSizeControl fontSize={fontSize} onCycle={cycleFontSize} />
             </div>
         </div>
