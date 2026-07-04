@@ -422,18 +422,26 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
             {localDraftState.draft && (
                 <div className="study-background-section study-local-draft">
                     <span>Local model draft</span>
-                    <p>
-                        <strong>Context:</strong> {localDraftState.draft.context}
-                    </p>
-                    <p>
-                        <strong>Meaning:</strong> {localDraftState.draft.meaning}
-                    </p>
-                    <p>
-                        <strong>Guardrail:</strong> {localDraftState.draft.guardrail}
-                    </p>
-                    <p>
-                        <strong>Next question:</strong> {localDraftState.draft.nextQuestion}
-                    </p>
+                    {localDraftState.draft.context && (
+                        <p>
+                            <strong>Context:</strong> {localDraftState.draft.context}
+                        </p>
+                    )}
+                    {localDraftState.draft.meaning && (
+                        <p>
+                            <strong>Meaning:</strong> {localDraftState.draft.meaning}
+                        </p>
+                    )}
+                    {localDraftState.draft.guardrail && (
+                        <p>
+                            <strong>Guardrail:</strong> {localDraftState.draft.guardrail}
+                        </p>
+                    )}
+                    {localDraftState.draft.nextQuestion && (
+                        <p>
+                            <strong>Next question:</strong> {localDraftState.draft.nextQuestion}
+                        </p>
+                    )}
                     <p>
                         <strong>Confidence:</strong> {localDraftState.draft.confidence}
                         {localDraftState.draft.citations.length > 0 && (

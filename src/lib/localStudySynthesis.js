@@ -120,8 +120,7 @@ function normalizeCitations(value, sourceIds) {
 
 function normalizeDraft(parsed, synthesisRequest, rawText) {
     const sourceIds = new Set((synthesisRequest.sources ?? []).map(source => source.id));
-
-    return {
+    const draft = {
         context: normalizeTextField(parsed.context),
         meaning: normalizeTextField(parsed.meaning),
         guardrail: normalizeTextField(parsed.guardrail),
@@ -131,6 +130,12 @@ function normalizeDraft(parsed, synthesisRequest, rawText) {
         modelId: LOCAL_STUDY_SLM_MODEL_ID,
         rawText,
     };
+
+    if (!draft.context && !draft.meaning && !draft.guardrail && !draft.nextQuestion) {
+        throw new Error('The local model did not produce a usable draft. Try again, or keep using the retrieved source chunks.');
+    }
+
+    return draft;
 }
 
 export async function draftLocalStudySynthesis({ synthesisRequest, onProgress }) {
