@@ -59,7 +59,12 @@ export default function SearchPanel({
 
     useEffect(() => {
         if (!open) return;
-        inputRef.current?.focus();
+
+        const focusInput = window.requestAnimationFrame(() => {
+            inputRef.current?.focus({ preventScroll: true });
+        });
+
+        return () => window.cancelAnimationFrame(focusInput);
     }, [open]);
 
     useEffect(() => {
@@ -73,6 +78,30 @@ export default function SearchPanel({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [onClose, open]);
 
+    useEffect(() => {
+        if (!open) return;
+
+        const updateViewportHeight = () => {
+            const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+            document.documentElement.style.setProperty('--search-viewport-height', `${viewportHeight}px`);
+        };
+
+        document.body.classList.add('search-open');
+        updateViewportHeight();
+
+        window.visualViewport?.addEventListener('resize', updateViewportHeight);
+        window.visualViewport?.addEventListener('scroll', updateViewportHeight);
+        window.addEventListener('resize', updateViewportHeight);
+
+        return () => {
+            document.body.classList.remove('search-open');
+            document.documentElement.style.removeProperty('--search-viewport-height');
+            window.visualViewport?.removeEventListener('resize', updateViewportHeight);
+            window.visualViewport?.removeEventListener('scroll', updateViewportHeight);
+            window.removeEventListener('resize', updateViewportHeight);
+        };
+    }, [open]);
+
     if (!open) return null;
 
     return (
@@ -85,21 +114,26 @@ export default function SearchPanel({
                     </button>
                 </div>
 
-                <input
-                    ref={inputRef}
-                    id="scripture-search"
-                    className="search-input"
-                    type="search"
-                    value={query}
-                    onChange={(event) => onQueryChange(event.target.value)}
-                    placeholder="Find a word or phrase"
-                    autoComplete="off"
-                />
-                {hasQuery && (
-                    <button className="search-clear" onClick={() => onQueryChange('')} aria-label="Clear search">
-                        Clear
-                    </button>
-                )}
+                <div className="search-controls">
+                    <div className="search-field-row">
+                        <input
+                            ref={inputRef}
+                            id="scripture-search"
+                            className="search-input"
+                            type="search"
+                            value={query}
+                            onChange={(event) => onQueryChange(event.target.value)}
+                            placeholder="Find a word or phrase"
+                            autoComplete="off"
+                            enterKeyHint="search"
+                        />
+                        {hasQuery && (
+                            <button className="search-clear" onClick={() => onQueryChange('')} aria-label="Clear search">
+                                Clear
+                            </button>
+                        )}
+                    </div>
+                </div>
 
                 <div className="search-results" aria-live="polite">
                     {!hasQuery ? (
