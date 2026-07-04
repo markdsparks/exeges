@@ -79,6 +79,12 @@ function hydrateChunk(chunk, score) {
         title: chunk.title,
         text: chunk.text,
         references: chunk.references ?? [],
+        license: chunk.license ?? source?.license ?? '',
+        attribution: chunk.attribution ?? source?.label ?? '',
+        sourceUrl: chunk.sourceUrl ?? source?.href ?? '',
+        confidence: chunk.confidence ?? '',
+        reviewStatus: chunk.reviewStatus ?? '',
+        allowedUse: chunk.allowedUse ?? '',
         score,
         generated: !!chunk.generated,
         source: source ? {

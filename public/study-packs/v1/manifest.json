@@ -1,0 +1,91 @@
+{
+    "schemaVersion": 2,
+    "packVersion": "2026-07-04.2",
+    "basePath": "study-packs/v1",
+    "recordCount": 8,
+    "globalPath": "global.json",
+    "globalRecordCount": 1,
+    "shardCount": 6,
+    "sources": {
+        "exegesMethod": {
+            "id": "exeges-method",
+            "label": "Exeges method notes",
+            "license": "App-authored",
+            "href": ""
+        },
+        "passageContext": {
+            "id": "passage-context",
+            "label": "Passage context",
+            "license": "Derived from the visible Bible passage",
+            "href": ""
+        },
+        "eastonDictionary": {
+            "id": "easton-dictionary",
+            "label": "Easton's Bible Dictionary",
+            "license": "Public domain",
+            "href": "https://en.wikipedia.org/wiki/Easton%27s_Bible_Dictionary"
+        },
+        "smithDictionary": {
+            "id": "smith-dictionary",
+            "label": "Smith's Bible Dictionary",
+            "license": "Public domain",
+            "href": "https://en.wikipedia.org/wiki/Smith%27s_Bible_Dictionary"
+        },
+        "openBibleCrossReferences": {
+            "id": "openbible-cross-references",
+            "label": "OpenBible.info Cross References",
+            "license": "CC BY",
+            "href": "https://www.openbible.info/labs/cross-references/"
+        },
+        "openBibleGeocoding": {
+            "id": "openbible-geocoding",
+            "label": "OpenBible.info Bible Geocoding Data",
+            "license": "CC BY 4.0",
+            "href": "https://github.com/openbibleinfo/Bible-Geocoding-Data"
+        }
+    },
+    "shards": [
+        {
+            "id": "2-corinthians-4",
+            "book": "2 Corinthians",
+            "chapter": 4,
+            "path": "2-corinthians/4.json",
+            "recordCount": 1
+        },
+        {
+            "id": "genesis-1",
+            "book": "Genesis",
+            "chapter": 1,
+            "path": "genesis/1.json",
+            "recordCount": 3
+        },
+        {
+            "id": "john-1",
+            "book": "John",
+            "chapter": 1,
+            "path": "john/1.json",
+            "recordCount": 1
+        },
+        {
+            "id": "joshua-9",
+            "book": "Joshua",
+            "chapter": 9,
+            "path": "joshua/9.json",
+            "recordCount": 1
+        },
+        {
+            "id": "joshua-10",
+            "book": "Joshua",
+            "chapter": 10,
+            "path": "joshua/10.json",
+            "recordCount": 4
+        },
+        {
+            "id": "psalm-33",
+            "book": "Psalm",
+            "chapter": 33,
+            "path": "psalm/33.json",
+            "recordCount": 1
+        }
+    ]
+}

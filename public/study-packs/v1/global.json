@@ -1,0 +1,35 @@
+{
+    "schemaVersion": 2,
+    "packVersion": "2026-07-04.2",
+    "scope": "global",
+    "records": [
+        {
+            "id": "method-cross-reference-guardrail",
+            "sourceId": "exegesMethod",
+            "title": "Cross-reference guardrail",
+            "routeIds": [
+                "canonical",
+                "theological"
+            ],
+            "terms": [
+                "cross reference",
+                "canonical",
+                "elsewhere",
+                "reference",
+                "theme",
+                "allusion",
+                "echo",
+                "fulfillment"
+            ],
+            "references": [],
+            "text": "Use cross references to test and enrich an interpretation after local meaning is clear. Prefer explicit quotations, repeated wording, shared events, or strong thematic development over loose associations.",
+            "license": "App-authored",
+            "attribution": "Exeges method note",
+            "sourceUrl": "",
+            "confidence": "medium",
+            "reviewStatus": "reviewed",
+            "allowedUse": "Use as a method guardrail; do not cite as factual background beyond the method principle.",
+            "generated": true
+        }
+    ]
+}

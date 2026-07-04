@@ -1,0 +1,104 @@
+{
+    "schemaVersion": 2,
+    "packVersion": "2026-07-04.2",
+    "book": "Genesis",
+    "chapter": 1,
+    "records": [
+        {
+            "id": "method-genesis-1-3-theological-claim",
+            "sourceId": "exegesMethod",
+            "title": "Interpreting power from Genesis 1:3",
+            "routeIds": [
+                "theological"
+            ],
+            "terms": [
+                "genesis",
+                "god",
+                "power",
+                "powerful",
+                "theology",
+                "creation",
+                "doctrine",
+                "claim"
+            ],
+            "references": [
+                "Genesis 1:3"
+            ],
+            "text": "A theological claim such as 'God is powerful' is strongest when it names how this text shows that truth. In Genesis 1:3, the evidence is not abstract power but God's creating command.",
+            "license": "App-authored",
+            "attribution": "Exeges method note",
+            "sourceUrl": "",
+            "confidence": "medium",
+            "reviewStatus": "reviewed",
+            "allowedUse": "Use as a method guardrail; do not cite as factual background beyond the method principle.",
+            "generated": true
+        },
+        {
+            "id": "openbible-cross-genesis-1-3-light-word",
+            "sourceId": "openBibleCrossReferences",
+            "title": "Cross-reference path for Genesis 1:3",
+            "routeIds": [
+                "canonical",
+                "theological"
+            ],
+            "terms": [
+                "genesis",
+                "light",
+                "word",
+                "said",
+                "creation",
+                "cross reference",
+                "john",
+                "psalm",
+                "corinthians"
+            ],
+            "references": [
+                "Genesis 1:3",
+                "Psalm 33:6",
+                "Psalm 33:9",
+                "John 1:1-5",
+                "2 Corinthians 4:6"
+            ],
+            "text": "Cross-reference data commonly points from Genesis 1:3 toward passages about God's word, creation, and light. Use those links after explaining what Genesis 1 itself is doing.",
+            "license": "CC BY",
+            "attribution": "OpenBible.info Cross References",
+            "sourceUrl": "https://www.openbible.info/labs/cross-references/",
+            "confidence": "medium",
+            "reviewStatus": "reviewed",
+            "allowedUse": "Use after local context is clear; favor direct textual links over loose thematic links.",
+            "generated": true
+        },
+        {
+            "id": "passage-genesis-1-3-divine-speech",
+            "sourceId": "passageContext",
+            "title": "Genesis 1:3 immediate context",
+            "routeIds": [
+                "theological"
+            ],
+            "terms": [
+                "genesis",
+                "god",
+                "said",
+                "light",
+                "powerful",
+                "power",
+                "creation",
+                "speak",
+                "speech",
+                "word",
+                "command"
+            ],
+            "references": [
+                "Genesis 1:3"
+            ],
+            "text": "Genesis 1:3 presents God's speech as effective within the creation account. If the observation is about God's power, begin with the passage's own pattern: God speaks, and creation responds.",
+            "license": "Derived from the visible Bible passage",
+            "attribution": "Exeges passage-context note",
+            "sourceUrl": "",
+            "confidence": "medium",
+            "reviewStatus": "reviewed",
+            "allowedUse": "Use as local passage context only; do not turn it into a lexical or historical claim.",
+            "generated": true
+        }
+    ]
+}

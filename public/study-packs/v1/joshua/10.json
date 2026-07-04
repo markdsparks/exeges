@@ -1,0 +1,134 @@
+{
+    "schemaVersion": 2,
+    "packVersion": "2026-07-04.2",
+    "book": "Joshua",
+    "chapter": 10,
+    "records": [
+        {
+            "id": "easton-adoni-zedek-king",
+            "sourceId": "eastonDictionary",
+            "title": "Adoni-zedek in public-domain dictionary tradition",
+            "routeIds": [
+                "word-name",
+                "person",
+                "historical-cultural"
+            ],
+            "terms": [
+                "adoni-zedek",
+                "adonizedek",
+                "jerusalem",
+                "king",
+                "lord",
+                "righteousness",
+                "justice",
+                "coalition",
+                "gibeon"
+            ],
+            "references": [
+                "Joshua 10:1-5"
+            ],
+            "text": "Public-domain dictionary tradition identifies Adoni-zedek as the king of Jerusalem in Joshua 10. The name is often connected with lord and righteousness or justice, but the passage emphasizes his response to Joshua and Gibeon.",
+            "license": "Public domain",
+            "attribution": "Easton's Bible Dictionary",
+            "sourceUrl": "https://en.wikipedia.org/wiki/Easton%27s_Bible_Dictionary",
+            "confidence": "low",
+            "reviewStatus": "reviewed",
+            "allowedUse": "Use as background starting-point evidence; keep the claim modest and passage-first.",
+            "generated": true
+        },
+        {
+            "id": "openbible-geo-gibeon",
+            "sourceId": "openBibleGeocoding",
+            "title": "Gibeon geography path",
+            "routeIds": [
+                "place",
+                "historical-cultural"
+            ],
+            "terms": [
+                "gibeon",
+                "geography",
+                "place",
+                "city",
+                "jerusalem",
+                "joshua",
+                "territory",
+                "coalition"
+            ],
+            "references": [
+                "Joshua 9:3",
+                "Joshua 10:1-5"
+            ],
+            "text": "For Gibeon, geography is useful because Joshua 10 turns on the city's relationship to Jerusalem, Ai, and the surrounding kings. Use location data to clarify movement and pressure, not as a stand-alone insight.",
+            "license": "CC BY 4.0",
+            "attribution": "OpenBible.info Bible Geocoding Data",
+            "sourceUrl": "https://github.com/openbibleinfo/Bible-Geocoding-Data",
+            "confidence": "medium",
+            "reviewStatus": "reviewed",
+            "allowedUse": "Use for geography or place-setting questions; keep location claims tentative.",
+            "generated": true
+        },
+        {
+            "id": "openbible-geo-jerusalem",
+            "sourceId": "openBibleGeocoding",
+            "title": "Jerusalem geography path",
+            "routeIds": [
+                "place",
+                "person",
+                "historical-cultural"
+            ],
+            "terms": [
+                "jerusalem",
+                "geography",
+                "place",
+                "city",
+                "king",
+                "adoni-zedek",
+                "canaan",
+                "joshua"
+            ],
+            "references": [
+                "Joshua 10:1"
+            ],
+            "text": "When Jerusalem appears in Joshua 10, place data should support the narrative question: why a Jerusalem king would be concerned about Gibeon and the changing regional balance.",
+            "license": "CC BY 4.0",
+            "attribution": "OpenBible.info Bible Geocoding Data",
+            "sourceUrl": "https://github.com/openbibleinfo/Bible-Geocoding-Data",
+            "confidence": "medium",
+            "reviewStatus": "reviewed",
+            "allowedUse": "Use for geography or place-setting questions; keep location claims tentative.",
+            "generated": true
+        },
+        {
+            "id": "passage-joshua-10-coalition",
+            "sourceId": "passageContext",
+            "title": "Joshua 10 coalition context",
+            "routeIds": [
+                "person",
+                "historical-cultural",
+                "word-name"
+            ],
+            "terms": [
+                "joshua",
+                "adoni-zedek",
+                "jerusalem",
+                "gibeon",
+                "ai",
+                "king",
+                "coalition",
+                "fear",
+                "war"
+            ],
+            "references": [
+                "Joshua 10:1-5"
+            ],
+            "text": "Joshua 10 frames Adoni-zedek by what he hears and does: he hears about Ai and Gibeon, fears the political and military implications, and gathers other Amorite kings against Gibeon.",
+            "license": "Derived from the visible Bible passage",
+            "attribution": "Exeges passage-context note",
+            "sourceUrl": "",
+            "confidence": "medium",
+            "reviewStatus": "reviewed",
+            "allowedUse": "Use as local passage context only; do not turn it into a lexical or historical claim.",
+            "generated": true
+        }
+    ]
+}
