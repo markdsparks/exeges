@@ -1,24 +1,49 @@
 import { useEffect, useState } from 'react';
 import {
-    OBSERVATION_PROMPTS,
-    OBSERVATION_TYPES,
-    getObservationTypeLabel,
     getSelectionQuote,
     getSelectionReference,
     getUniqueSelectionWords,
     sortSelectionItems,
 } from '../../lib/studyMethod';
 
-const NOTE_REQUIRED_TYPES = new Set(['question', 'key-term', 'note']);
+const CAPTURE_CHOICES = [
+    {
+        id: 'notice',
+        label: 'I notice...',
+        type: 'note',
+        title: 'I notice',
+        prompt: 'What do you notice in the text?',
+        saveLabel: 'Save observation',
+    },
+    {
+        id: 'wonder',
+        label: 'I wonder...',
+        type: 'question',
+        title: 'I wonder',
+        prompt: 'What question does this raise?',
+        saveLabel: 'Save question',
+    },
+    {
+        id: 'important',
+        label: 'This seems important',
+        type: 'key-term',
+        title: 'This seems important',
+        prompt: 'Why does this seem important here?',
+        saveLabel: 'Save insight',
+    },
+];
+
+const PATTERN_PROMPTS = {
+    command: {
+        type: 'command',
+        title: 'Command',
+        prompt: 'Who is commanded, and what action is required?',
+        saveLabel: 'Save command',
+    },
+};
 
 function stopPanelEvent(event) {
     event.stopPropagation();
-}
-
-function getSaveLabel(type) {
-    if (type === 'question') return 'Save question';
-    if (type === 'note') return 'Save note';
-    return 'Save observation';
 }
 
 export function SelectionChips({ items, sideA = [], sideB = [], onAssignSide }) {
@@ -60,11 +85,9 @@ export default function StudySelectionPanel({
     className = '',
     selection = [],
     workflow,
-    observationCounts = {},
     showEmpty = false,
     onAddObservation,
     onClearSelection,
-    onSelectSameWord,
     onStartContrast,
     onCancelWorkflow,
 }) {
@@ -75,11 +98,9 @@ export default function StudySelectionPanel({
     const selectionQuote = getSelectionQuote(selection);
     const selectionReference = getSelectionReference(selection);
     const uniqueWords = getUniqueSelectionWords(selection);
-    const canSelectSame = uniqueWords.length === 1;
+    const canMarkRepeatedWord = uniqueWords.length === 1;
     const selectionSignature = selection.map(item => item.id).join('|');
-    const pendingRequiresNote = pendingObservation && NOTE_REQUIRED_TYPES.has(pendingObservation.type);
-    const pendingCanSave = pendingObservation
-        && (!pendingRequiresNote || pendingObservation.note.trim().length > 0);
+    const pendingCanSave = pendingObservation?.note.trim().length > 0;
 
     useEffect(() => {
         setPendingObservation(null);
@@ -87,8 +108,22 @@ export default function StudySelectionPanel({
         setContrastSplit({ sideA: [], sideB: [] });
     }, [selectionSignature, workflow?.type]);
 
-    const handleAddObservation = (type) => {
+    const handleStartCapture = (choice) => {
         if (!selection.length) return;
+
+        setPendingObservation({ ...choice, note: '' });
+        setContrastChoice(null);
+    };
+
+    const handleQuickPattern = (type) => {
+        if (!selection.length) return;
+
+        if (type === 'repeated-word') {
+            onAddObservation?.({ type, selections: selection });
+            setPendingObservation(null);
+            setContrastChoice(null);
+            return;
+        }
 
         if (type === 'contrast') {
             if (selection.length === 1) {
@@ -102,19 +137,14 @@ export default function StudySelectionPanel({
             return;
         }
 
-        if (OBSERVATION_PROMPTS[type]) {
-            setPendingObservation({ type, note: '' });
+        if (PATTERN_PROMPTS[type]) {
+            setPendingObservation({ ...PATTERN_PROMPTS[type], note: '' });
             setContrastChoice(null);
-            return;
         }
-
-        onAddObservation?.({ type, selections: selection });
-        setPendingObservation(null);
-        setContrastChoice(null);
     };
 
     const handleSavePendingObservation = () => {
-        if (!pendingObservation) return;
+        if (!pendingObservation || !pendingCanSave) return;
 
         onAddObservation?.({
             type: pendingObservation.type,
@@ -202,7 +232,7 @@ export default function StudySelectionPanel({
     if (!selection.length) {
         return showEmpty ? (
             <p className={`study-mode-empty ${className}`}>
-                Tap words in the passage to collect them here. Tap again to deselect.
+                Select a word or phrase that stands out in the passage.
             </p>
         ) : null;
     }
@@ -219,36 +249,59 @@ export default function StudySelectionPanel({
 
             {!pendingObservation && !contrastChoice && (
                 <>
-                    <div className="study-selection-actions" aria-label="Observation types">
-                        <span className="study-selection-reference study-selection-action-label">
-                            Mark as
-                        </span>
-                        {OBSERVATION_TYPES.map(type => (
+                    <div className="study-intent-actions" aria-label="Study note choices">
+                        {CAPTURE_CHOICES.map(choice => (
                             <button
                                 type="button"
-                                key={type.id}
-                                className="study-selection-action"
-                                onClick={() => handleAddObservation(type.id)}
-                                disabled={type.id === 'repeated-word' && uniqueWords.length !== 1}
-                                title={type.id === 'repeated-word' && uniqueWords.length !== 1
-                                    ? 'Repeated word works on one selected word.'
-                                    : undefined}
+                                key={choice.id}
+                                className="study-intent-action"
+                                onClick={() => handleStartCapture(choice)}
                             >
-                                {type.label}
-                                {observationCounts[type.id] ? (
-                                    <span>{observationCounts[type.id]}</span>
-                                ) : null}
+                                {choice.label}
                             </button>
                         ))}
                     </div>
-                    <div className="study-selection-tools" aria-label="Selection options">
-                        {canSelectSame && (
-                            <button type="button" onClick={onSelectSameWord}>
-                                Include every &ldquo;{uniqueWords[0].text}&rdquo; in this chapter
+
+                    <div className="study-pattern-actions" aria-label="Specific patterns">
+                        <span className="study-selection-reference study-pattern-label">
+                            Optional pattern
+                        </span>
+                        {canMarkRepeatedWord && (
+                            <button
+                                type="button"
+                                className="study-selection-action"
+                                onClick={() => handleQuickPattern('repeated-word')}
+                            >
+                                Repeated word
                             </button>
                         )}
-                        <button type="button" onClick={onClearSelection}>Clear selection</button>
+                        <button
+                            type="button"
+                            className="study-selection-action"
+                            onClick={() => handleQuickPattern('command')}
+                        >
+                            Command
+                        </button>
+                        <button
+                            type="button"
+                            className="study-selection-action"
+                            onClick={() => handleQuickPattern('contrast')}
+                        >
+                            Contrast...
+                        </button>
                     </div>
+
+                    <div className="study-selection-tools" aria-label="Selection options">
+                        <button type="button" onClick={onClearSelection}>
+                            Clear selection
+                        </button>
+                    </div>
+
+                    {canMarkRepeatedWord && (
+                        <p className="study-selection-help">
+                            Repeated word will also link matching uses in this chapter.
+                        </p>
+                    )}
                 </>
             )}
 
@@ -285,6 +338,7 @@ export default function StudySelectionPanel({
                     </div>
                 </div>
             )}
+
             {contrastChoice === 'split' && (
                 <div className="study-followup-card">
                     <span className="study-selection-reference">Split contrast</span>
@@ -312,13 +366,14 @@ export default function StudySelectionPanel({
                     </div>
                 </div>
             )}
+
             {pendingObservation && (
                 <div className="study-followup-card">
                     <span className="study-selection-reference">
-                        {getObservationTypeLabel(pendingObservation.type)}
+                        {pendingObservation.title}
                     </span>
                     <label className="study-followup-field">
-                        <span>{OBSERVATION_PROMPTS[pendingObservation.type]}</span>
+                        <span>{pendingObservation.prompt}</span>
                         <textarea
                             value={pendingObservation.note}
                             autoFocus
@@ -335,7 +390,7 @@ export default function StudySelectionPanel({
                             onClick={handleSavePendingObservation}
                             disabled={!pendingCanSave}
                         >
-                            {getSaveLabel(pendingObservation.type)}
+                            {pendingObservation.saveLabel}
                         </button>
                         <button type="button" className="study-selection-action" onClick={() => setPendingObservation(null)}>
                             Back

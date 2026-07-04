@@ -439,7 +439,37 @@
     gap: var(--space-xs);
 }
 
-.study-selection-action-label {
+.study-intent-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-xs);
+}
+
+.study-intent-action {
+    min-height: 42px;
+    padding: 0.45rem 0.55rem;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-family-ui);
+    font-size: 0.76rem;
+    line-height: 1.2;
+    color: var(--color-text-primary);
+    background-color: color-mix(in srgb, var(--color-accent) 10%, var(--color-bg-primary));
+}
+
+.study-intent-action:hover {
+    color: #fff;
+    background-color: var(--color-accent);
+}
+
+.study-pattern-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    padding-top: var(--space-xs);
+    border-top: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+}
+
+.study-pattern-label {
     width: 100%;
 }
 
@@ -810,6 +840,7 @@
     }
 
     .study-inline-selection-panel .study-selection-action,
+    .study-inline-selection-panel .study-intent-action,
     .study-inline-selection-panel .study-selection-tools button,
     .study-inline-selection-panel .study-inline-cancel {
         min-height: 34px;

@@ -48,13 +48,11 @@ export default function ChapterReader({
     studyCanSelect = false,
     studySelection = [],
     studyWorkflow,
-    studyObservationCounts = {},
     studyObservations = [],
     onToggleStudySelection,
     onAddStudySelections,
     onAddStudyObservation,
     onClearStudySelection,
-    onSelectSameStudyWord,
     onStartStudyContrast,
     onCancelStudyWorkflow,
 }) {
@@ -279,10 +277,8 @@ export default function ChapterReader({
                                     className="study-inline-selection-panel"
                                     selection={studySelection}
                                     workflow={studyWorkflow}
-                                    observationCounts={studyObservationCounts}
                                     onAddObservation={onAddStudyObservation}
                                     onClearSelection={onClearStudySelection}
-                                    onSelectSameWord={onSelectSameStudyWord}
                                     onStartContrast={onStartStudyContrast}
                                     onCancelWorkflow={onCancelStudyWorkflow}
                                 />

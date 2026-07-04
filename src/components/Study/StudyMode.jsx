@@ -46,7 +46,7 @@ function ObservationList({ observations, onRemoveObservation }) {
     if (!observations.length) {
         return (
             <p className="study-mode-empty">
-                Begin with repeated words, contrasts, commands, questions, structure, people, places.
+                Your saved observations will collect here as you notice, wonder, and mark what matters.
             </p>
         );
     }
@@ -122,10 +122,8 @@ export default function StudyMode({
     onStageChange,
     onAddObservation,
     onClearSelection,
-    onSelectSameWord,
     onStartContrast,
     onCancelWorkflow,
-    observationCounts = {},
     onRemoveObservation,
     onSaveFields,
     onDeleteStudy,
@@ -210,11 +208,9 @@ export default function StudyMode({
                                 <StudySelectionPanel
                                     selection={selection}
                                     workflow={workflow}
-                                    observationCounts={observationCounts}
                                     showEmpty
                                     onAddObservation={onAddObservation}
                                     onClearSelection={onClearSelection}
-                                    onSelectSameWord={onSelectSameWord}
                                     onStartContrast={onStartContrast}
                                     onCancelWorkflow={onCancelWorkflow}
                                 />

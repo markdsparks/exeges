@@ -2,7 +2,7 @@ export const STUDY_STAGES = [
     {
         id: 'observe',
         label: 'Observe',
-        prompt: 'Mark what is actually in the passage.',
+        prompt: 'Read slowly. Tap what stands out, then capture what you notice or wonder.',
     },
     {
         id: 'interpret',
@@ -20,19 +20,19 @@ export const OBSERVATION_TYPES = [
     { id: 'repeated-word', label: 'Repeated word' },
     { id: 'contrast', label: 'Contrast' },
     { id: 'command', label: 'Command' },
-    { id: 'question', label: 'Question' },
+    { id: 'question', label: 'I wonder' },
     { id: 'structure', label: 'Structure' },
-    { id: 'key-term', label: 'Key term' },
+    { id: 'key-term', label: 'Important' },
     { id: 'person', label: 'Person' },
     { id: 'place', label: 'Place' },
-    { id: 'note', label: 'Note' },
+    { id: 'note', label: 'I notice' },
 ];
 
 export const OBSERVATION_PROMPTS = {
     command: 'Who is commanded, and what action is required?',
-    question: 'What question do you have about this?',
+    question: 'What question does this raise?',
     structure: 'How does this shape the structure of the passage?',
-    'key-term': 'Why does this seem key here?',
+    'key-term': 'Why does this seem important here?',
     person: 'What role does this person play here?',
     place: 'What role does this place play here?',
     note: 'What do you notice?',

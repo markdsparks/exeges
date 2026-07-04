@@ -316,13 +316,6 @@ export default function App() {
         ? getStudy(studyTarget.bookId, studyTarget.chapter)
         : null;
 
-    const studyObservationCounts = useMemo(() => {
-        return (activeStudy?.observations ?? []).reduce((counts, observation) => {
-            counts[observation.type] = (counts[observation.type] ?? 0) + 1;
-            return counts;
-        }, {});
-    }, [activeStudy?.observations]);
-
     const handleOpenSearch = useCallback(() => {
         setHideControls(false);
         setSearchOpen(true);
@@ -378,14 +371,6 @@ export default function App() {
     const handleClearStudySelection = useCallback(() => {
         setStudySelection([]);
     }, []);
-
-    const handleSelectSameWord = useCallback(() => {
-        const uniqueWords = getUniqueSelectionWords(studySelection);
-        if (uniqueWords.length !== 1) return;
-
-        const [selectedWord] = uniqueWords;
-        setStudySelection(chapterWordSelections.filter(item => item.normalized === selectedWord.normalized));
-    }, [chapterWordSelections, studySelection]);
 
     const handleStartContrast = useCallback((sideA) => {
         const cleanSideA = sortSelectionItems(sideA);
@@ -548,13 +533,11 @@ export default function App() {
                 studyCanSelect={!!studyTarget && studyStage === 'observe'}
                 studySelection={studySelection}
                 studyWorkflow={studyWorkflow}
-                studyObservationCounts={studyObservationCounts}
                 studyObservations={activeStudy?.observations ?? []}
                 onToggleStudySelection={handleToggleStudySelection}
                 onAddStudySelections={handleAddStudySelections}
                 onAddStudyObservation={handleAddStudyObservation}
                 onClearStudySelection={handleClearStudySelection}
-                onSelectSameStudyWord={handleSelectSameWord}
                 onStartStudyContrast={handleStartContrast}
                 onCancelStudyWorkflow={() => setStudyWorkflow(null)}
             />
@@ -655,11 +638,9 @@ export default function App() {
                                     stage={studyStage}
                                     selection={studySelection}
                                     workflow={studyWorkflow}
-                                    observationCounts={studyObservationCounts}
                                     onStageChange={handleStudyStageChange}
                                     onAddObservation={handleAddStudyObservation}
                                     onClearSelection={handleClearStudySelection}
-                                    onSelectSameWord={handleSelectSameWord}
                                     onStartContrast={handleStartContrast}
                                     onCancelWorkflow={() => setStudyWorkflow(null)}
                                     onRemoveObservation={handleRemoveStudyObservation}
