@@ -110,6 +110,7 @@ function buildMessages(synthesisRequest, options = {}) {
                 'Never apologize, never say you lack ability, and never say you need source chunks when source chunks are supplied.',
                 'Do not include hidden reasoning, chain-of-thought, or thinking tags.',
                 'Prefer plain text with the exact headings Context, Meaning, Guardrail, Next question, Citations, Confidence.',
+                'Use valid evidence card ids in Citations; the app will audit every section against those cards.',
                 'Return each heading at most once. Do not use a repeated Question/Response format.',
                 options.retry
                     ? 'Retry instruction: the previous answer was too cautious. Use the source chunks below and produce the draft sections.'
@@ -148,6 +149,7 @@ function formatSynthesisPrompt(synthesisRequest, options = {}) {
         'Do not include apologies, capability disclaimers, or requests for more evidence cards.',
         'Do not echo the question. Do not repeat the same answer.',
         'If a claim is not supported by an evidence card, put it in Next question instead of asserting it.',
+        'Do not introduce Bible references, people groups, events, or cross references unless one of the evidence cards contains them.',
         '',
         `Observation: ${observation.label || observation.reference || observation.quote}`,
         `Type: ${observation.type || 'observation'}`,
@@ -161,6 +163,7 @@ function formatSynthesisPrompt(synthesisRequest, options = {}) {
         'END EVIDENCE CARDS',
         `Valid citation ids: ${validCitationIds.join(', ') || 'none'}`,
         'If you cite sources, cite only those card ids. Do not cite selected words or names.',
+        'Citations should be a comma-separated list of the card ids that support the draft.',
         '',
         'Output exactly these headings with 1-2 concise sentences each where helpful:',
         'Context',

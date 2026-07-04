@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { buildGroundedStudyDraft } from '../src/lib/groundedStudyDraft.js';
+import { auditLocalStudyDraft } from '../src/lib/localStudyDraftAudit.js';
 import { buildStudySynthesisRequest } from '../src/lib/studySynthesisRequest.js';
 import {
     isLocalStudySelfTalkText,
@@ -175,6 +176,32 @@ assert.deepEqual(
     validCitationDraft.citations,
     ['joshua-10-adoni-zedek-context', 'adoni-zedek-lexical-note'],
     'structured normalization should preserve valid evidence-card ids',
+);
+
+const promisingButShakyDraft = normalizeLocalStudyModelDraft({
+    rawText: [
+        'Context: Adoni-zedek is a significant figure in the biblical narrative, particularly noted for his role as king of Jerusalem (Joshua 10:1-5).',
+        "Meaning: The Israelites were commanded to honor God's commandments, including those concerning Adoni-zedek (Exodus 23:4).",
+        'Guardrail: Zedek could have symbolic connotations related to justice, righteousness, and divine law.',
+        'Next question: What does it mean to say that Adoni-zedek was considered righteous?',
+        'Confidence: low',
+    ].join('\n'),
+    synthesisRequest,
+});
+const shakyAudit = auditLocalStudyDraft(promisingButShakyDraft, synthesisRequest);
+
+assert.equal(
+    shakyAudit.status,
+    'review',
+    'audit should flag drafts with unsupported claims or references',
+);
+assert.ok(
+    shakyAudit.sections.some(section => section.detailsToVerify.includes('Exodus 23:4')),
+    'audit should flag unsupported Bible references',
+);
+assert.ok(
+    !shakyAudit.sections.some(section => section.detailsToVerify.includes('What')),
+    'audit should not flag ordinary question starters',
 );
 
 console.log('local study synthesis benchmark passed');

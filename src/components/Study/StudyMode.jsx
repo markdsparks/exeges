@@ -7,6 +7,7 @@ import {
 } from '../../lib/studyMethod';
 import { getBackgroundGuideForObservation } from '../../lib/backgroundGuides';
 import { buildGroundedStudyDraft } from '../../lib/groundedStudyDraft';
+import { auditLocalStudyDraft } from '../../lib/localStudyDraftAudit';
 import { getLocalStudyCapabilities } from '../../lib/localStudyGrounding';
 import {
     LOCAL_STUDY_SLM_MODEL_ID,
@@ -143,6 +144,40 @@ function HelperField({ helper, value, onChange }) {
                 onChange={(event) => onChange(event.target.value)}
             />
         </label>
+    );
+}
+
+function LocalDraftAudit({ audit }) {
+    if (!audit) return null;
+
+    const sectionsToReview = audit.sections.filter(section => (
+        !['empty', 'supported'].includes(section.status)
+    ));
+
+    return (
+        <div className={`study-local-audit status-${audit.status}`.trim()}>
+            <span>Source check</span>
+            <p>{audit.summary}</p>
+            {sectionsToReview.length > 0 && (
+                <div className="study-local-audit-list">
+                    {sectionsToReview.map(section => (
+                        <div
+                            key={section.key}
+                            className={`study-local-audit-row status-${section.status}`.trim()}
+                        >
+                            <strong>{section.label}</strong>
+                            <p>{section.reason}</p>
+                            {section.matchedCards.length > 0 && (
+                                <em>Cards: {section.matchedCards.join(', ')}</em>
+                            )}
+                            {section.detailsToVerify.length > 0 && (
+                                <em>Check: {section.detailsToVerify.join(', ')}</em>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
     );
 }
 
@@ -327,6 +362,9 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
     );
     const localDraftIsRawOnly = !!(localDraft?.unstructured && !localDraftHasFields);
     const localDraftMeaning = localDraft?.meaning || '';
+    const localDraftAudit = localDraft
+        ? auditLocalStudyDraft(localDraft, guide.grounding.synthesisRequest)
+        : null;
 
     const handleUseDraft = (key, value) => {
         onHelperChange(key, mergeHelperText(interpretation?.[key], value));
@@ -565,6 +603,7 @@ function BackgroundGuideCard({ observation, interpretation, onHelperChange }) {
                                 <em> Uses {localDraft.citations.join(', ')}</em>
                             )}
                         </p>
+                        <LocalDraftAudit audit={localDraftAudit} />
                         {!localDraftIsRawOnly && localDraft.unstructured && localDraft.rawText && (
                             <details className="study-local-raw-details">
                                 <summary>Raw response</summary>
