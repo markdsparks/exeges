@@ -366,6 +366,7 @@ function attachGrounding(guide, observation, route) {
         ...guide,
         grounding,
         sourceFindings: grounding.sourceFindings,
+        exploreFindings: grounding.exploreFindings,
         citations: grounding.citations,
     };
 }

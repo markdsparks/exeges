@@ -4,6 +4,7 @@ import { buildGroundedStudyDraft } from '../src/lib/groundedStudyDraft.js';
 import { auditLocalStudyDraft } from '../src/lib/localStudyDraftAudit.js';
 import { retrieveStudySourceChunks } from '../src/lib/localStudyGrounding.js';
 import { buildStudySynthesisRequest } from '../src/lib/studySynthesisRequest.js';
+import { STUDY_SOURCE_CHUNKS } from '../src/data/studySourcePacks.js';
 import {
     isLocalStudySelfTalkText,
     isLocalStudyRefusalText,
@@ -11,6 +12,10 @@ import {
 } from '../src/lib/localStudySynthesis.js';
 
 const bibles = JSON.parse(readFileSync(new URL('../src/data/bible.json', import.meta.url), 'utf8'));
+const genesisOneStaticPack = JSON.parse(readFileSync(
+    new URL('../public/study-packs/v1/genesis/1.json', import.meta.url),
+    'utf8',
+));
 
 const observation = {
     id: 'bench-joshua-10-1-adoni-zedek',
@@ -95,6 +100,22 @@ const lightFindings = retrieveStudySourceChunks({
     limit: 6,
 });
 const lightFindingIds = lightFindings.map(finding => finding.id);
+const lightExploreFindings = retrieveStudySourceChunks({
+    observation: {
+        ...lightObservation,
+        note: 'Look how powerful God is',
+    },
+    route: {
+        id: 'theological',
+        label: 'Theological meaning question',
+    },
+    limit: 12,
+    chunks: [
+        ...STUDY_SOURCE_CHUNKS,
+        ...genesisOneStaticPack.records,
+    ],
+});
+const lightExploreFindingIds = lightExploreFindings.map(finding => finding.id);
 
 assert.ok(
     lightFindingIds.includes('passage-genesis-1-3-divine-speech'),
@@ -107,6 +128,14 @@ assert.ok(
 assert.ok(
     !lightFindingIds.includes('easton-adoni-zedek-king'),
     'route match alone should not retrieve unrelated Adoni-zedek evidence for light',
+);
+assert.ok(
+    lightExploreFindingIds.includes('openbible-cross-genesis-1-3'),
+    'light source explorer should retrieve the exact Genesis 1:3 cross-reference source',
+);
+assert.ok(
+    !lightExploreFindingIds.includes('openbible-cross-genesis-1-30'),
+    'light source explorer should not treat Genesis 1:30 as a strong match for Genesis 1:3',
 );
 
 const lightDraft = buildGroundedStudyDraft(buildStudySynthesisRequest({

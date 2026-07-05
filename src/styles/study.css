@@ -1222,6 +1222,196 @@
     padding-top: var(--space-xs);
 }
 
+.study-deep-dive {
+    display: grid;
+    gap: var(--space-sm);
+    padding: 0.72rem 0.78rem;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 28%, var(--color-border));
+    border-radius: var(--radius-sm);
+    background-color: color-mix(in srgb, var(--color-bg-primary) 62%, transparent);
+}
+
+.study-deep-dive > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    cursor: pointer;
+    font-family: var(--font-family-ui);
+}
+
+.study-deep-dive > summary span {
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-text-primary);
+}
+
+.study-deep-dive > summary em {
+    font-style: normal;
+    font-size: 0.72rem;
+    line-height: 1.2;
+    color: var(--color-text-muted);
+}
+
+.study-deep-dive[open] > summary span {
+    color: var(--color-accent-strong);
+}
+
+.study-deep-dive-body {
+    display: grid;
+    gap: var(--space-md);
+    padding-top: var(--space-xs);
+}
+
+.study-deep-dive-focus,
+.study-deep-dive-route,
+.study-research-draft {
+    display: grid;
+    gap: 0.36rem;
+    padding: 0.68rem 0.72rem;
+    border: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+    border-radius: var(--radius-sm);
+    background-color: color-mix(in srgb, var(--color-bg-elevated) 54%, transparent);
+}
+
+.study-deep-dive-focus span,
+.study-deep-dive-route span,
+.study-source-bucket-heading span {
+    font-family: var(--font-family-ui);
+    font-size: 0.68rem;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-label);
+    color: var(--color-accent-strong);
+}
+
+.study-deep-dive-focus strong {
+    font-family: var(--font-family-heading);
+    font-size: 1rem;
+    line-height: 1.28;
+    color: var(--color-text-primary);
+}
+
+.study-deep-dive-focus p,
+.study-deep-dive-route p,
+.study-research-draft p {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--color-text-secondary);
+}
+
+.study-deep-dive-route strong {
+    color: var(--color-text-primary);
+}
+
+.study-source-bucket,
+.study-source-card-list {
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.study-source-bucket-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+}
+
+.study-source-bucket-heading em {
+    font-style: normal;
+    font-family: var(--font-family-ui);
+    font-size: 0.72rem;
+    line-height: 1.2;
+    color: var(--color-text-muted);
+}
+
+.study-source-card {
+    display: grid;
+    gap: 0.38rem;
+    padding: 0.72rem 0.78rem;
+    border: 1px solid color-mix(in srgb, var(--color-border) 76%, transparent);
+    border-left: 2px solid color-mix(in srgb, var(--color-accent) 44%, transparent);
+    border-radius: var(--radius-sm);
+    background-color: color-mix(in srgb, var(--color-bg-primary) 68%, transparent);
+}
+
+.study-source-card.bucket-bible {
+    border-left-color: color-mix(in srgb, var(--color-illumination) 78%, transparent);
+}
+
+.study-source-card.bucket-word {
+    border-left-color: color-mix(in srgb, var(--color-accent-strong) 70%, transparent);
+}
+
+.study-source-card.bucket-method {
+    border-left-color: color-mix(in srgb, var(--color-text-muted) 58%, transparent);
+}
+
+.study-source-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    font-family: var(--font-family-ui);
+    font-size: 0.68rem;
+    line-height: 1.2;
+}
+
+.study-source-card-top span {
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-label);
+    color: var(--color-accent-strong);
+}
+
+.study-source-card-top em {
+    min-width: 0;
+    overflow: hidden;
+    font-style: normal;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-text-muted);
+}
+
+.study-source-card h4 {
+    margin: 0;
+    font-family: var(--font-family-heading);
+    font-size: 0.98rem;
+    line-height: 1.26;
+    color: var(--color-text-primary);
+}
+
+.study-source-card p {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.78rem;
+    line-height: 1.48;
+    color: var(--color-text-secondary);
+}
+
+.study-source-card .study-source-card-refs,
+.study-source-card .study-source-card-meta {
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+}
+
+.study-source-card-link {
+    width: fit-content;
+    font-family: var(--font-family-ui);
+    font-size: 0.72rem;
+    line-height: 1.2;
+}
+
+.study-source-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    padding-top: 0.12rem;
+}
+
 .study-assistant-diagnostic {
     padding: 0.7rem 0.75rem;
     border: 1px solid color-mix(in srgb, var(--color-accent) 24%, var(--color-border));

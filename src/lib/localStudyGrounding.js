@@ -73,7 +73,6 @@ function getObservationText(observation) {
     return [
         observation?.quote,
         observation?.note,
-        observation?.reference,
         ...(observation?.selections ?? []).map(selection => selection.text),
     ].join(' ');
 }
@@ -94,6 +93,10 @@ function getReferenceSignals(references = []) {
         .filter(signal => signal.exact || signal.chapter);
 }
 
+function hasReferenceBoundaryPrefix(value = '', prefix = '') {
+    return value === prefix || (value.startsWith(prefix) && value[prefix.length] === ' ');
+}
+
 function getReferenceScore(chunkReferences = [], observationReference = '') {
     const normalizedObservationReference = normalizeText(observationReference);
     const observationChapter = getReferenceBookChapter(observationReference);
@@ -103,8 +106,8 @@ function getReferenceScore(chunkReferences = [], observationReference = '') {
         if (signal.exact && normalizedObservationReference) {
             if (signal.exact === normalizedObservationReference) return Math.max(score, 14);
             if (
-                signal.exact.startsWith(normalizedObservationReference)
-                || normalizedObservationReference.startsWith(signal.exact)
+                hasReferenceBoundaryPrefix(signal.exact, normalizedObservationReference)
+                || hasReferenceBoundaryPrefix(normalizedObservationReference, signal.exact)
             ) {
                 return Math.max(score, 10);
             }
@@ -116,6 +119,20 @@ function getReferenceScore(chunkReferences = [], observationReference = '') {
 
         return score;
     }, 0);
+}
+
+function hasStrongReferenceMatch(chunkReferences = [], observationReference = '') {
+    const normalizedObservationReference = normalizeText(observationReference);
+    if (!normalizedObservationReference) return false;
+
+    return getReferenceSignals(chunkReferences).some(signal => (
+        signal.exact
+        && (
+            signal.exact === normalizedObservationReference
+            || hasReferenceBoundaryPrefix(signal.exact, normalizedObservationReference)
+            || hasReferenceBoundaryPrefix(normalizedObservationReference, signal.exact)
+        )
+    ));
 }
 
 function isGlobalMethodChunk(chunk) {
@@ -218,6 +235,7 @@ function scoreChunk(chunk, { observation, route }) {
         ...(chunk.references ?? []),
     ].join(' '));
     const referenceScore = getReferenceScore(chunk.references, observation?.reference);
+    const strongReferenceMatch = hasStrongReferenceMatch(chunk.references, observation?.reference);
     const termScore = observationTokens.reduce((score, token) => {
         if (normalizedTerms.some(term => term === token)) return score + 4;
         if (chunkText.includes(token)) return score + 2;
@@ -225,12 +243,20 @@ function scoreChunk(chunk, { observation, route }) {
     }, 0);
     const focusScore = focus && chunkText.includes(focus) ? 10 : 0;
     const routeScore = routeId && chunk.routeIds?.includes(routeId) ? 4 : 0;
+    const weakGeneratedCrossReference = chunk.generated
+        && chunk.sourceId === 'openBibleCrossReferences'
+        && referenceScore > 0
+        && !strongReferenceMatch
+        && focusScore === 0;
 
     if (
-        !isGlobalMethodChunk(chunk)
-        && referenceScore === 0
-        && focusScore === 0
-        && termScore === 0
+        weakGeneratedCrossReference
+        || (
+            !isGlobalMethodChunk(chunk)
+            && referenceScore === 0
+            && focusScore === 0
+            && termScore === 0
+        )
     ) {
         return 0;
     }
@@ -249,7 +275,7 @@ function scoreChunk(chunk, { observation, route }) {
     return score;
 }
 
-function buildGrounding({ observation, route, sourceFindings, version }) {
+function buildGrounding({ observation, route, sourceFindings, exploreFindings = sourceFindings, version }) {
     const synthesisRequest = buildStudySynthesisRequest({ observation, route, sourceFindings });
 
     return {
@@ -258,6 +284,7 @@ function buildGrounding({ observation, route, sourceFindings, version }) {
         status: sourceFindings.length ? 'ready' : 'needs-sources',
         confidence: sourceFindings.length >= 3 ? 'medium' : 'low',
         sourceFindings,
+        exploreFindings,
         synthesisRequest,
         citations: sourceFindings
             .map(finding => finding.source)
@@ -283,12 +310,14 @@ export function retrieveStudySourceChunks({
 }
 
 export function getLocalStudyGrounding({ observation, route }) {
-    const sourceFindings = retrieveStudySourceChunks({ observation, route });
+    const exploreFindings = retrieveStudySourceChunks({ observation, route, limit: 12 });
+    const sourceFindings = exploreFindings.slice(0, 4);
 
     return buildGrounding({
         observation,
         route,
         sourceFindings,
+        exploreFindings,
         version: STUDY_SOURCE_PACK_VERSION,
     });
 }
@@ -299,12 +328,14 @@ export async function getLocalStudyGroundingWithStaticPacks({ observation, route
         ...STUDY_SOURCE_CHUNKS,
         ...staticPack.chunks,
     ]);
-    const sourceFindings = retrieveStudySourceChunks({ observation, route, chunks });
+    const exploreFindings = retrieveStudySourceChunks({ observation, route, chunks, limit: 12 });
+    const sourceFindings = exploreFindings.slice(0, 4);
 
     return buildGrounding({
         observation,
         route,
         sourceFindings,
+        exploreFindings,
         version: staticPack.version,
     });
 }

@@ -60,6 +60,14 @@ const INTERPRET_PATHS = [
     },
 ];
 
+const SOURCE_BUCKETS = [
+    { key: 'bible', label: 'Bible refs' },
+    { key: 'word', label: 'Word / name' },
+    { key: 'context', label: 'Context' },
+    { key: 'method', label: 'Method' },
+    { key: 'other', label: 'Other sources' },
+];
+
 const APPLICATION_HELPERS = [
     {
         key: 'worship',
@@ -225,6 +233,66 @@ function getSourceUseText(finding) {
     return 'Supports the answer as a checked source.';
 }
 
+function getSourceBucketKey(finding) {
+    const sourceId = finding.source?.id ?? finding.sourceId ?? '';
+    const role = getSourceRole(finding);
+
+    if (role === 'Cross references') return 'bible';
+    if (role === 'Passage anchor' || role === 'Place context') return 'context';
+    if (role === 'Method guardrail') return 'method';
+    if (sourceId.includes('dictionary')) return 'word';
+
+    return 'other';
+}
+
+function getSourceReferenceText(finding) {
+    if (finding.crossReferences?.length) {
+        return finding.crossReferences
+            .slice(0, 6)
+            .map(item => item.reference)
+            .join(', ');
+    }
+
+    return finding.references?.length ? finding.references.join(', ') : '';
+}
+
+function getSourceMetaText(finding) {
+    return [
+        finding.source?.label ?? finding.attribution,
+        finding.license || finding.source?.license,
+        finding.confidence ? `${finding.confidence} confidence` : '',
+        finding.reviewStatus,
+    ].filter(Boolean).join(' · ');
+}
+
+function appendStudyText(current = '', addition = '') {
+    const cleanCurrent = current.trim();
+    const cleanAddition = addition.trim();
+
+    if (!cleanAddition) return cleanCurrent;
+    if (!cleanCurrent) return cleanAddition;
+
+    return `${cleanCurrent}\n\n${cleanAddition}`;
+}
+
+function getSourceAppendText(finding, field) {
+    if (field === 'guardrail') {
+        return finding.allowedUse || getSourceUseText(finding);
+    }
+
+    return `${finding.title}: ${finding.text}`;
+}
+
+function getDraftAppendText(draft, field) {
+    if (!draft) return '';
+    if (field === 'summary') return draft.mainThought || draft.meaning || draft.context || '';
+    if (field === 'context') return draft.context || draft.mainThought || '';
+    if (field === 'meaning') return draft.meaning || draft.mainThought || '';
+    if (field === 'guardrail') return draft.guardrail || '';
+
+    return '';
+}
+
 function getVisibleSourceUses(sourceFindings = []) {
     const preferredRoles = ['Passage anchor', 'Cross references', 'Method guardrail', 'Background', 'Place context'];
     const sourceUses = [];
@@ -261,11 +329,29 @@ function StudyDetailsCard({
     draft,
     audit,
     sourceFindings = [],
+    interpretation = {},
 }) {
-    if (!draft && !sourceFindings.length) return null;
+    const savedNotes = [
+        ['context', 'Context'],
+        ['meaning', 'Meaning note'],
+        ['guardrail', 'Caution'],
+    ].filter(([key]) => interpretation?.[key]?.trim());
+
+    if (!draft && !sourceFindings.length && !savedNotes.length) return null;
 
     return (
         <div className="study-source-detail-stack">
+            {savedNotes.length > 0 && (
+                <div className="study-background-section">
+                    <span>Saved notes</span>
+                    {savedNotes.map(([key, label]) => (
+                        <p key={key}>
+                            <strong>{label}:</strong> {interpretation[key]}
+                        </p>
+                    ))}
+                </div>
+            )}
+
             {draft && (
                 <div className="study-assistant-draft-lines">
                     {draft.context && (
@@ -333,6 +419,254 @@ function StudyDetailsCard({
                 </div>
             )}
         </div>
+    );
+}
+
+function SourceCard({ finding, interpretation = {}, onUseField }) {
+    const references = getSourceReferenceText(finding);
+    const metaText = getSourceMetaText(finding);
+
+    const handleUse = (field) => {
+        onUseField(field, appendStudyText(
+            interpretation?.[field] ?? '',
+            getSourceAppendText(finding, field),
+        ));
+    };
+
+    return (
+        <article className={`study-source-card bucket-${getSourceBucketKey(finding)}`.trim()}>
+            <div className="study-source-card-top">
+                <span>{getSourceRole(finding)}</span>
+                {references && <em>{references}</em>}
+            </div>
+            <h4>{finding.title}</h4>
+            <p>{finding.text}</p>
+            {finding.crossReferences?.length > 0 && (
+                <p className="study-source-card-refs">
+                    Leads: {finding.crossReferences
+                        .slice(0, 6)
+                        .map(item => item.reference)
+                        .join(', ')}
+                </p>
+            )}
+            {metaText && <p className="study-source-card-meta">{metaText}</p>}
+            {finding.source?.href && (
+                <a
+                    className="study-source-card-link"
+                    href={finding.source.href}
+                    target="_blank"
+                    rel="noreferrer"
+                >
+                    Open source
+                </a>
+            )}
+            <div className="study-source-actions" aria-label={`Use ${finding.title}`}>
+                <button
+                    type="button"
+                    className="study-selection-action primary"
+                    onClick={() => handleUse('summary')}
+                >
+                    Use in meaning
+                </button>
+                <button
+                    type="button"
+                    className="study-selection-action"
+                    onClick={() => handleUse('context')}
+                >
+                    Save context
+                </button>
+                <button
+                    type="button"
+                    className="study-selection-action"
+                    onClick={() => handleUse('guardrail')}
+                >
+                    Save caution
+                </button>
+            </div>
+        </article>
+    );
+}
+
+function SourceBucketSection({ bucket, findings, interpretation, onUseField }) {
+    if (!findings.length) return null;
+
+    return (
+        <section className="study-source-bucket">
+            <div className="study-source-bucket-heading">
+                <span>{bucket.label}</span>
+                <em>{findings.length}</em>
+            </div>
+            <div className="study-source-card-list">
+                {findings.map(finding => (
+                    <SourceCard
+                        key={finding.id}
+                        finding={finding}
+                        interpretation={interpretation}
+                        onUseField={onUseField}
+                    />
+                ))}
+            </div>
+        </section>
+    );
+}
+
+function ResearchDraftBlock({ label, note, draft, emptyText, interpretation = {}, onUseField }) {
+    if (!draft) {
+        return (
+            <section className="study-research-draft">
+                <div className="study-source-bucket-heading">
+                    <span>{label}</span>
+                </div>
+                <p>{emptyText}</p>
+            </section>
+        );
+    }
+
+    const rawText = draft.rawText || [
+        draft.context && `Context: ${draft.context}`,
+        draft.meaning && `Meaning: ${draft.meaning}`,
+        draft.guardrail && `Guardrail: ${draft.guardrail}`,
+        draft.nextQuestion && `Next question: ${draft.nextQuestion}`,
+    ].filter(Boolean).join('\n\n');
+
+    const handleUseDraft = (field) => {
+        onUseField(field, appendStudyText(
+            interpretation?.[field] ?? '',
+            getDraftAppendText(draft, field),
+        ));
+    };
+
+    return (
+        <section className="study-research-draft">
+            <div className="study-source-bucket-heading">
+                <span>{label}</span>
+                {draft.confidence && <em>{draft.confidence}</em>}
+            </div>
+            {note && <p>{note}</p>}
+            <div className="study-source-actions" aria-label={`Use ${label}`}>
+                <button
+                    type="button"
+                    className="study-selection-action primary"
+                    onClick={() => handleUseDraft('summary')}
+                    disabled={!getDraftAppendText(draft, 'summary')}
+                >
+                    Use meaning
+                </button>
+                <button
+                    type="button"
+                    className="study-selection-action"
+                    onClick={() => handleUseDraft('context')}
+                    disabled={!getDraftAppendText(draft, 'context')}
+                >
+                    Save context
+                </button>
+                <button
+                    type="button"
+                    className="study-selection-action"
+                    onClick={() => handleUseDraft('guardrail')}
+                    disabled={!getDraftAppendText(draft, 'guardrail')}
+                >
+                    Save caution
+                </button>
+            </div>
+            {rawText && (
+                <pre className="study-local-raw-response">{rawText}</pre>
+            )}
+        </section>
+    );
+}
+
+function SourceExplorer({
+    observation,
+    activePath,
+    guide,
+    groundedDraft,
+    localDraft,
+    localDraftState,
+    sourceFindings = [],
+    exploreFindings = [],
+    sourceLoading = false,
+    interpretation = {},
+    onUseField,
+}) {
+    const findings = exploreFindings.length ? exploreFindings : sourceFindings;
+    const groupedFindings = SOURCE_BUCKETS.map(bucket => ({
+        ...bucket,
+        findings: findings.filter(finding => getSourceBucketKey(finding) === bucket.key),
+    }));
+    const uncategorizedCount = findings.filter(finding => (
+        !SOURCE_BUCKETS.some(bucket => bucket.key === getSourceBucketKey(finding))
+    )).length;
+    const summaryText = sourceLoading
+        ? 'Loading'
+        : `${findings.length}${uncategorizedCount ? `+${uncategorizedCount}` : ''} cards`;
+
+    return (
+        <details className="study-deep-dive">
+            <summary>
+                <span>Dig deeper</span>
+                <em>{summaryText}</em>
+            </summary>
+            <div className="study-deep-dive-body">
+                <header className="study-deep-dive-focus">
+                    <span>{activePath.label}</span>
+                    <strong>&ldquo;{observation.quote}&rdquo;</strong>
+                    {observation.note && <p>{observation.note}</p>}
+                </header>
+
+                <section className="study-deep-dive-route">
+                    <span>Question</span>
+                    <p>{activePath.question}</p>
+                    {guide?.routeLabel && (
+                        <p>
+                            <strong>{guide.routeLabel}:</strong> {guide.reason}
+                        </p>
+                    )}
+                </section>
+
+                {sourceLoading && (
+                    <p className="study-background-note">
+                        Loading passage-specific source cards.
+                    </p>
+                )}
+
+                {!sourceLoading && !findings.length && (
+                    <p className="study-background-note">
+                        No source cards are available for this mark yet.
+                    </p>
+                )}
+
+                {groupedFindings.map(bucket => (
+                    <SourceBucketSection
+                        key={bucket.key}
+                        bucket={bucket}
+                        findings={bucket.findings}
+                        interpretation={interpretation}
+                        onUseField={onUseField}
+                    />
+                ))}
+
+                <ResearchDraftBlock
+                    label="Curated draft"
+                    note="Deterministic synthesis from the source cards."
+                    draft={groundedDraft}
+                    emptyText="No curated draft is available for this mark yet."
+                    interpretation={interpretation}
+                    onUseField={onUseField}
+                />
+
+                <ResearchDraftBlock
+                    label="Local model raw"
+                    note={localDraft ? 'Raw local response, kept available for review.' : ''}
+                    draft={localDraft}
+                    emptyText={localDraftState.status === 'loading'
+                        ? localDraftState.progress || 'Drafting locally...'
+                        : 'Run the optional local model pass to see raw model output here.'}
+                    interpretation={interpretation}
+                    onUseField={onUseField}
+                />
+            </div>
+        </details>
     );
 }
 
@@ -414,6 +748,7 @@ function StudyDraftCard({
                     draft={draft}
                     audit={audit}
                     sourceFindings={sourceFindings}
+                    interpretation={interpretation}
                 />
                 {usableFields.length > 1 && (
                     <div className="study-background-actions" aria-label={`Use ${title}`}>
@@ -652,11 +987,13 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
             ...guide,
             grounding: staticGrounding,
             sourceFindings: staticGrounding.sourceFindings,
+            exploreFindings: staticGrounding.exploreFindings,
             citations: staticGrounding.citations,
         }
         : guide;
     const capabilities = getLocalStudyCapabilities();
     const sourceFindings = activeGuide.sourceFindings ?? [];
+    const exploreFindings = activeGuide.exploreFindings ?? sourceFindings;
     const sourceCount = sourceFindings.length;
     const isLoadingStaticGrounding = staticGroundingState.key === staticGroundingKey
         && staticGroundingState.status === 'loading';
@@ -795,6 +1132,20 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
                     This helper has a route for the question, but no source-backed draft yet.
                 </p>
             )}
+
+            <SourceExplorer
+                observation={observation}
+                activePath={activePath}
+                guide={activeGuide}
+                groundedDraft={groundedDraft}
+                localDraft={localDraft}
+                localDraftState={localDraftState}
+                sourceFindings={sourceFindings}
+                exploreFindings={exploreFindings}
+                sourceLoading={isLoadingStaticGrounding}
+                interpretation={interpretation}
+                onUseField={handleSetField}
+            />
 
             <details className="study-assistant-details">
                 <summary>Optional local model</summary>
