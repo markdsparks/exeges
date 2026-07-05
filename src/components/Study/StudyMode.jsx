@@ -722,6 +722,8 @@ function SourceExplorer({
     sourceLoading = false,
     interpretation = {},
     onUseField,
+    routeControls = null,
+    children = null,
 }) {
     const findings = exploreFindings.length ? exploreFindings : sourceFindings;
     const groupedFindings = SOURCE_BUCKETS.map(bucket => ({
@@ -757,6 +759,8 @@ function SourceExplorer({
                         </p>
                     )}
                 </section>
+
+                {routeControls}
 
                 {sourceLoading && (
                     <p className="study-background-note">
@@ -801,6 +805,8 @@ function SourceExplorer({
                     interpretation={interpretation}
                     onUseField={onUseField}
                 />
+
+                {children}
             </div>
         </details>
     );
@@ -903,6 +909,85 @@ function StudyDraftCard({
                     </div>
                 )}
             </details>
+        </div>
+    );
+}
+
+function InterpretGuideCard({
+    draft,
+    activePath,
+    audit,
+    sourceFindings = [],
+    sourceLoading = false,
+    interpretation = {},
+    onUseField,
+}) {
+    if (!draft) {
+        return (
+            <p className="study-background-note">
+                This helper has a route for the question, but no source-backed draft yet.
+            </p>
+        );
+    }
+
+    const mainThought = getDraftMainThought(draft);
+    const workingMeaning = interpretation.summary ?? '';
+    const checkQuestion = draft.nextQuestion || activePath.question;
+    const sourceCheckText = getSourceCheckText({ sourceFindings, sourceLoading, audit });
+    const handleUseMeaning = () => {
+        if (!mainThought) return;
+        onUseField('summary', appendStudyText(workingMeaning, mainThought));
+    };
+
+    return (
+        <div className="study-guide-card">
+            <header className="study-guide-header">
+                <span>Passage-first</span>
+                <strong>Start with the passage.</strong>
+                <p>{activePath.question}</p>
+            </header>
+
+            {mainThought && (
+                <section className="study-guide-answer">
+                    <span>Suggested direction</span>
+                    <p>{mainThought}</p>
+                </section>
+            )}
+
+            <section className="study-guide-check">
+                <span>Check this</span>
+                <p>{checkQuestion}</p>
+            </section>
+
+            {draft.guardrail && (
+                <details className="study-guide-caution">
+                    <summary>Guard the claim</summary>
+                    <p>{draft.guardrail}</p>
+                </details>
+            )}
+
+            <div className="study-guide-actions">
+                <button
+                    type="button"
+                    className="study-selection-action primary"
+                    onClick={handleUseMeaning}
+                    disabled={!mainThought}
+                >
+                    Add to meaning
+                </button>
+                <p className={`study-source-check status-${audit?.status ?? 'checked'}`.trim()}>
+                    {sourceCheckText}
+                </p>
+            </div>
+
+            <label className="study-working-meaning">
+                <span>Working meaning</span>
+                <textarea
+                    value={workingMeaning}
+                    placeholder="So I think this means..."
+                    onChange={(event) => onUseField('summary', event.target.value)}
+                />
+            </label>
         </div>
     );
 }
@@ -1221,53 +1306,15 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
 
     return (
         <section className="study-assistant-card">
-            <div className="study-interpret-top">
-                <span className="study-context-card-label">Interpret this mark</span>
-                <strong>What are you asking?</strong>
-                <p>{activePath.question}</p>
-            </div>
-
-            <details className="study-path-picker">
-                <summary>
-                    <span>Question type</span>
-                    <em>{activePath.label}</em>
-                </summary>
-                <div className="study-interpret-paths" role="list" aria-label="Interpret question type">
-                    {INTERPRET_PATHS.map(path => (
-                        <button
-                            type="button"
-                            key={path.key}
-                            className={`study-interpret-path ${activePath.key === path.key ? 'active' : ''}`.trim()}
-                            onClick={() => handleSetField('pathKey', path.key)}
-                            aria-pressed={activePath.key === path.key}
-                        >
-                            <span>{path.label}</span>
-                            <em>{path.question}</em>
-                        </button>
-                    ))}
-                </div>
-            </details>
-
-            {primaryDraft ? (
-                <StudyDraftCard
-                    draft={primaryDraft}
-                    title={hasUsableLocalDraft ? 'Local model pass' : 'Think it through'}
-                    kicker={hasUsableLocalDraft ? selectedLocalModel.label : activePath.label}
-                    note={hasUsableLocalDraft
-                        ? 'Generated on this device, then checked against the local Bible and retrieved evidence.'
-                        : 'Start local. Use outside sources only as they clarify this question.'}
-                    audit={primaryDraftAudit}
-                    sourceFindings={sourceFindings}
-                    sourceLoading={isLoadingStaticGrounding}
-                    interpretation={interpretation}
-                    showHeading={false}
-                    onUseField={handleSetField}
-                />
-            ) : (
-                <p className="study-background-note">
-                    This helper has a route for the question, but no source-backed draft yet.
-                </p>
-            )}
+            <InterpretGuideCard
+                draft={primaryDraft}
+                activePath={activePath}
+                audit={primaryDraftAudit}
+                sourceFindings={sourceFindings}
+                sourceLoading={isLoadingStaticGrounding}
+                interpretation={interpretation}
+                onUseField={handleSetField}
+            />
 
             <SourceExplorer
                 observation={observation}
@@ -1282,138 +1329,161 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
                 sourceLoading={isLoadingStaticGrounding}
                 interpretation={interpretation}
                 onUseField={handleSetField}
-            />
-
-            <details className="study-assistant-details">
-                <summary>Optional local model</summary>
-                <div className="study-assistant-local">
-                    <div>
-                        <span>Local model pass</span>
-                        <p>{localModelMessage}</p>
-                        {localDraftState.progress && (
-                            <p>{localDraftState.progress}</p>
-                        )}
-                        {localDraftState.error && (
-                            <p>{localDraftState.error}</p>
-                        )}
-                    </div>
-                    <button
-                        type="button"
-                        className="study-selection-action"
-                        onClick={handleDraftLocally}
-                        disabled={!canDraftLocally || isDraftingLocally}
-                    >
-                        {isDraftingLocally
-                            ? 'Drafting...'
-                            : hasUsableLocalDraft
-                                ? 'Refresh draft'
-                                : 'Draft locally'}
-                    </button>
-                </div>
-
-                {capabilities.webGpu && (
-                    <div className="study-assistant-settings">
-                        <label className="study-local-model-control">
-                            <span>Local model</span>
-                            <select
-                                value={selectedLocalModelId}
-                                onChange={(event) => setSelectedLocalModelId(event.target.value)}
-                                disabled={isDraftingLocally || !capabilities.localSlmAvailable}
-                            >
-                                {LOCAL_STUDY_SLM_MODELS.map(model => (
-                                    <option key={model.id} value={model.id}>
-                                        {model.label} · {model.description}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-                    </div>
+                routeControls={(
+                    <details className="study-path-picker">
+                        <summary>
+                            <span>Change question type</span>
+                            <em>{activePath.label}</em>
+                        </summary>
+                        <div className="study-interpret-paths" role="list" aria-label="Interpret question type">
+                            {INTERPRET_PATHS.map(path => (
+                                <button
+                                    type="button"
+                                    key={path.key}
+                                    className={`study-interpret-path ${activePath.key === path.key ? 'active' : ''}`.trim()}
+                                    onClick={() => handleSetField('pathKey', path.key)}
+                                    aria-pressed={activePath.key === path.key}
+                                >
+                                    <span>{path.label}</span>
+                                    <em>{path.question}</em>
+                                </button>
+                            ))}
+                        </div>
+                    </details>
                 )}
-            </details>
-
-            {localDraftIsRawOnly && (
-                <details className="study-assistant-diagnostic" open>
-                    <summary>Local response kept out of the draft</summary>
-                    <p>The model returned text that was not safe to promote into the interpretation fields.</p>
-                    <pre className="study-local-raw-response">{localDraft.rawText}</pre>
-                </details>
-            )}
-
-            {hasUsableLocalDraft && groundedDraft && (
+            >
                 <details className="study-assistant-details">
-                    <summary>Curated fallback draft</summary>
-                    <StudyDraftCard
-                        draft={groundedDraft}
-                        title="Suggested draft"
-                        kicker="Passage-first"
-                        note="This deterministic draft remains available if the local model wanders."
-                        audit={groundedDraftAudit}
-                        sourceFindings={sourceFindings}
-                        interpretation={interpretation}
-                        onUseField={handleSetField}
-                    />
+                    <summary>Optional local model</summary>
+                    <div className="study-assistant-local">
+                        <div>
+                            <span>Local model pass</span>
+                            <p>{localModelMessage}</p>
+                            {localDraftState.progress && (
+                                <p>{localDraftState.progress}</p>
+                            )}
+                            {localDraftState.error && (
+                                <p>{localDraftState.error}</p>
+                            )}
+                        </div>
+                        <button
+                            type="button"
+                            className="study-selection-action"
+                            onClick={handleDraftLocally}
+                            disabled={!canDraftLocally || isDraftingLocally}
+                        >
+                            {isDraftingLocally
+                                ? 'Drafting...'
+                                : hasUsableLocalDraft
+                                    ? 'Refresh draft'
+                                    : 'Draft locally'}
+                        </button>
+                    </div>
+
+                    {capabilities.webGpu && (
+                        <div className="study-assistant-settings">
+                            <label className="study-local-model-control">
+                                <span>Local model</span>
+                                <select
+                                    value={selectedLocalModelId}
+                                    onChange={(event) => setSelectedLocalModelId(event.target.value)}
+                                    disabled={isDraftingLocally || !capabilities.localSlmAvailable}
+                                >
+                                    {LOCAL_STUDY_SLM_MODELS.map(model => (
+                                        <option key={model.id} value={model.id}>
+                                            {model.label} · {model.description}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        </div>
+                    )}
                 </details>
-            )}
 
-            <details className="study-assistant-details">
-                <summary>Evidence receipts</summary>
-                <div className="study-background-section">
-                    <span>Route</span>
-                    <p>
-                        <strong>{activeGuide.routeLabel}:</strong> {activeGuide.subtitle}
-                    </p>
-                    <p>
-                        <strong>Why:</strong> {activeGuide.reason}
-                    </p>
-                </div>
-
-                {!activeGuide.exact && (
-                    <p className="study-background-note">
-                        We do not have a curated source card for this exact item yet, so this helper gives a careful research path instead of a finished answer.
-                    </p>
+                {localDraftIsRawOnly && (
+                    <details className="study-assistant-diagnostic" open>
+                        <summary>Local response kept out of the draft</summary>
+                        <p>The model returned text that was not safe to promote into the interpretation fields.</p>
+                        <pre className="study-local-raw-response">{localDraft.rawText}</pre>
+                    </details>
                 )}
 
-                <div className="study-background-section">
-                    <span>Local context</span>
-                    {activeGuide.contextNotes.map(note => (
-                        <p key={note}>{note}</p>
-                    ))}
-                </div>
+                {hasUsableLocalDraft && groundedDraft && (
+                    <details className="study-assistant-details">
+                        <summary>Curated fallback draft</summary>
+                        <StudyDraftCard
+                            draft={groundedDraft}
+                            title="Suggested draft"
+                            kicker="Passage-first"
+                            note="This deterministic draft remains available if the local model wanders."
+                            audit={groundedDraftAudit}
+                            sourceFindings={sourceFindings}
+                            sourceLoading={isLoadingStaticGrounding}
+                            interpretation={interpretation}
+                            onUseField={handleSetField}
+                        />
+                    </details>
+                )}
 
-                <div className="study-background-section">
-                    <span>Trusted source notes</span>
-                    {activeGuide.sourceNotes.map(note => (
-                        <p key={`${note.label}-${note.text}`}>
-                            <strong>{note.label}:</strong> {note.text}
-                            {note.href && (
-                                <>
-                                    {' '}
-                                    <a href={note.href} target="_blank" rel="noreferrer">
-                                        {note.sourceLabel}
-                                    </a>
-                                </>
-                            )}
-                            {note.sourceLabel && !note.href && (
-                                <em> {note.sourceLabel}</em>
-                            )}
+                <details className="study-assistant-details">
+                    <summary>Evidence receipts</summary>
+                    <div className="study-background-section">
+                        <span>Route</span>
+                        <p>
+                            <strong>{activeGuide.routeLabel}:</strong> {activeGuide.subtitle}
                         </p>
-                    ))}
-                </div>
+                        <p>
+                            <strong>Why:</strong> {activeGuide.reason}
+                        </p>
+                    </div>
 
-                <div className="study-background-section">
-                    <span>Careful synthesis</span>
-                    {activeGuide.synthesis.map(note => (
-                        <p key={note}>{note}</p>
-                    ))}
-                </div>
+                    {!activeGuide.exact && (
+                        <p className="study-background-note">
+                            We do not have a curated source card for this exact item yet, so this helper gives a careful research path instead of a finished answer.
+                        </p>
+                    )}
 
-                <div className="study-background-section">
-                    <span>Grounding</span>
-                    <p>
-                        <strong>Loaded pack:</strong> {activeGuide.grounding.version}
-                    </p>
-                </div>
-            </details>
+                    <div className="study-background-section">
+                        <span>Local context</span>
+                        {activeGuide.contextNotes.map(note => (
+                            <p key={note}>{note}</p>
+                        ))}
+                    </div>
+
+                    <div className="study-background-section">
+                        <span>Trusted source notes</span>
+                        {activeGuide.sourceNotes.map(note => (
+                            <p key={`${note.label}-${note.text}`}>
+                                <strong>{note.label}:</strong> {note.text}
+                                {note.href && (
+                                    <>
+                                        {' '}
+                                        <a href={note.href} target="_blank" rel="noreferrer">
+                                            {note.sourceLabel}
+                                        </a>
+                                    </>
+                                )}
+                                {note.sourceLabel && !note.href && (
+                                    <em> {note.sourceLabel}</em>
+                                )}
+                            </p>
+                        ))}
+                    </div>
+
+                    <div className="study-background-section">
+                        <span>Careful synthesis</span>
+                        {activeGuide.synthesis.map(note => (
+                            <p key={note}>{note}</p>
+                        ))}
+                    </div>
+
+                    <div className="study-background-section">
+                        <span>Grounding</span>
+                        <p>
+                            <strong>Loaded pack:</strong> {activeGuide.grounding.version}
+                        </p>
+                    </div>
+                </details>
+            </SourceExplorer>
         </section>
     );
 }

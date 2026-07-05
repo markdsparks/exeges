@@ -950,6 +950,110 @@
     gap: var(--space-sm);
 }
 
+.study-guide-card {
+    display: grid;
+    gap: var(--space-sm);
+}
+
+.study-guide-header {
+    display: grid;
+    gap: 0.18rem;
+}
+
+.study-guide-header span,
+.study-guide-answer span,
+.study-guide-check span {
+    font-family: var(--font-family-ui);
+    font-size: 0.68rem;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-label);
+    color: var(--color-accent-strong);
+}
+
+.study-guide-header strong {
+    font-family: var(--font-family-heading);
+    font-size: 1.18rem;
+    line-height: 1.2;
+    color: var(--color-text-primary);
+}
+
+.study-guide-header p,
+.study-guide-check p {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--color-text-secondary);
+}
+
+.study-guide-answer,
+.study-guide-check {
+    display: grid;
+    gap: 0.34rem;
+    padding: 0.68rem 0.72rem;
+    border-radius: var(--radius-sm);
+}
+
+.study-guide-answer {
+    border: 1px solid color-mix(in srgb, var(--color-illumination) 34%, var(--color-border));
+    background-color: color-mix(in srgb, var(--color-bg-note) 82%, var(--color-illumination));
+}
+
+.study-guide-answer p {
+    margin: 0;
+    font-family: var(--font-family-heading);
+    font-size: 0.98rem;
+    line-height: 1.38;
+    color: var(--color-text-primary);
+}
+
+.study-guide-check {
+    border: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+    background-color: color-mix(in srgb, var(--color-bg-primary) 62%, transparent);
+}
+
+.study-guide-caution {
+    display: grid;
+    gap: 0.34rem;
+    padding: 0.54rem 0.64rem;
+    border: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+    border-radius: var(--radius-sm);
+    background-color: color-mix(in srgb, var(--color-bg-primary) 58%, transparent);
+}
+
+.study-guide-caution summary {
+    width: fit-content;
+    cursor: pointer;
+    font-family: var(--font-family-ui);
+    font-size: 0.72rem;
+    line-height: 1.25;
+    color: var(--color-text-muted);
+}
+
+.study-guide-caution[open] summary {
+    color: var(--color-accent-strong);
+}
+
+.study-guide-caution p {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--color-text-secondary);
+}
+
+.study-guide-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.study-guide-actions .study-source-check {
+    margin: 0;
+}
+
 .study-thinking-flow {
     display: grid;
     gap: var(--space-sm);
