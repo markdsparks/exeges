@@ -224,7 +224,7 @@ function buildBookLookup(bibles) {
     return lookup;
 }
 
-function resolveBibleReference(reference, bibles) {
+export function resolveBibleReference(reference, bibles) {
     const parsed = parseBibleReference(reference);
 
     if (!parsed) {

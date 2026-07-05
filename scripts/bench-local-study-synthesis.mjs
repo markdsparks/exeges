@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { buildGroundedStudyDraft } from '../src/lib/groundedStudyDraft.js';
-import { auditLocalStudyDraft } from '../src/lib/localStudyDraftAudit.js';
+import {
+    auditLocalStudyDraft,
+    resolveBibleReference,
+} from '../src/lib/localStudyDraftAudit.js';
 import { retrieveStudySourceChunks } from '../src/lib/localStudyGrounding.js';
 import { buildStudySynthesisRequest } from '../src/lib/studySynthesisRequest.js';
 import { STUDY_SOURCE_CHUNKS } from '../src/data/studySourcePacks.js';
@@ -116,6 +119,8 @@ const lightExploreFindings = retrieveStudySourceChunks({
     ],
 });
 const lightExploreFindingIds = lightExploreFindings.map(finding => finding.id);
+const johnLightReference = resolveBibleReference('John 1:1-5', bibles);
+const corinthiansLightReference = resolveBibleReference('2 Corinthians 4:6', bibles);
 
 assert.ok(
     lightFindingIds.includes('passage-genesis-1-3-divine-speech'),
@@ -136,6 +141,21 @@ assert.ok(
 assert.ok(
     !lightExploreFindingIds.includes('openbible-cross-genesis-1-30'),
     'light source explorer should not treat Genesis 1:30 as a strong match for Genesis 1:3',
+);
+assert.equal(
+    johnLightReference.status,
+    'valid',
+    'source explorer should resolve John 1:1-5 against the local Bible',
+);
+assert.equal(
+    johnLightReference.verses.length,
+    5,
+    'source explorer should resolve a same-chapter verse range',
+);
+assert.equal(
+    corinthiansLightReference.status,
+    'valid',
+    'source explorer should resolve numbered-book cross references',
 );
 
 const lightDraft = buildGroundedStudyDraft(buildStudySynthesisRequest({

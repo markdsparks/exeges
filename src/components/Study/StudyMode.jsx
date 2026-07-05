@@ -6,7 +6,10 @@ import {
 } from '../../lib/studyMethod';
 import { getBackgroundGuideForObservation } from '../../lib/backgroundGuides';
 import { buildGroundedStudyDraft } from '../../lib/groundedStudyDraft';
-import { auditLocalStudyDraft } from '../../lib/localStudyDraftAudit';
+import {
+    auditLocalStudyDraft,
+    resolveBibleReference,
+} from '../../lib/localStudyDraftAudit';
 import {
     getLocalStudyCapabilities,
     getLocalStudyGroundingWithStaticPacks,
@@ -283,6 +286,81 @@ function getSourceAppendText(finding, field) {
     return `${finding.title}: ${finding.text}`;
 }
 
+function normalizeReferenceLabel(reference = '') {
+    return reference
+        .toLowerCase()
+        .replace(/[\u2013-]/g, '-')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function uniqueValues(values = []) {
+    return [...new Set(values.filter(Boolean))];
+}
+
+function getCrossReferenceTargets(finding, observation) {
+    if (getSourceRole(finding) !== 'Cross references') return [];
+
+    const anchorReferences = new Set([
+        observation?.reference,
+        ...(finding.anchorReferences ?? []),
+        finding.references?.[0],
+    ].map(normalizeReferenceLabel).filter(Boolean));
+    const targets = finding.crossReferences?.length
+        ? finding.crossReferences.map(item => item.reference)
+        : (finding.references ?? []).slice(1);
+
+    return uniqueValues(targets).filter(reference => (
+        !anchorReferences.has(normalizeReferenceLabel(reference))
+    ));
+}
+
+function resolveCrossReferenceTargets(finding, bibles, observation) {
+    return getCrossReferenceTargets(finding, observation)
+        .slice(0, 6)
+        .map(reference => resolveBibleReference(reference, bibles))
+        .filter(result => result.status === 'valid');
+}
+
+function getResolvedReferenceText(resolvedReference) {
+    return (resolvedReference.verses ?? [])
+        .map(verse => `${verse.verse} ${verse.text}`)
+        .join(' ');
+}
+
+function getCrossReferenceSynthesis(resolvedReferences = []) {
+    const normalizedText = resolvedReferences
+        .map(getResolvedReferenceText)
+        .join(' ')
+        .toLowerCase();
+    const points = [];
+
+    if (/\b(word|spake|spoke|commanded|said|speech)\b/u.test(normalizedText)) {
+        points.push('Several references connect the theme to God acting by his word.');
+    }
+
+    if (/\b(light|darkness|shine|shined)\b/u.test(normalizedText)) {
+        points.push('The linked passages repeatedly use light and darkness language.');
+    }
+
+    if (/\b(beginning|created|made|heavens|creation)\b/u.test(normalizedText)) {
+        points.push('Some references keep the comparison close to creation language.');
+    }
+
+    if (/\b(life|christ|jesus|gospel|knowledge|glory)\b/u.test(normalizedText)) {
+        points.push('Later passages may develop the theme toward revelation, life, or Christ; keep that distinct from the local claim.');
+    }
+
+    return points.length
+        ? points.slice(0, 3)
+        : ['Compare these passages after stating what the local passage itself shows.'];
+}
+
+function getCrossReferenceSynthesisText(points = []) {
+    return points.join(' ');
+}
+
 function getDraftAppendText(draft, field) {
     if (!draft) return '';
     if (field === 'summary') return draft.mainThought || draft.meaning || draft.context || '';
@@ -422,14 +500,62 @@ function StudyDetailsCard({
     );
 }
 
-function SourceCard({ finding, interpretation = {}, onUseField }) {
+function CrossReferenceExpansion({
+    resolvedReferences,
+    synthesisPoints,
+    onUseSynthesis,
+}) {
+    if (!resolvedReferences.length) return null;
+
+    return (
+        <div className="study-cross-ref-expansion">
+            <div className="study-cross-ref-passages">
+                <span>Referenced passages</span>
+                {resolvedReferences.map(reference => (
+                    <article key={reference.reference} className="study-cross-ref-passage">
+                        <strong>{reference.reference}</strong>
+                        {reference.verses.map(verse => (
+                            <p key={`${reference.reference}-${verse.verse}`}>
+                                <sup>{verse.verse}</sup>
+                                {verse.text}
+                            </p>
+                        ))}
+                    </article>
+                ))}
+            </div>
+            <div className="study-cross-ref-synthesis">
+                <span>Compare them</span>
+                {synthesisPoints.map(point => (
+                    <p key={point}>{point}</p>
+                ))}
+                <button
+                    type="button"
+                    className="study-selection-action primary"
+                    onClick={onUseSynthesis}
+                >
+                    Use comparison
+                </button>
+            </div>
+        </div>
+    );
+}
+
+function SourceCard({ finding, observation, bibles = [], interpretation = {}, onUseField }) {
     const references = getSourceReferenceText(finding);
     const metaText = getSourceMetaText(finding);
+    const resolvedCrossReferences = resolveCrossReferenceTargets(finding, bibles, observation);
+    const crossReferenceSynthesis = getCrossReferenceSynthesis(resolvedCrossReferences);
 
     const handleUse = (field) => {
         onUseField(field, appendStudyText(
             interpretation?.[field] ?? '',
             getSourceAppendText(finding, field),
+        ));
+    };
+    const handleUseSynthesis = () => {
+        onUseField('summary', appendStudyText(
+            interpretation?.summary ?? '',
+            getCrossReferenceSynthesisText(crossReferenceSynthesis),
         ));
     };
 
@@ -460,6 +586,11 @@ function SourceCard({ finding, interpretation = {}, onUseField }) {
                     Open source
                 </a>
             )}
+            <CrossReferenceExpansion
+                resolvedReferences={resolvedCrossReferences}
+                synthesisPoints={crossReferenceSynthesis}
+                onUseSynthesis={handleUseSynthesis}
+            />
             <div className="study-source-actions" aria-label={`Use ${finding.title}`}>
                 <button
                     type="button"
@@ -487,7 +618,7 @@ function SourceCard({ finding, interpretation = {}, onUseField }) {
     );
 }
 
-function SourceBucketSection({ bucket, findings, interpretation, onUseField }) {
+function SourceBucketSection({ bucket, findings, observation, bibles, interpretation, onUseField }) {
     if (!findings.length) return null;
 
     return (
@@ -501,6 +632,8 @@ function SourceBucketSection({ bucket, findings, interpretation, onUseField }) {
                     <SourceCard
                         key={finding.id}
                         finding={finding}
+                        observation={observation}
+                        bibles={bibles}
                         interpretation={interpretation}
                         onUseField={onUseField}
                     />
@@ -580,6 +713,7 @@ function SourceExplorer({
     observation,
     activePath,
     guide,
+    bibles = [],
     groundedDraft,
     localDraft,
     localDraftState,
@@ -641,6 +775,8 @@ function SourceExplorer({
                         key={bucket.key}
                         bucket={bucket}
                         findings={bucket.findings}
+                        observation={observation}
+                        bibles={bibles}
                         interpretation={interpretation}
                         onUseField={onUseField}
                     />
@@ -1137,6 +1273,7 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
                 observation={observation}
                 activePath={activePath}
                 guide={activeGuide}
+                bibles={bibles}
                 groundedDraft={groundedDraft}
                 localDraft={localDraft}
                 localDraftState={localDraftState}
