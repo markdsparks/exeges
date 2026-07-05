@@ -1,10 +1,11 @@
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
-const inputPath = path.join(projectRoot, 'sources/study/curated-records.json');
+const primaryInputPath = path.join(projectRoot, 'sources/study/curated-records.json');
+const importedInputDir = path.join(projectRoot, 'sources/study/imported');
 const jsOutputPath = path.join(projectRoot, 'src/data/generatedStudySourceChunks.js');
 const staticPackRoot = path.join(projectRoot, 'public/study-packs/v1');
 const staticPackBasePath = 'study-packs/v1';
@@ -69,6 +70,7 @@ const allowedRouteIds = new Set([
 
 const allowedConfidenceValues = new Set(['low', 'medium', 'high']);
 const allowedReviewStatuses = new Set(['draft', 'reviewed', 'needs-review']);
+const allowedDeliveryModes = new Set(['bundle', 'static']);
 
 const bibleBookAliases = new Map([
     ['Genesis', 'Genesis'],
@@ -162,51 +164,81 @@ function assertArray(value, label) {
     }
 }
 
-function assertRecord(record) {
+function isRecordObject(value) {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function materializeRecord(record, defaults = {}) {
+    return {
+        ...defaults,
+        ...record,
+        routeIds: record.routeIds ?? defaults.routeIds ?? [],
+        terms: record.terms ?? defaults.terms ?? [],
+        references: record.references ?? defaults.references ?? [],
+        anchorReferences: record.anchorReferences ?? defaults.anchorReferences,
+        crossReferences: record.crossReferences ?? defaults.crossReferences,
+        sourceUrl: record.sourceUrl ?? defaults.sourceUrl,
+        delivery: record.delivery ?? defaults.delivery ?? 'bundle',
+    };
+}
+
+function assertRecord(record, sourceLabel) {
     for (const key of ['id', 'sourceId', 'title', 'text']) {
         if (typeof record[key] !== 'string' || !record[key].trim()) {
-            throw new Error(`Record is missing required string field: ${key}`);
+            throw new Error(`${sourceLabel}: record is missing required string field: ${key}`);
         }
     }
 
     if (!allowedSourceIds.has(record.sourceId)) {
-        throw new Error(`Unsupported sourceId "${record.sourceId}" in ${record.id}.`);
+        throw new Error(`${sourceLabel}: unsupported sourceId "${record.sourceId}" in ${record.id}.`);
     }
 
     for (const key of ['license', 'attribution', 'allowedUse', 'confidence', 'reviewStatus']) {
         if (typeof record[key] !== 'string' || !record[key].trim()) {
-            throw new Error(`${record.id}.${key} is required for SourcePack v2.`);
+            throw new Error(`${sourceLabel}: ${record.id}.${key} is required for SourcePack v2.`);
         }
     }
 
     if (record.sourceUrl !== undefined && typeof record.sourceUrl !== 'string') {
-        throw new Error(`${record.id}.sourceUrl must be a string when provided.`);
+        throw new Error(`${sourceLabel}: ${record.id}.sourceUrl must be a string when provided.`);
     }
 
     if (!allowedConfidenceValues.has(record.confidence)) {
-        throw new Error(`${record.id}.confidence must be one of: ${[...allowedConfidenceValues].join(', ')}.`);
+        throw new Error(`${sourceLabel}: ${record.id}.confidence must be one of: ${[...allowedConfidenceValues].join(', ')}.`);
     }
 
     if (!allowedReviewStatuses.has(record.reviewStatus)) {
-        throw new Error(`${record.id}.reviewStatus must be one of: ${[...allowedReviewStatuses].join(', ')}.`);
+        throw new Error(`${sourceLabel}: ${record.id}.reviewStatus must be one of: ${[...allowedReviewStatuses].join(', ')}.`);
+    }
+
+    if (!allowedDeliveryModes.has(record.delivery)) {
+        throw new Error(`${sourceLabel}: ${record.id}.delivery must be one of: ${[...allowedDeliveryModes].join(', ')}.`);
     }
 
     assertArray(record.routeIds, `${record.id}.routeIds`);
     assertArray(record.terms, `${record.id}.terms`);
     assertArray(record.references, `${record.id}.references`);
 
+    if (record.anchorReferences !== undefined) {
+        assertArray(record.anchorReferences, `${record.id}.anchorReferences`);
+    }
+
     for (const routeId of record.routeIds) {
         if (!allowedRouteIds.has(routeId)) {
-            throw new Error(`Unsupported routeId "${routeId}" in ${record.id}.`);
+            throw new Error(`${sourceLabel}: unsupported routeId "${routeId}" in ${record.id}.`);
         }
     }
 
     if (record.text.length > 420) {
-        throw new Error(`${record.id}.text is too long for a source chunk. Keep records concise.`);
+        throw new Error(`${sourceLabel}: ${record.id}.text is too long for a source chunk. Keep records concise.`);
     }
 
     if (record.references.length > 0 && getReferenceAnchors(record.references).length === 0) {
-        throw new Error(`${record.id}.references did not include a parseable Bible reference.`);
+        throw new Error(`${sourceLabel}: ${record.id}.references did not include a parseable Bible reference.`);
+    }
+
+    if (record.anchorReferences?.length > 0 && getReferenceAnchors(record.anchorReferences).length === 0) {
+        throw new Error(`${sourceLabel}: ${record.id}.anchorReferences did not include a parseable Bible reference.`);
     }
 }
 
@@ -227,12 +259,18 @@ function normalizeRecord(record) {
         confidence: record.confidence,
         reviewStatus: record.reviewStatus,
         allowedUse: record.allowedUse,
+        delivery: record.delivery,
+        ...(record.anchorReferences?.length ? { anchorReferences: [...new Set(record.anchorReferences)] } : {}),
+        ...(Array.isArray(record.crossReferences) ? { crossReferences: record.crossReferences } : {}),
         generated: true,
     };
 }
 
 function makeOutput({ version, records }) {
-    const chunks = records.map(normalizeRecord).sort((a, b) => a.id.localeCompare(b.id));
+    const chunks = records
+        .filter(record => record.delivery !== 'static')
+        .map(normalizeRecord)
+        .sort((a, b) => a.id.localeCompare(b.id));
 
     return `// Generated by scripts/build-study-source-pack.mjs. Do not edit by hand.
 export const GENERATED_STUDY_SOURCE_VERSION = ${JSON.stringify(version)};
@@ -275,6 +313,14 @@ function getReferenceAnchors(references) {
     ));
 }
 
+function getShardAnchors(record) {
+    const shardReferences = record.anchorReferences?.length
+        ? record.anchorReferences
+        : record.references;
+
+    return getReferenceAnchors(shardReferences);
+}
+
 function addRecordToShard(shards, anchor, record) {
     const existing = shards.get(anchor.key) ?? {
         book: anchor.book,
@@ -309,16 +355,20 @@ function makeGlobalPack({ version, records }) {
     };
 }
 
-function makeManifest({ version, records, globalRecords, shards }) {
+function makeManifest({ version, records, globalRecords, shards, sourcePackVersions }) {
     const sortedShards = [...shards.values()].sort((a, b) => (
         a.book.localeCompare(b.book) || a.chapter - b.chapter
     ));
+    const bundledRecordCount = records.filter(record => record.delivery !== 'static').length;
 
     return {
         schemaVersion: 2,
         packVersion: version,
         basePath: staticPackBasePath,
         recordCount: records.length,
+        bundledRecordCount,
+        staticOnlyRecordCount: records.length - bundledRecordCount,
+        sourcePackVersions,
         globalPath: globalRecords.length ? 'global.json' : '',
         globalRecordCount: globalRecords.length,
         shardCount: sortedShards.length,
@@ -333,13 +383,13 @@ function makeManifest({ version, records, globalRecords, shards }) {
     };
 }
 
-async function writeStaticPacks({ version, records }) {
+async function writeStaticPacks({ version, records, sourcePackVersions = {} }) {
     const normalizedRecords = records.map(normalizeRecord).sort((a, b) => a.id.localeCompare(b.id));
     const globalRecords = [];
     const shards = new Map();
 
     for (const record of normalizedRecords) {
-        const anchors = getReferenceAnchors(record.references);
+        const anchors = getShardAnchors(record);
 
         if (anchors.length === 0) {
             globalRecords.push(record);
@@ -374,41 +424,113 @@ async function writeStaticPacks({ version, records }) {
 
     await writeFile(
         path.join(staticPackRoot, 'manifest.json'),
-        `${JSON.stringify(makeManifest({ version, records: normalizedRecords, globalRecords, shards }), null, 4)}\n`,
+        `${JSON.stringify(makeManifest({
+            version,
+            records: normalizedRecords,
+            globalRecords,
+            shards,
+            sourcePackVersions,
+        }), null, 4)}\n`,
         'utf8',
     );
 }
 
-async function main() {
-    const raw = await readFile(inputPath, 'utf8');
-    const sourcePack = JSON.parse(raw);
+async function readJsonFile(filePath) {
+    const raw = await readFile(filePath, 'utf8');
+    return JSON.parse(raw);
+}
 
+async function readImportedSourcePacks() {
+    try {
+        const entries = await readdir(importedInputDir, { withFileTypes: true });
+        const jsonFiles = entries
+            .filter(entry => entry.isFile() && entry.name.endsWith('.json'))
+            .map(entry => path.join(importedInputDir, entry.name))
+            .sort((a, b) => a.localeCompare(b));
+
+        return Promise.all(jsonFiles.map(async filePath => ({
+            filePath,
+            pack: await readJsonFile(filePath),
+        })));
+    } catch (error) {
+        if (error?.code === 'ENOENT') return [];
+        throw error;
+    }
+}
+
+function validateSourcePack(sourcePack, sourceLabel) {
     if (sourcePack.schemaVersion !== 2) {
-        throw new Error('Source pack needs schemaVersion: 2.');
+        throw new Error(`${sourceLabel}: source pack needs schemaVersion: 2.`);
     }
 
     if (typeof sourcePack.version !== 'string' || !sourcePack.version.trim()) {
-        throw new Error('Source pack needs a version string.');
+        throw new Error(`${sourceLabel}: source pack needs a version string.`);
     }
 
     if (!Array.isArray(sourcePack.records)) {
-        throw new Error('Source pack needs a records array.');
+        throw new Error(`${sourceLabel}: source pack needs a records array.`);
     }
 
+    if (sourcePack.recordDefaults !== undefined && !isRecordObject(sourcePack.recordDefaults)) {
+        throw new Error(`${sourceLabel}: recordDefaults must be an object when provided.`);
+    }
+}
+
+async function readSourcePacks() {
+    const primaryPack = await readJsonFile(primaryInputPath);
+    const importedPacks = await readImportedSourcePacks();
+
+    return [
+        {
+            filePath: primaryInputPath,
+            pack: primaryPack,
+        },
+        ...importedPacks,
+    ];
+}
+
+function combineSourcePacks(sourcePacks) {
+    const records = [];
     const seenIds = new Set();
-    for (const record of sourcePack.records) {
-        assertRecord(record);
+    const sourcePackVersions = {};
 
-        if (seenIds.has(record.id)) {
-            throw new Error(`Duplicate source record id: ${record.id}`);
+    for (const { filePath, pack } of sourcePacks) {
+        const sourceLabel = path.relative(projectRoot, filePath);
+        validateSourcePack(pack, sourceLabel);
+        sourcePackVersions[sourceLabel] = pack.version;
+        const defaults = pack.recordDefaults ?? {};
+
+        for (const rawRecord of pack.records) {
+            const record = materializeRecord(rawRecord, defaults);
+            assertRecord(record, sourceLabel);
+
+            if (seenIds.has(record.id)) {
+                throw new Error(`Duplicate source record id: ${record.id}`);
+            }
+
+            seenIds.add(record.id);
+            records.push(record);
         }
-
-        seenIds.add(record.id);
     }
 
-    await writeFile(jsOutputPath, makeOutput(sourcePack), 'utf8');
-    await writeStaticPacks(sourcePack);
-    console.log(`Generated ${sourcePack.records.length} study source chunks and static source packs.`);
+    return {
+        version: Object.values(sourcePackVersions).join('+'),
+        records,
+        sourcePackVersions,
+    };
+}
+
+async function main() {
+    const sourcePacks = await readSourcePacks();
+    const combinedSourcePack = combineSourcePacks(sourcePacks);
+    const bundledRecordCount = combinedSourcePack.records.filter(record => record.delivery !== 'static').length;
+
+    await writeFile(jsOutputPath, makeOutput(combinedSourcePack), 'utf8');
+    await writeStaticPacks(combinedSourcePack);
+    console.log(
+        `Generated ${combinedSourcePack.records.length} study source chunks `
+        + `(${bundledRecordCount} bundled, ${combinedSourcePack.records.length - bundledRecordCount} static-only).`,
+    );
 }
 
 main().catch((error) => {

@@ -17,11 +17,20 @@ This is the source plan for Exeges study grounding. The core rule: the model is 
 
 ## Engineering Shape
 
-Raw curated source records live in `sources/study/curated-records.json`.
+Hand-curated source records live in `sources/study/curated-records.json`.
+Large source inputs live under `sources/study/raw/` and generate ignored import artifacts under `sources/study/imported/`.
 Run `npm run build:study-sources` to regenerate:
 
 - `src/data/generatedStudySourceChunks.js` for the current bundled fallback path.
 - `public/study-packs/v1/manifest.json` plus chapter/global JSON shards for future static or object-storage loading.
+
+The first large import is OpenBible.info Cross References:
+
+- Source file: `sources/study/raw/openbible-cross-references.zip`.
+- Import command: `npm run import:openbible-crossrefs -- --input=sources/study/raw/openbible-cross-references.zip`.
+- Build behavior: `npm run build:study-sources` imports the ZIP, then rebuilds the bundled fallback and static packs.
+- Scope: one static-only source record per OpenBible source verse, using the top voted cross-reference targets from the 344,799 imported edges.
+- Delivery: imported OpenBible records are `delivery: "static"` so they appear in chapter shards but stay out of the JavaScript bundle.
 
 Each SourcePack v2 record should include:
 
@@ -48,6 +57,8 @@ Use this order:
 1. Keep the current bundled JS path for the small test corpus.
 2. Move runtime retrieval to static chapter packs under `public/study-packs/v1/` once the corpus grows beyond what we want in the JavaScript bundle.
 3. Promote the same `study-packs/v1` tree to Cloudflare R2 when the corpus becomes too large for GitHub Pages assets or needs independent source-pack updates.
+
+`public/study-packs/` and `sources/study/imported/` are generated and ignored. CI and local builds recreate them from committed source files before Vite builds the app.
 
 Cloudflare roles should stay simple:
 

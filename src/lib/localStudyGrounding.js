@@ -2,6 +2,9 @@ import { STUDY_SOURCE_CHUNKS, STUDY_SOURCE_PACK_VERSION, STUDY_SOURCES } from '.
 import { cleanStudyToken } from './studyMethod';
 import { buildStudySynthesisRequest } from './studySynthesisRequest';
 
+const STATIC_STUDY_PACK_BASE_PATH = 'study-packs/v1';
+const staticPackCache = new Map();
+
 const STOPWORDS = new Set([
     'a',
     'about',
@@ -41,6 +44,10 @@ const STOPWORDS = new Set([
     'why',
     'with',
 ]);
+
+function slugify(value) {
+    return (value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
 
 function normalizeText(text) {
     return (text ?? '')
@@ -85,6 +92,7 @@ function hydrateChunk(chunk, score) {
         confidence: chunk.confidence ?? '',
         reviewStatus: chunk.reviewStatus ?? '',
         allowedUse: chunk.allowedUse ?? '',
+        crossReferences: chunk.crossReferences ?? [],
         score,
         generated: !!chunk.generated,
         source: source ? {
@@ -93,6 +101,63 @@ function hydrateChunk(chunk, score) {
             href: source.href,
             license: source.license,
         } : null,
+    };
+}
+
+function getStaticPackUrl(packPath) {
+    const baseUrl = import.meta.env?.BASE_URL ?? '/';
+    const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+    return `${normalizedBaseUrl}${STATIC_STUDY_PACK_BASE_PATH}/${packPath}`;
+}
+
+async function fetchStaticPack(packPath) {
+    if (typeof window === 'undefined' || typeof fetch === 'undefined') return null;
+
+    if (!staticPackCache.has(packPath)) {
+        staticPackCache.set(packPath, fetch(getStaticPackUrl(packPath))
+            .then((response) => {
+                if (!response.ok) return null;
+                return response.json();
+            })
+            .catch(() => null));
+    }
+
+    return staticPackCache.get(packPath);
+}
+
+function getScopedPackPaths(scope = {}) {
+    const bookSlug = slugify(scope.bookName);
+    const chapterNumber = Number.parseInt(scope.chapterNumber, 10);
+
+    if (!bookSlug || !Number.isFinite(chapterNumber)) return [];
+
+    return [`${bookSlug}/${chapterNumber}.json`];
+}
+
+function dedupeChunks(chunks) {
+    const seen = new Set();
+    const deduped = [];
+
+    for (const chunk of chunks) {
+        if (!chunk?.id || seen.has(chunk.id)) continue;
+        seen.add(chunk.id);
+        deduped.push(chunk);
+    }
+
+    return deduped;
+}
+
+async function loadScopedStudySourcePack(scope) {
+    const packPaths = ['global.json', ...getScopedPackPaths(scope)];
+    const [manifest, ...packs] = await Promise.all([
+        fetchStaticPack('manifest.json'),
+        ...packPaths.map(packPath => fetchStaticPack(packPath)),
+    ]);
+    const chunks = packs.flatMap(pack => pack?.records ?? []);
+
+    return {
+        version: manifest?.packVersion ?? STUDY_SOURCE_PACK_VERSION,
+        chunks,
     };
 }
 
@@ -126,24 +191,12 @@ function scoreChunk(chunk, { observation, route }) {
     return score;
 }
 
-export function retrieveStudySourceChunks({ observation, route, limit = 4 }) {
-    if (!observation) return [];
-
-    return STUDY_SOURCE_CHUNKS
-        .map(chunk => ({ chunk, score: scoreChunk(chunk, { observation, route }) }))
-        .filter(item => item.score > 0)
-        .sort((a, b) => b.score - a.score || a.chunk.title.localeCompare(b.chunk.title))
-        .slice(0, limit)
-        .map(item => hydrateChunk(item.chunk, item.score));
-}
-
-export function getLocalStudyGrounding({ observation, route }) {
-    const sourceFindings = retrieveStudySourceChunks({ observation, route });
+function buildGrounding({ observation, route, sourceFindings, version }) {
     const synthesisRequest = buildStudySynthesisRequest({ observation, route, sourceFindings });
 
     return {
         provider: 'local-source-pack',
-        version: STUDY_SOURCE_PACK_VERSION,
+        version,
         status: sourceFindings.length ? 'ready' : 'needs-sources',
         confidence: sourceFindings.length >= 3 ? 'medium' : 'low',
         sourceFindings,
@@ -153,6 +206,49 @@ export function getLocalStudyGrounding({ observation, route }) {
             .filter(Boolean)
             .filter((source, index, sources) => sources.findIndex(item => item.id === source.id) === index),
     };
+}
+
+export function retrieveStudySourceChunks({
+    observation,
+    route,
+    limit = 4,
+    chunks = STUDY_SOURCE_CHUNKS,
+}) {
+    if (!observation) return [];
+
+    return chunks
+        .map(chunk => ({ chunk, score: scoreChunk(chunk, { observation, route }) }))
+        .filter(item => item.score > 0)
+        .sort((a, b) => b.score - a.score || a.chunk.title.localeCompare(b.chunk.title))
+        .slice(0, limit)
+        .map(item => hydrateChunk(item.chunk, item.score));
+}
+
+export function getLocalStudyGrounding({ observation, route }) {
+    const sourceFindings = retrieveStudySourceChunks({ observation, route });
+
+    return buildGrounding({
+        observation,
+        route,
+        sourceFindings,
+        version: STUDY_SOURCE_PACK_VERSION,
+    });
+}
+
+export async function getLocalStudyGroundingWithStaticPacks({ observation, route, scope }) {
+    const staticPack = await loadScopedStudySourcePack(scope);
+    const chunks = dedupeChunks([
+        ...STUDY_SOURCE_CHUNKS,
+        ...staticPack.chunks,
+    ]);
+    const sourceFindings = retrieveStudySourceChunks({ observation, route, chunks });
+
+    return buildGrounding({
+        observation,
+        route,
+        sourceFindings,
+        version: staticPack.version,
+    });
 }
 
 export function getLocalStudyCapabilities() {

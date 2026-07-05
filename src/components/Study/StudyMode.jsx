@@ -8,7 +8,10 @@ import {
 import { getBackgroundGuideForObservation } from '../../lib/backgroundGuides';
 import { buildGroundedStudyDraft } from '../../lib/groundedStudyDraft';
 import { auditLocalStudyDraft } from '../../lib/localStudyDraftAudit';
-import { getLocalStudyCapabilities } from '../../lib/localStudyGrounding';
+import {
+    getLocalStudyCapabilities,
+    getLocalStudyGroundingWithStaticPacks,
+} from '../../lib/localStudyGrounding';
 import {
     LOCAL_STUDY_SLM_MODEL_ID,
     LOCAL_STUDY_SLM_MODELS,
@@ -442,7 +445,7 @@ function mergeHelperText(current = '', next = '') {
     return cleanCurrent ? `${cleanCurrent}\n\n${cleanNext}` : cleanNext;
 }
 
-function BackgroundGuideCard({ observation, interpretation, bibles, onHelperChange }) {
+function BackgroundGuideCard({ observation, interpretation, bibles, book, chapter, onHelperChange }) {
     const guide = getBackgroundGuideForObservation(observation);
     const localDraftRequestRef = useRef(0);
     const [localDraftState, setLocalDraftState] = useState({
@@ -451,7 +454,26 @@ function BackgroundGuideCard({ observation, interpretation, bibles, onHelperChan
         draft: null,
         error: '',
     });
+    const [staticGroundingState, setStaticGroundingState] = useState({
+        key: '',
+        status: 'idle',
+        grounding: null,
+    });
     const [selectedLocalModelId, setSelectedLocalModelId] = useState(LOCAL_STUDY_SLM_MODEL_ID);
+    const chapterNumber = chapter?.chapter;
+    const routeId = guide?.routeId ?? '';
+    const routeLabel = guide?.routeLabel ?? '';
+    const staticGroundingKey = guide
+        ? [
+            observation?.id,
+            observation?.quote,
+            observation?.note,
+            observation?.reference,
+            routeId,
+            book?.name,
+            chapterNumber,
+        ].join('|')
+        : '';
 
     useEffect(() => {
         localDraftRequestRef.current += 1;
@@ -463,17 +485,89 @@ function BackgroundGuideCard({ observation, interpretation, bibles, onHelperChan
         });
     }, [observation?.id, selectedLocalModelId]);
 
+    useEffect(() => {
+        if (!guide || !routeId || !book?.name || !chapterNumber) {
+            setStaticGroundingState({
+                key: '',
+                status: 'idle',
+                grounding: null,
+            });
+            return undefined;
+        }
+
+        let cancelled = false;
+        setStaticGroundingState({
+            key: staticGroundingKey,
+            status: 'loading',
+            grounding: null,
+        });
+
+        getLocalStudyGroundingWithStaticPacks({
+            observation,
+            route: {
+                id: routeId,
+                label: routeLabel,
+            },
+            scope: {
+                bookName: book.name,
+                chapterNumber,
+            },
+        }).then((grounding) => {
+            if (cancelled) return;
+            setStaticGroundingState({
+                key: staticGroundingKey,
+                status: 'ready',
+                grounding,
+            });
+        }).catch(() => {
+            if (cancelled) return;
+            setStaticGroundingState({
+                key: staticGroundingKey,
+                status: 'error',
+                grounding: null,
+            });
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        book?.name,
+        chapterNumber,
+        observation?.id,
+        observation?.note,
+        observation?.quote,
+        observation?.reference,
+        observation?.type,
+        routeId,
+        routeLabel,
+        staticGroundingKey,
+    ]);
+
     if (!guide) return null;
 
+    const staticGrounding = staticGroundingState.key === staticGroundingKey
+        ? staticGroundingState.grounding
+        : null;
+    const activeGuide = staticGrounding
+        ? {
+            ...guide,
+            grounding: staticGrounding,
+            sourceFindings: staticGrounding.sourceFindings,
+            citations: staticGrounding.citations,
+        }
+        : guide;
     const capabilities = getLocalStudyCapabilities();
-    const sourceFindings = guide.sourceFindings ?? [];
+    const sourceFindings = activeGuide.sourceFindings ?? [];
     const sourceCount = sourceFindings.length;
+    const isLoadingStaticGrounding = staticGroundingState.key === staticGroundingKey
+        && staticGroundingState.status === 'loading';
     const canDraftLocally = capabilities.localSlmAvailable && sourceCount > 0;
     const isDraftingLocally = localDraftState.status === 'loading';
     const selectedLocalModel = LOCAL_STUDY_SLM_MODELS.find(model => (
         model.id === selectedLocalModelId
     )) ?? LOCAL_STUDY_SLM_MODELS[0];
-    const groundedDraft = buildGroundedStudyDraft(guide.grounding.synthesisRequest);
+    const groundedDraft = buildGroundedStudyDraft(activeGuide.grounding.synthesisRequest);
     const localDraft = localDraftState.draft;
     const localDraftHasFields = !!(
         localDraft?.context ||
@@ -484,10 +578,10 @@ function BackgroundGuideCard({ observation, interpretation, bibles, onHelperChan
     const localDraftIsRawOnly = !!(localDraft?.unstructured && !localDraftHasFields);
     const hasUsableLocalDraft = !!(localDraft && localDraftHasFields && !localDraftIsRawOnly);
     const localDraftAudit = localDraft
-        ? auditLocalStudyDraft(localDraft, guide.grounding.synthesisRequest, { bibles })
+        ? auditLocalStudyDraft(localDraft, activeGuide.grounding.synthesisRequest, { bibles })
         : null;
     const groundedDraftAudit = groundedDraft
-        ? auditLocalStudyDraft(groundedDraft, guide.grounding.synthesisRequest, { bibles })
+        ? auditLocalStudyDraft(groundedDraft, activeGuide.grounding.synthesisRequest, { bibles })
         : null;
     const primaryDraft = hasUsableLocalDraft ? localDraft : groundedDraft;
     const primaryDraftAudit = hasUsableLocalDraft ? localDraftAudit : groundedDraftAudit;
@@ -516,7 +610,7 @@ function BackgroundGuideCard({ observation, interpretation, bibles, onHelperChan
 
         try {
             const draft = await draftLocalStudySynthesis({
-                synthesisRequest: guide.grounding.synthesisRequest,
+                synthesisRequest: activeGuide.grounding.synthesisRequest,
                 modelId: selectedLocalModelId,
                 onProgress: (progress) => {
                     if (localDraftRequestRef.current !== requestId) return;
@@ -557,13 +651,17 @@ function BackgroundGuideCard({ observation, interpretation, bibles, onHelperChan
             <div className="study-assistant-top">
                 <div>
                     <span className="study-context-card-label">
-                        {guide.exact ? 'Study assistant' : 'Study path'}
+                        {activeGuide.exact ? 'Study assistant' : 'Study path'}
                     </span>
-                    <strong>{guide.title}</strong>
-                    <p>{guide.reason}</p>
+                    <strong>{activeGuide.title}</strong>
+                    <p>{activeGuide.reason}</p>
                 </div>
                 <div className="study-assistant-status" aria-label="Assistant grounding status">
-                    <span>{sourceCount} source card{sourceCount === 1 ? '' : 's'}</span>
+                    <span>
+                        {isLoadingStaticGrounding
+                            ? 'Loading chapter sources'
+                            : `${sourceCount} source card${sourceCount === 1 ? '' : 's'}`}
+                    </span>
                     <span>Bible refs checked</span>
                     <span>{hasUsableLocalDraft ? 'Local draft' : 'Curated draft'}</span>
                 </div>
@@ -658,11 +756,11 @@ function BackgroundGuideCard({ observation, interpretation, bibles, onHelperChan
                 <div className="study-background-section">
                     <span>Route</span>
                     <p>
-                        <strong>{guide.routeLabel}:</strong> {guide.subtitle}
+                        <strong>{activeGuide.routeLabel}:</strong> {activeGuide.subtitle}
                     </p>
                 </div>
 
-                {!guide.exact && (
+                {!activeGuide.exact && (
                     <p className="study-background-note">
                         We do not have a curated source card for this exact item yet, so this helper gives a careful research path instead of a finished answer.
                     </p>
@@ -670,14 +768,14 @@ function BackgroundGuideCard({ observation, interpretation, bibles, onHelperChan
 
                 <div className="study-background-section">
                     <span>Local context</span>
-                    {guide.contextNotes.map(note => (
+                    {activeGuide.contextNotes.map(note => (
                         <p key={note}>{note}</p>
                     ))}
                 </div>
 
                 <div className="study-background-section">
                     <span>Trusted source notes</span>
-                    {guide.sourceNotes.map(note => (
+                    {activeGuide.sourceNotes.map(note => (
                         <p key={`${note.label}-${note.text}`}>
                             <strong>{note.label}:</strong> {note.text}
                             {note.href && (
@@ -719,7 +817,7 @@ function BackgroundGuideCard({ observation, interpretation, bibles, onHelperChan
 
                 <div className="study-background-section">
                     <span>Careful synthesis</span>
-                    {guide.synthesis.map(note => (
+                    {activeGuide.synthesis.map(note => (
                         <p key={note}>{note}</p>
                     ))}
                 </div>
@@ -770,6 +868,8 @@ function InterpretWorkbench({
                     observation={activeObservation}
                     interpretation={interpretation}
                     bibles={bibles}
+                    book={book}
+                    chapter={chapter}
                     onHelperChange={handleHelperChange}
                 />
                 <div className="study-helper-stack">

@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Generated study source artifacts
+public/study-packs/
+sources/study/imported/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

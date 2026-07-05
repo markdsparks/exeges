@@ -4,11 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "npm run build:study-sources",
     "dev": "vite",
+    "prebench:study-sources": "npm run build:study-sources",
     "bench:study-sources": "node scripts/bench-study-source-pack.mjs",
     "bench:study-synthesis": "node scripts/bench-local-study-synthesis.mjs",
     "build": "vite build",
-    "build:study-sources": "node scripts/build-study-source-pack.mjs",
+    "build:study-sources": "npm run import:openbible-crossrefs -- --input=sources/study/raw/openbible-cross-references.zip --quiet && node scripts/build-study-source-pack.mjs",
+    "import:openbible-crossrefs": "node scripts/import-openbible-cross-references.mjs",
     "lint": "oxlint",
     "prebuild": "npm run build:study-sources",
     "preview": "vite preview"
