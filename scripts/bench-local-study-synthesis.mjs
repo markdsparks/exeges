@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { buildGroundedStudyDraft } from '../src/lib/groundedStudyDraft.js';
 import { auditLocalStudyDraft } from '../src/lib/localStudyDraftAudit.js';
+import { retrieveStudySourceChunks } from '../src/lib/localStudyGrounding.js';
 import { buildStudySynthesisRequest } from '../src/lib/studySynthesisRequest.js';
 import {
     isLocalStudySelfTalkText,
@@ -75,6 +76,52 @@ assert.ok(
 assert.ok(
     groundedDraft?.guardrail.includes('word or name study'),
     'grounded draft should preserve a passage-first method guardrail',
+);
+
+const lightObservation = {
+    id: 'bench-genesis-1-3-light',
+    type: 'question',
+    quote: 'light',
+    note: 'What does light mean here?',
+    reference: 'Genesis 1:3',
+};
+const lightRoute = {
+    id: 'word-name',
+    label: 'Word/name study',
+};
+const lightFindings = retrieveStudySourceChunks({
+    observation: lightObservation,
+    route: lightRoute,
+    limit: 6,
+});
+const lightFindingIds = lightFindings.map(finding => finding.id);
+
+assert.ok(
+    lightFindingIds.includes('passage-genesis-1-3-divine-speech'),
+    'light question should retrieve the Genesis 1:3 passage-context source',
+);
+assert.ok(
+    lightFindingIds.includes('openbible-cross-genesis-1-3-light-word'),
+    'light question should retrieve the Genesis 1:3 cross-reference source',
+);
+assert.ok(
+    !lightFindingIds.includes('easton-adoni-zedek-king'),
+    'route match alone should not retrieve unrelated Adoni-zedek evidence for light',
+);
+
+const lightDraft = buildGroundedStudyDraft(buildStudySynthesisRequest({
+    observation: lightObservation,
+    route: lightRoute,
+    sourceFindings: lightFindings,
+}));
+
+assert.ok(
+    lightDraft?.mainThought.includes('Genesis 1:3 presents God'),
+    'light draft should state the passage-first main thought before details',
+);
+assert.ok(
+    !lightDraft?.meaning.includes('word or name study can sharpen'),
+    'light draft should not make a generic word-study guardrail the meaning',
 );
 
 function countMatches(text, pattern) {

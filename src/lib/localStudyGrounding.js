@@ -1,6 +1,6 @@
-import { STUDY_SOURCE_CHUNKS, STUDY_SOURCE_PACK_VERSION, STUDY_SOURCES } from '../data/studySourcePacks';
-import { cleanStudyToken } from './studyMethod';
-import { buildStudySynthesisRequest } from './studySynthesisRequest';
+import { STUDY_SOURCE_CHUNKS, STUDY_SOURCE_PACK_VERSION, STUDY_SOURCES } from '../data/studySourcePacks.js';
+import { cleanStudyToken } from './studyMethod.js';
+import { buildStudySynthesisRequest } from './studySynthesisRequest.js';
 
 const STATIC_STUDY_PACK_BASE_PATH = 'study-packs/v1';
 const staticPackCache = new Map();
@@ -76,6 +76,50 @@ function getObservationText(observation) {
         observation?.reference,
         ...(observation?.selections ?? []).map(selection => selection.text),
     ].join(' ');
+}
+
+function getReferenceBookChapter(reference = '') {
+    const match = reference.match(/^((?:\d\s)?[A-Za-z]+(?:\s(?:of\s)?[A-Za-z]+)*)\s+(\d{1,3})/u);
+    if (!match) return '';
+
+    return `${normalizeText(match[1])} ${match[2]}`;
+}
+
+function getReferenceSignals(references = []) {
+    return references
+        .map(reference => ({
+            exact: normalizeText(reference),
+            chapter: getReferenceBookChapter(reference),
+        }))
+        .filter(signal => signal.exact || signal.chapter);
+}
+
+function getReferenceScore(chunkReferences = [], observationReference = '') {
+    const normalizedObservationReference = normalizeText(observationReference);
+    const observationChapter = getReferenceBookChapter(observationReference);
+    if (!normalizedObservationReference && !observationChapter) return 0;
+
+    return getReferenceSignals(chunkReferences).reduce((score, signal) => {
+        if (signal.exact && normalizedObservationReference) {
+            if (signal.exact === normalizedObservationReference) return Math.max(score, 14);
+            if (
+                signal.exact.startsWith(normalizedObservationReference)
+                || normalizedObservationReference.startsWith(signal.exact)
+            ) {
+                return Math.max(score, 10);
+            }
+        }
+
+        if (signal.chapter && observationChapter && signal.chapter === observationChapter) {
+            return Math.max(score, 5);
+        }
+
+        return score;
+    }, 0);
+}
+
+function isGlobalMethodChunk(chunk) {
+    return (chunk.references ?? []).length === 0 && chunk.sourceId === 'exegesMethod';
 }
 
 function hydrateChunk(chunk, score) {
@@ -166,27 +210,41 @@ function scoreChunk(chunk, { observation, route }) {
     const observationText = getObservationText(observation);
     const observationTokens = uniqueTokens(observationText);
     const focus = normalizeText(observation?.quote);
+    const normalizedTerms = (chunk.terms ?? []).map(normalizeText);
     const chunkText = normalizeText([
         chunk.title,
         chunk.text,
         ...(chunk.terms ?? []),
         ...(chunk.references ?? []),
     ].join(' '));
+    const referenceScore = getReferenceScore(chunk.references, observation?.reference);
+    const termScore = observationTokens.reduce((score, token) => {
+        if (normalizedTerms.some(term => term === token)) return score + 4;
+        if (chunkText.includes(token)) return score + 2;
+        return score;
+    }, 0);
+    const focusScore = focus && chunkText.includes(focus) ? 10 : 0;
+    const routeScore = routeId && chunk.routeIds?.includes(routeId) ? 4 : 0;
+
+    if (
+        !isGlobalMethodChunk(chunk)
+        && referenceScore === 0
+        && focusScore === 0
+        && termScore === 0
+    ) {
+        return 0;
+    }
 
     let score = 0;
 
-    if (routeId && chunk.routeIds?.includes(routeId)) score += 12;
-    if (focus && chunkText.includes(focus)) score += 10;
+    score += routeScore;
+    score += focusScore;
+    score += termScore;
+    score += referenceScore;
 
-    for (const token of observationTokens) {
-        if (chunk.terms?.some(term => normalizeText(term) === token)) score += 4;
-        else if (chunkText.includes(token)) score += 2;
-    }
-
-    const reference = observation?.reference ?? '';
-    if (reference && chunk.references?.some(item => item === reference || reference.startsWith(item))) {
-        score += 5;
-    }
+    if (chunk.sourceId === 'passageContext' && referenceScore > 0) score += 6;
+    if (chunk.sourceId === 'openBibleCrossReferences' && referenceScore > 0) score += 4;
+    if (isGlobalMethodChunk(chunk) && routeScore > 0) score += 2;
 
     return score;
 }

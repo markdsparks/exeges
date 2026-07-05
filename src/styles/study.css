@@ -896,6 +896,75 @@
     color: var(--color-text-primary);
 }
 
+.study-main-thought {
+    display: grid;
+    gap: 0.28rem;
+    padding: 0.78rem 0.82rem;
+    border: 1px solid color-mix(in srgb, var(--color-illumination) 34%, var(--color-border));
+    border-radius: var(--radius-sm);
+    background-color: color-mix(in srgb, var(--color-bg-note) 82%, var(--color-illumination));
+}
+
+.study-main-thought span,
+.study-source-use span {
+    font-family: var(--font-family-ui);
+    font-size: 0.68rem;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-label);
+    color: var(--color-accent-strong);
+}
+
+.study-main-thought p {
+    margin: 0;
+    font-family: var(--font-family-heading);
+    font-size: 1.02rem;
+    line-height: 1.42;
+    color: var(--color-text-primary);
+}
+
+.study-source-use-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    gap: var(--space-xs);
+}
+
+.study-source-use {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.58rem 0.64rem;
+    border: 1px solid color-mix(in srgb, var(--color-border) 76%, transparent);
+    border-radius: var(--radius-sm);
+    background-color: color-mix(in srgb, var(--color-bg-primary) 66%, transparent);
+}
+
+.study-source-use p {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.74rem;
+    line-height: 1.36;
+    color: var(--color-text-secondary);
+}
+
+.study-source-check {
+    width: fit-content;
+    margin: 0;
+    padding: 0.28rem 0.46rem;
+    border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+    border-radius: var(--radius-sm);
+    background-color: color-mix(in srgb, var(--color-bg-primary) 70%, transparent);
+    color: var(--color-text-muted);
+    font-family: var(--font-family-ui);
+    font-size: 0.72rem;
+    line-height: 1.25;
+}
+
+.study-source-check.status-review,
+.study-source-check.status-uncited {
+    border-color: color-mix(in srgb, var(--color-accent-strong) 46%, var(--color-border));
+    color: var(--color-accent-strong);
+}
+
 .study-assistant-draft-heading p,
 .study-assistant-local p,
 .study-assistant-draft-lines p,
@@ -911,6 +980,7 @@
 .study-assistant-draft-lines {
     display: grid;
     gap: 0.42rem;
+    padding-top: var(--space-xs);
 }
 
 .study-assistant-draft-lines strong {
@@ -969,6 +1039,10 @@
 .study-assistant-details[open] summary,
 .study-assistant-diagnostic[open] summary {
     color: var(--color-accent-strong);
+}
+
+.study-assistant-why {
+    padding: 0.1rem 0 0;
 }
 
 .study-assistant-diagnostic {

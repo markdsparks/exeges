@@ -198,10 +198,52 @@ function LocalDraftAudit({ audit }) {
 
 function getDraftUsableFields(draft) {
     return [
+        ['summary', draft?.mainThought],
         ['context', draft?.context],
         ['meaning', draft?.meaning],
         ['guardrail', draft?.guardrail],
     ].filter(([, value]) => value?.trim());
+}
+
+function getDraftMainThought(draft) {
+    return draft?.mainThought || draft?.meaning || draft?.context || '';
+}
+
+function getSourceRole(finding) {
+    const sourceId = finding.source?.id ?? finding.sourceId ?? '';
+
+    if (sourceId === 'passage-context') return 'Passage anchor';
+    if (sourceId === 'openbible-cross-references') return 'Cross references';
+    if (sourceId === 'exeges-method') return 'Method guardrail';
+    if (sourceId.includes('dictionary')) return 'Background';
+    if (sourceId.includes('geocoding')) return 'Place context';
+
+    return 'Source note';
+}
+
+function getSourceUseText(finding) {
+    const role = getSourceRole(finding);
+
+    if (role === 'Passage anchor') return 'Sets the first boundary for interpretation.';
+    if (role === 'Cross references') return 'Offers passages to compare after local meaning is clear.';
+    if (role === 'Method guardrail') return 'Keeps the answer from over-reading the detail.';
+    if (role === 'Background') return 'Adds modest historical or lexical context.';
+    if (role === 'Place context') return 'Clarifies setting without making geography the point.';
+
+    return 'Supports the answer as a checked source.';
+}
+
+function getVisibleSourceUses(sourceFindings = []) {
+    const preferredRoles = ['Passage anchor', 'Cross references', 'Method guardrail', 'Background', 'Place context'];
+    const sourceUses = [];
+
+    for (const role of preferredRoles) {
+        const finding = sourceFindings.find(item => getSourceRole(item) === role);
+        if (finding) sourceUses.push(finding);
+        if (sourceUses.length === 3) break;
+    }
+
+    return sourceUses.length ? sourceUses : sourceFindings.slice(0, 3);
 }
 
 function StudyDraftCard({
@@ -210,12 +252,16 @@ function StudyDraftCard({
     kicker,
     note,
     audit,
+    sourceFindings = [],
+    sourceLoading = false,
     onUseField,
 }) {
     if (!draft) return null;
 
     const usableFields = getDraftUsableFields(draft);
     const canUseDraft = usableFields.length > 0;
+    const mainThought = getDraftMainThought(draft);
+    const visibleSourceUses = getVisibleSourceUses(sourceFindings);
     const handleUseDraft = () => {
         usableFields.forEach(([key, value]) => onUseField(key, value));
     };
@@ -228,40 +274,71 @@ function StudyDraftCard({
                 {note && <p>{note}</p>}
             </div>
 
-            <div className="study-assistant-draft-lines">
-                {draft.context && (
-                    <p>
-                        <strong>Context:</strong> {draft.context}
-                    </p>
+            {mainThought && (
+                <div className="study-main-thought">
+                    <span>Main thought</span>
+                    <p>{mainThought}</p>
+                </div>
+            )}
+
+            <div className="study-source-use-list" aria-label="How sources are being used">
+                {sourceLoading && (
+                    <div className="study-source-use">
+                        <span>Chapter sources</span>
+                        <p>Loading passage-specific evidence.</p>
+                    </div>
                 )}
-                {draft.meaning && (
-                    <p>
-                        <strong>Meaning:</strong> {draft.meaning}
-                    </p>
-                )}
-                {draft.guardrail && (
-                    <p>
-                        <strong>Guardrail:</strong> {draft.guardrail}
-                    </p>
-                )}
-                {draft.nextQuestion && (
-                    <p>
-                        <strong>Next question:</strong> {draft.nextQuestion}
-                    </p>
-                )}
+                {visibleSourceUses.map(finding => (
+                    <div className="study-source-use" key={finding.id}>
+                        <span>{getSourceRole(finding)}</span>
+                        <p>{getSourceUseText(finding)}</p>
+                    </div>
+                ))}
             </div>
 
-            <p className="study-assistant-draft-meta">
-                Confidence: {draft.confidence}
-                {draft.citations?.length > 0 && (
-                    <em>Uses {draft.citations.join(', ')}</em>
-                )}
-                {draft.unstructured && (
-                    <em>Cleaned plain text</em>
-                )}
-            </p>
+            {audit && (
+                <p className={`study-source-check status-${audit.status}`.trim()}>
+                    Source check: {audit.status === 'checked' ? 'checked' : 'review suggested'}
+                </p>
+            )}
 
-            {audit && <LocalDraftAudit audit={audit} />}
+            <details className="study-assistant-details study-assistant-why">
+                <summary>Show why</summary>
+                <div className="study-assistant-draft-lines">
+                    {draft.context && (
+                        <p>
+                            <strong>Passage:</strong> {draft.context}
+                        </p>
+                    )}
+                    {draft.meaning && (
+                        <p>
+                            <strong>Meaning:</strong> {draft.meaning}
+                        </p>
+                    )}
+                    {draft.guardrail && (
+                        <p>
+                            <strong>Caution:</strong> {draft.guardrail}
+                        </p>
+                    )}
+                    {draft.nextQuestion && (
+                        <p>
+                            <strong>Next:</strong> {draft.nextQuestion}
+                        </p>
+                    )}
+                </div>
+
+                <p className="study-assistant-draft-meta">
+                    Confidence: {draft.confidence}
+                    {draft.citations?.length > 0 && (
+                        <em>Uses {draft.citations.join(', ')}</em>
+                    )}
+                    {draft.unstructured && (
+                        <em>Cleaned plain text</em>
+                    )}
+                </p>
+
+                {audit && <LocalDraftAudit audit={audit} />}
+            </details>
 
             {canUseDraft && (
                 <div className="study-background-actions" aria-label={`Use ${title}`}>
@@ -272,6 +349,15 @@ function StudyDraftCard({
                     >
                         Use draft
                     </button>
+                    {draft.mainThought && (
+                        <button
+                            type="button"
+                            className="study-selection-action"
+                            onClick={() => onUseField('summary', draft.mainThought)}
+                        >
+                            Main thought
+                        </button>
+                    )}
                     {draft.context && (
                         <button
                             type="button"
@@ -651,10 +737,10 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
             <div className="study-assistant-top">
                 <div>
                     <span className="study-context-card-label">
-                        {activeGuide.exact ? 'Study assistant' : 'Study path'}
+                        Interpret helper
                     </span>
                     <strong>{activeGuide.title}</strong>
-                    <p>{activeGuide.reason}</p>
+                    <p>Start with the passage, then widen only as the sources help the question.</p>
                 </div>
                 <div className="study-assistant-status" aria-label="Assistant grounding status">
                     <span>
@@ -670,12 +756,14 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
             {primaryDraft ? (
                 <StudyDraftCard
                     draft={primaryDraft}
-                    title={hasUsableLocalDraft ? 'Local model draft' : 'Suggested draft'}
+                    title={hasUsableLocalDraft ? 'Local model pass' : 'Suggested path'}
                     kicker={hasUsableLocalDraft ? selectedLocalModel.label : 'Passage-first'}
                     note={hasUsableLocalDraft
                         ? 'Generated on this device, then checked against the local Bible and retrieved evidence.'
-                        : 'Assembled from retrieved evidence cards while the local model stays optional.'}
+                        : 'Built from the selected passage and the strongest retrieved source cards.'}
                     audit={primaryDraftAudit}
+                    sourceFindings={sourceFindings}
+                    sourceLoading={isLoadingStaticGrounding}
                     onUseField={handleUseDraft}
                 />
             ) : (
@@ -684,50 +772,52 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
                 </p>
             )}
 
-            <div className="study-assistant-local">
-                <div>
-                    <span>Local model pass</span>
-                    <p>{localModelMessage}</p>
-                    {localDraftState.progress && (
-                        <p>{localDraftState.progress}</p>
-                    )}
-                    {localDraftState.error && (
-                        <p>{localDraftState.error}</p>
-                    )}
+            <details className="study-assistant-details">
+                <summary>Optional local model</summary>
+                <div className="study-assistant-local">
+                    <div>
+                        <span>Local model pass</span>
+                        <p>{localModelMessage}</p>
+                        {localDraftState.progress && (
+                            <p>{localDraftState.progress}</p>
+                        )}
+                        {localDraftState.error && (
+                            <p>{localDraftState.error}</p>
+                        )}
+                    </div>
+                    <button
+                        type="button"
+                        className="study-selection-action"
+                        onClick={handleDraftLocally}
+                        disabled={!canDraftLocally || isDraftingLocally}
+                    >
+                        {isDraftingLocally
+                            ? 'Drafting...'
+                            : hasUsableLocalDraft
+                                ? 'Refresh draft'
+                                : 'Draft locally'}
+                    </button>
                 </div>
-                <button
-                    type="button"
-                    className="study-selection-action"
-                    onClick={handleDraftLocally}
-                    disabled={!canDraftLocally || isDraftingLocally}
-                >
-                    {isDraftingLocally
-                        ? 'Drafting...'
-                        : hasUsableLocalDraft
-                            ? 'Refresh draft'
-                            : 'Draft locally'}
-                </button>
-            </div>
 
-            {capabilities.webGpu && (
-                <details className="study-assistant-settings">
-                    <summary>Model settings</summary>
-                    <label className="study-local-model-control">
-                        <span>Local model</span>
-                        <select
-                            value={selectedLocalModelId}
-                            onChange={(event) => setSelectedLocalModelId(event.target.value)}
-                            disabled={isDraftingLocally || !capabilities.localSlmAvailable}
-                        >
-                            {LOCAL_STUDY_SLM_MODELS.map(model => (
-                                <option key={model.id} value={model.id}>
-                                    {model.label} · {model.description}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
-                </details>
-            )}
+                {capabilities.webGpu && (
+                    <div className="study-assistant-settings">
+                        <label className="study-local-model-control">
+                            <span>Local model</span>
+                            <select
+                                value={selectedLocalModelId}
+                                onChange={(event) => setSelectedLocalModelId(event.target.value)}
+                                disabled={isDraftingLocally || !capabilities.localSlmAvailable}
+                            >
+                                {LOCAL_STUDY_SLM_MODELS.map(model => (
+                                    <option key={model.id} value={model.id}>
+                                        {model.label} · {model.description}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                    </div>
+                )}
+            </details>
 
             {localDraftIsRawOnly && (
                 <details className="study-assistant-diagnostic" open>
@@ -746,6 +836,7 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
                         kicker="Passage-first"
                         note="This deterministic draft remains available if the local model wanders."
                         audit={groundedDraftAudit}
+                        sourceFindings={sourceFindings}
                         onUseField={handleUseDraft}
                     />
                 </details>
@@ -757,6 +848,9 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
                     <span>Route</span>
                     <p>
                         <strong>{activeGuide.routeLabel}:</strong> {activeGuide.subtitle}
+                    </p>
+                    <p>
+                        <strong>Why:</strong> {activeGuide.reason}
                     </p>
                 </div>
 
@@ -795,10 +889,30 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
 
                 {sourceFindings.length > 0 && (
                     <div className="study-background-section">
-                        <span>Retrieved source chunks</span>
+                        <span>How sources are used</span>
+                        {getVisibleSourceUses(sourceFindings).map(finding => (
+                            <p key={`use-${finding.id}`}>
+                                <strong>{getSourceRole(finding)}:</strong> {getSourceUseText(finding)}
+                            </p>
+                        ))}
+                    </div>
+                )}
+
+                {sourceFindings.length > 0 && (
+                    <div className="study-background-section">
+                        <span>Retrieved source cards</span>
                         {sourceFindings.map(finding => (
                             <p key={finding.id}>
                                 <strong>{finding.title}:</strong> {finding.text}
+                                {finding.crossReferences?.length > 0 && (
+                                    <em>
+                                        {' '}
+                                        Leads: {finding.crossReferences
+                                            .slice(0, 4)
+                                            .map(item => item.reference)
+                                            .join(', ')}
+                                    </em>
+                                )}
                                 {finding.source?.href && (
                                     <>
                                         {' '}
@@ -820,6 +934,13 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
                     {activeGuide.synthesis.map(note => (
                         <p key={note}>{note}</p>
                     ))}
+                </div>
+
+                <div className="study-background-section">
+                    <span>Grounding</span>
+                    <p>
+                        <strong>Loaded pack:</strong> {activeGuide.grounding.version}
+                    </p>
                 </div>
             </details>
         </section>

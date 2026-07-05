@@ -1,4 +1,4 @@
-import { GENERATED_STUDY_SOURCE_CHUNKS, GENERATED_STUDY_SOURCE_VERSION } from './generatedStudySourceChunks';
+import { GENERATED_STUDY_SOURCE_CHUNKS, GENERATED_STUDY_SOURCE_VERSION } from './generatedStudySourceChunks.js';
 
 export const STUDY_SOURCES = {
     exegesMethod: {

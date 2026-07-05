@@ -35,6 +35,25 @@ function getFirstCard(cards, sourceId) {
     return getCardsBySource(cards, sourceId)[0] ?? null;
 }
 
+function isGenericMethodCard(card) {
+    return card.sourceId === 'exeges-method'
+        && (
+            /^method-(passage-first|word-name|cross-reference-guardrail|historical-cultural|theological-synthesis)$/u.test(card.id ?? '')
+            || (card.id ?? '').startsWith('source-')
+            || /guardrail|source path|passage-first interpretation/i.test(`${card.title} ${card.claim}`)
+        );
+}
+
+function truncateSentence(text, maxLength = 220) {
+    const clean = cleanText(text).replace(/\s+/g, ' ');
+    if (clean.length <= maxLength) return clean;
+
+    const sentenceEnd = clean.slice(0, maxLength).lastIndexOf('.');
+    if (sentenceEnd > 80) return clean.slice(0, sentenceEnd + 1);
+
+    return `${clean.slice(0, maxLength - 1).trim()}...`;
+}
+
 function sortCards(cards) {
     return [...cards].sort((first, second) => {
         const firstPriority = SOURCE_PRIORITIES.indexOf(first.sourceId);
@@ -64,12 +83,42 @@ function makeContext({ cards, observation }) {
     return 'Start with the selected words in their sentence and chapter before widening to background sources.';
 }
 
+function makeMainThought({ cards, observation }) {
+    const passageCard = getFirstCard(cards, 'passage-context');
+    const crossReferenceCard = getFirstCard(cards, 'openbible-cross-references');
+    const quote = cleanText(observation.quote);
+    const reference = cleanText(observation.reference);
+
+    if (passageCard?.claim && crossReferenceCard?.claim) {
+        return `${truncateSentence(passageCard.claim, 170)} Use cross references as next-step leads, not as the foundation.`;
+    }
+
+    if (passageCard?.claim) {
+        return truncateSentence(passageCard.claim);
+    }
+
+    if (crossReferenceCard?.claim && reference) {
+        return `${reference} should be read locally first; then use the cross-reference leads to trace the theme carefully.`;
+    }
+
+    if (quote && reference) {
+        return `${reference} is the anchor. Ask what ${quote} does in the passage before widening to outside sources.`;
+    }
+
+    if (quote) {
+        return `Start with what ${quote} does in the sentence and chapter before widening to outside sources.`;
+    }
+
+    return 'Start with the passage itself, then let curated sources clarify one focused question at a time.';
+}
+
 function makeMeaning({ cards, observation }) {
     const quote = cleanText(observation.quote);
     const lexicalCard = cards.find(card => (
-        /lexical|word|name/i.test(`${card.title} ${card.claim}`)
+        !isGenericMethodCard(card) && /lexical|word|name/i.test(`${card.title} ${card.claim}`)
     ));
     const passageCard = getFirstCard(cards, 'passage-context');
+    const crossReferenceCard = getFirstCard(cards, 'openbible-cross-references');
 
     if (lexicalCard?.claim && passageCard?.claim) {
         return `${cleanText(lexicalCard.claim)} In this passage, weigh that clue under the local context: ${cleanText(passageCard.claim)}`;
@@ -79,7 +128,17 @@ function makeMeaning({ cards, observation }) {
         return cleanText(lexicalCard.claim);
     }
 
-    const factualCard = sortCards(cards).find(card => card.sourceId !== 'exeges-method');
+    if (passageCard?.claim) {
+        return cleanText(passageCard.claim);
+    }
+
+    if (crossReferenceCard?.claim) {
+        return cleanText(crossReferenceCard.claim);
+    }
+
+    const factualCard = sortCards(cards).find(card => (
+        card.sourceId !== 'exeges-method' || !isGenericMethodCard(card)
+    ));
     if (factualCard?.claim) {
         return cleanText(factualCard.claim);
     }
@@ -124,6 +183,7 @@ export function buildGroundedStudyDraft(synthesisRequest) {
     if (!cards.length) return null;
 
     return {
+        mainThought: makeMainThought({ cards, observation }),
         context: makeContext({ cards, observation }),
         meaning: makeMeaning({ cards, observation }),
         guardrail: makeGuardrail({ cards, observation }),
