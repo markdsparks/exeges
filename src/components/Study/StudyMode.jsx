@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
     STUDY_STAGES,
-    getBookGenre,
     getObservationTypeLabel,
     getSelectionQuote,
 } from '../../lib/studyMethod';
@@ -27,34 +26,37 @@ const EMPTY_DRAFT = {
 
 const INTERPRET_HELPERS = [
     {
-        key: 'anchor',
-        label: 'Anchor it',
-        prompt: 'What words or details in the passage show this?',
-        placeholder: 'God said... and there was light.',
-    },
-    {
-        key: 'context',
-        label: 'Read around it',
-        prompt: 'How do nearby verses, repetition, or the chapter flow clarify it?',
-        placeholder: 'This fits the repeated pattern: God said, and it was so.',
-    },
-    {
-        key: 'meaning',
-        label: 'Name the meaning',
-        prompt: 'What does this reveal about God, people, creation, sin, promise, or obedience?',
-        placeholder: 'God creates by command; his word is effective.',
-    },
-    {
-        key: 'guardrail',
-        label: 'Guard the claim',
-        prompt: 'What would be saying more than this passage actually says?',
-        placeholder: 'This does not make human speech creator-level speech.',
-    },
-    {
         key: 'summary',
-        label: 'Say it simply',
-        prompt: 'Write the meaning in one clear sentence.',
+        label: 'Working meaning',
+        prompt: 'Write one faithful sentence from what the passage shows.',
         placeholder: "Genesis 1:3 shows that God's word powerfully brings light into being.",
+    },
+];
+
+const INTERPRET_PATHS = [
+    {
+        key: 'word-name',
+        label: 'Word or name',
+        question: 'What does this word or name mean here?',
+        routeIds: ['word-name', 'person', 'place'],
+    },
+    {
+        key: 'purpose',
+        label: 'Why here',
+        question: 'Why is this detail here?',
+        routeIds: ['general', 'historical-cultural'],
+    },
+    {
+        key: 'reveal',
+        label: 'Reveals',
+        question: 'What does this show about God or people?',
+        routeIds: ['theological'],
+    },
+    {
+        key: 'connect',
+        label: 'Connects',
+        question: 'How does this connect to the rest of Scripture?',
+        routeIds: ['canonical'],
     },
 ];
 
@@ -90,16 +92,6 @@ const APPLICATION_HELPERS = [
         placeholder: 'Lord, help me trust your word and worship your power.',
     },
 ];
-
-function getContextVerses(chapter, focusVerse) {
-    const verses = chapter?.verses ?? [];
-    if (!verses.length) return [];
-
-    const index = verses.findIndex(item => item.verse === focusVerse);
-    if (index === -1) return verses.slice(0, Math.min(3, verses.length));
-
-    return verses.slice(Math.max(0, index - 1), Math.min(verses.length, index + 2));
-}
 
 function prefersCompactStudyTray() {
     return typeof window !== 'undefined'
@@ -246,64 +238,35 @@ function getVisibleSourceUses(sourceFindings = []) {
     return sourceUses.length ? sourceUses : sourceFindings.slice(0, 3);
 }
 
-function StudyDraftCard({
+function getDefaultInterpretPathKey(routeId = '') {
+    return INTERPRET_PATHS.find(path => path.routeIds.includes(routeId))?.key ?? 'purpose';
+}
+
+function getSourceCheckText({ sourceFindings = [], sourceLoading = false, audit = null }) {
+    if (sourceLoading) return 'Checking passage sources...';
+    if (!sourceFindings.length) return 'No extra source cards yet. Start from the passage.';
+
+    const roles = getVisibleSourceUses(sourceFindings)
+        .map(getSourceRole)
+        .map(role => role.toLowerCase());
+    const sourceText = roles.length ? roles.join(', ') : `${sourceFindings.length} source cards`;
+    const auditText = audit?.status === 'checked' || audit?.status === 'supported'
+        ? 'refs checked'
+        : 'review gently';
+
+    return `Checked: ${sourceText}; ${auditText}.`;
+}
+
+function StudyDetailsCard({
     draft,
-    title,
-    kicker,
-    note,
     audit,
     sourceFindings = [],
-    sourceLoading = false,
-    onUseField,
 }) {
-    if (!draft) return null;
-
-    const usableFields = getDraftUsableFields(draft);
-    const canUseDraft = usableFields.length > 0;
-    const mainThought = getDraftMainThought(draft);
-    const visibleSourceUses = getVisibleSourceUses(sourceFindings);
-    const handleUseDraft = () => {
-        usableFields.forEach(([key, value]) => onUseField(key, value));
-    };
+    if (!draft && !sourceFindings.length) return null;
 
     return (
-        <div className="study-assistant-draft">
-            <div className="study-assistant-draft-heading">
-                <span>{kicker}</span>
-                <strong>{title}</strong>
-                {note && <p>{note}</p>}
-            </div>
-
-            {mainThought && (
-                <div className="study-main-thought">
-                    <span>Main thought</span>
-                    <p>{mainThought}</p>
-                </div>
-            )}
-
-            <div className="study-source-use-list" aria-label="How sources are being used">
-                {sourceLoading && (
-                    <div className="study-source-use">
-                        <span>Chapter sources</span>
-                        <p>Loading passage-specific evidence.</p>
-                    </div>
-                )}
-                {visibleSourceUses.map(finding => (
-                    <div className="study-source-use" key={finding.id}>
-                        <span>{getSourceRole(finding)}</span>
-                        <p>{getSourceUseText(finding)}</p>
-                    </div>
-                ))}
-            </div>
-
-            {audit && (
-                <p className={`study-source-check status-${audit.status}`.trim()}>
-                    Source check: {audit.status === 'checked' ? 'checked' : 'review suggested'}
-                </p>
-            )}
-
-            <details className="study-assistant-details study-assistant-why">
-                <summary>Show why</summary>
+        <div className="study-source-detail-stack">
+            {draft && (
                 <div className="study-assistant-draft-lines">
                     {draft.context && (
                         <p>
@@ -325,68 +288,150 @@ function StudyDraftCard({
                             <strong>Next:</strong> {draft.nextQuestion}
                         </p>
                     )}
-                </div>
-
-                <p className="study-assistant-draft-meta">
-                    Confidence: {draft.confidence}
-                    {draft.citations?.length > 0 && (
-                        <em>Uses {draft.citations.join(', ')}</em>
-                    )}
-                    {draft.unstructured && (
-                        <em>Cleaned plain text</em>
-                    )}
-                </p>
-
-                {audit && <LocalDraftAudit audit={audit} />}
-            </details>
-
-            {canUseDraft && (
-                <div className="study-background-actions" aria-label={`Use ${title}`}>
-                    <button
-                        type="button"
-                        className="study-selection-action primary"
-                        onClick={handleUseDraft}
-                    >
-                        Use draft
-                    </button>
-                    {draft.mainThought && (
-                        <button
-                            type="button"
-                            className="study-selection-action"
-                            onClick={() => onUseField('summary', draft.mainThought)}
-                        >
-                            Main thought
-                        </button>
-                    )}
-                    {draft.context && (
-                        <button
-                            type="button"
-                            className="study-selection-action"
-                            onClick={() => onUseField('context', draft.context)}
-                        >
-                            Context
-                        </button>
-                    )}
-                    {draft.meaning && (
-                        <button
-                            type="button"
-                            className="study-selection-action"
-                            onClick={() => onUseField('meaning', draft.meaning)}
-                        >
-                            Meaning
-                        </button>
-                    )}
-                    {draft.guardrail && (
-                        <button
-                            type="button"
-                            className="study-selection-action"
-                            onClick={() => onUseField('guardrail', draft.guardrail)}
-                        >
-                            Caution
-                        </button>
-                    )}
+                    <p className="study-assistant-draft-meta">
+                        Confidence: {draft.confidence}
+                        {draft.citations?.length > 0 && (
+                            <em>Uses {draft.citations.join(', ')}</em>
+                        )}
+                        {draft.unstructured && (
+                            <em>Cleaned plain text</em>
+                        )}
+                    </p>
                 </div>
             )}
+
+            {audit && <LocalDraftAudit audit={audit} />}
+
+            {sourceFindings.length > 0 && (
+                <div className="study-background-section">
+                    <span>Source cards</span>
+                    {sourceFindings.map(finding => (
+                        <p key={finding.id}>
+                            <strong>{finding.title}:</strong> {finding.text}
+                            {finding.crossReferences?.length > 0 && (
+                                <em>
+                                    {' '}
+                                    Leads: {finding.crossReferences
+                                        .slice(0, 4)
+                                        .map(item => item.reference)
+                                        .join(', ')}
+                                </em>
+                            )}
+                            {finding.source?.href && (
+                                <>
+                                    {' '}
+                                    <a href={finding.source.href} target="_blank" rel="noreferrer">
+                                        {finding.source.label}
+                                    </a>
+                                </>
+                            )}
+                            {finding.source && (
+                                <em> {finding.source.license}</em>
+                            )}
+                        </p>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function StudyDraftCard({
+    draft,
+    title,
+    kicker,
+    note,
+    audit,
+    sourceFindings = [],
+    sourceLoading = false,
+    interpretation = {},
+    showHeading = true,
+    onUseField,
+}) {
+    if (!draft) return null;
+
+    const usableFields = getDraftUsableFields(draft);
+    const mainThought = getDraftMainThought(draft);
+    const visibleSourceUses = getVisibleSourceUses(sourceFindings);
+    const sourceCheckText = getSourceCheckText({ sourceFindings, sourceLoading, audit });
+    const workingMeaning = interpretation.summary ?? '';
+
+    return (
+        <div className="study-thinking-card">
+            {showHeading && (
+                <div className="study-assistant-draft-heading">
+                    <span>{kicker}</span>
+                    <strong>{title}</strong>
+                    {note && <p>{note}</p>}
+                </div>
+            )}
+
+            <div className="study-thinking-flow">
+                {mainThought && (
+                    <div className="study-main-thought">
+                        <span>Start from the passage</span>
+                        <p>{mainThought}</p>
+                    </div>
+                )}
+
+                <label className="study-working-meaning">
+                    <span>Working meaning</span>
+                    <textarea
+                        value={workingMeaning}
+                        placeholder="So I think this means..."
+                        onChange={(event) => onUseField('summary', event.target.value)}
+                    />
+                </label>
+            </div>
+
+            <p className={`study-source-check status-${audit?.status ?? 'checked'}`.trim()}>
+                {sourceCheckText}
+            </p>
+
+            {visibleSourceUses.length > 0 && (
+                <details className="study-assistant-details study-source-glance">
+                    <summary>How the sources helped</summary>
+                    <div className="study-source-use-list" aria-label="How sources are being used">
+                        {sourceLoading && (
+                            <div className="study-source-use">
+                                <span>Chapter sources</span>
+                                <p>Loading passage-specific evidence.</p>
+                            </div>
+                        )}
+                        {visibleSourceUses.map(finding => (
+                            <div className="study-source-use" key={finding.id}>
+                                <span>{getSourceRole(finding)}</span>
+                                <p>{getSourceUseText(finding)}</p>
+                            </div>
+                        ))}
+                    </div>
+                </details>
+            )}
+
+            <details className="study-assistant-details study-assistant-why">
+                <summary>Study notes</summary>
+                <StudyDetailsCard
+                    draft={draft}
+                    audit={audit}
+                    sourceFindings={sourceFindings}
+                />
+                {usableFields.length > 1 && (
+                    <div className="study-background-actions" aria-label={`Use ${title}`}>
+                        {usableFields
+                            .filter(([key]) => key !== 'summary')
+                            .map(([key, value]) => (
+                                <button
+                                    type="button"
+                                    key={key}
+                                    className="study-selection-action"
+                                    onClick={() => onUseField(key, value)}
+                                >
+                                    Save {key}
+                                </button>
+                            ))}
+                    </div>
+                )}
+            </details>
         </div>
     );
 }
@@ -473,31 +518,6 @@ function ObservationList({
     );
 }
 
-function ContextCards({ book, chapter, focusVerse }) {
-    const contextVerses = getContextVerses(chapter, focusVerse);
-    const genre = getBookGenre(book?.id);
-
-    return (
-        <div className="study-context-grid">
-            <section className="study-context-card">
-                <span className="study-context-card-label">Genre</span>
-                <strong>{genre}</strong>
-                <p>Let the kind of writing shape what counts as evidence.</p>
-            </section>
-            <section className="study-context-card">
-                <span className="study-context-card-label">Local context</span>
-                <div className="study-context-verses">
-                    {contextVerses.map(verse => (
-                        <p key={verse.verse}>
-                            <sup>{verse.verse}</sup> {verse.text}
-                        </p>
-                    ))}
-                </div>
-            </section>
-        </div>
-    );
-}
-
 function ObservationWorkbenchHeader({ observation, stage }) {
     const meaning = observation?.interpretation?.summary || observation?.interpretation?.meaning;
 
@@ -521,14 +541,6 @@ function ObservationWorkbenchHeader({ observation, stage }) {
             )}
         </section>
     );
-}
-
-function mergeHelperText(current = '', next = '') {
-    const cleanNext = next.trim();
-    const cleanCurrent = current.trim();
-    if (!cleanNext) return current;
-    if (cleanCurrent.includes(cleanNext)) return current;
-    return cleanCurrent ? `${cleanCurrent}\n\n${cleanNext}` : cleanNext;
 }
 
 function BackgroundGuideCard({ observation, interpretation, bibles, book, chapter, onHelperChange }) {
@@ -671,14 +683,16 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
         : null;
     const primaryDraft = hasUsableLocalDraft ? localDraft : groundedDraft;
     const primaryDraftAudit = hasUsableLocalDraft ? localDraftAudit : groundedDraftAudit;
+    const activePathKey = interpretation?.pathKey || getDefaultInterpretPathKey(routeId);
+    const activePath = INTERPRET_PATHS.find(path => path.key === activePathKey) ?? INTERPRET_PATHS[1];
     const localModelMessage = capabilities.localSlmRecommended
         ? `Use ${selectedLocalModel.label} for a second pass on this device.`
         : capabilities.localSlmRisk === 'ios-webgpu-memory-risk'
             ? `${selectedLocalModel.label} can run here, but phone browsers may reload during model loading.`
             : 'This browser needs WebGPU before local model drafting can run.';
 
-    const handleUseDraft = (key, value) => {
-        onHelperChange(key, mergeHelperText(interpretation?.[key], value));
+    const handleSetField = (key, value) => {
+        onHelperChange(key, value);
     };
 
     const handleDraftLocally = async () => {
@@ -734,37 +748,47 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
 
     return (
         <section className="study-assistant-card">
-            <div className="study-assistant-top">
-                <div>
-                    <span className="study-context-card-label">
-                        Interpret helper
-                    </span>
-                    <strong>{activeGuide.title}</strong>
-                    <p>Start with the passage, then widen only as the sources help the question.</p>
-                </div>
-                <div className="study-assistant-status" aria-label="Assistant grounding status">
-                    <span>
-                        {isLoadingStaticGrounding
-                            ? 'Loading chapter sources'
-                            : `${sourceCount} source card${sourceCount === 1 ? '' : 's'}`}
-                    </span>
-                    <span>Bible refs checked</span>
-                    <span>{hasUsableLocalDraft ? 'Local draft' : 'Curated draft'}</span>
-                </div>
+            <div className="study-interpret-top">
+                <span className="study-context-card-label">Interpret this mark</span>
+                <strong>What are you asking?</strong>
+                <p>{activePath.question}</p>
             </div>
+
+            <details className="study-path-picker">
+                <summary>
+                    <span>Question type</span>
+                    <em>{activePath.label}</em>
+                </summary>
+                <div className="study-interpret-paths" role="list" aria-label="Interpret question type">
+                    {INTERPRET_PATHS.map(path => (
+                        <button
+                            type="button"
+                            key={path.key}
+                            className={`study-interpret-path ${activePath.key === path.key ? 'active' : ''}`.trim()}
+                            onClick={() => handleSetField('pathKey', path.key)}
+                            aria-pressed={activePath.key === path.key}
+                        >
+                            <span>{path.label}</span>
+                            <em>{path.question}</em>
+                        </button>
+                    ))}
+                </div>
+            </details>
 
             {primaryDraft ? (
                 <StudyDraftCard
                     draft={primaryDraft}
-                    title={hasUsableLocalDraft ? 'Local model pass' : 'Suggested path'}
-                    kicker={hasUsableLocalDraft ? selectedLocalModel.label : 'Passage-first'}
+                    title={hasUsableLocalDraft ? 'Local model pass' : 'Think it through'}
+                    kicker={hasUsableLocalDraft ? selectedLocalModel.label : activePath.label}
                     note={hasUsableLocalDraft
                         ? 'Generated on this device, then checked against the local Bible and retrieved evidence.'
-                        : 'Built from the selected passage and the strongest retrieved source cards.'}
+                        : 'Start local. Use outside sources only as they clarify this question.'}
                     audit={primaryDraftAudit}
                     sourceFindings={sourceFindings}
                     sourceLoading={isLoadingStaticGrounding}
-                    onUseField={handleUseDraft}
+                    interpretation={interpretation}
+                    showHeading={false}
+                    onUseField={handleSetField}
                 />
             ) : (
                 <p className="study-background-note">
@@ -837,13 +861,14 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
                         note="This deterministic draft remains available if the local model wanders."
                         audit={groundedDraftAudit}
                         sourceFindings={sourceFindings}
-                        onUseField={handleUseDraft}
+                        interpretation={interpretation}
+                        onUseField={handleSetField}
                     />
                 </details>
             )}
 
             <details className="study-assistant-details">
-                <summary>Evidence and method</summary>
+                <summary>Evidence receipts</summary>
                 <div className="study-background-section">
                     <span>Route</span>
                     <p>
@@ -886,48 +911,6 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
                         </p>
                     ))}
                 </div>
-
-                {sourceFindings.length > 0 && (
-                    <div className="study-background-section">
-                        <span>How sources are used</span>
-                        {getVisibleSourceUses(sourceFindings).map(finding => (
-                            <p key={`use-${finding.id}`}>
-                                <strong>{getSourceRole(finding)}:</strong> {getSourceUseText(finding)}
-                            </p>
-                        ))}
-                    </div>
-                )}
-
-                {sourceFindings.length > 0 && (
-                    <div className="study-background-section">
-                        <span>Retrieved source cards</span>
-                        {sourceFindings.map(finding => (
-                            <p key={finding.id}>
-                                <strong>{finding.title}:</strong> {finding.text}
-                                {finding.crossReferences?.length > 0 && (
-                                    <em>
-                                        {' '}
-                                        Leads: {finding.crossReferences
-                                            .slice(0, 4)
-                                            .map(item => item.reference)
-                                            .join(', ')}
-                                    </em>
-                                )}
-                                {finding.source?.href && (
-                                    <>
-                                        {' '}
-                                        <a href={finding.source.href} target="_blank" rel="noreferrer">
-                                            {finding.source.label}
-                                        </a>
-                                    </>
-                                )}
-                                {finding.source && (
-                                    <em> {finding.source.license}</em>
-                                )}
-                            </p>
-                        ))}
-                    </div>
-                )}
 
                 <div className="study-background-section">
                     <span>Careful synthesis</span>
@@ -976,15 +959,8 @@ function InterpretWorkbench({
 
     return (
         <>
-            <ObservationList
-                observations={observations}
-                selectedId={activeObservationId}
-                onSelectObservation={onSelectObservation}
-                workStage="interpret"
-            />
             <div className="study-workbench">
                 <ObservationWorkbenchHeader observation={activeObservation} stage="interpret" />
-                <ContextCards book={book} chapter={chapter} focusVerse={activeObservation.verse} />
                 <BackgroundGuideCard
                     observation={activeObservation}
                     interpretation={interpretation}
@@ -993,17 +969,19 @@ function InterpretWorkbench({
                     chapter={chapter}
                     onHelperChange={handleHelperChange}
                 />
-                <div className="study-helper-stack">
-                    {INTERPRET_HELPERS.map(helper => (
-                        <HelperField
-                            key={helper.key}
-                            helper={helper}
-                            value={interpretation[helper.key]}
-                            onChange={(value) => handleHelperChange(helper.key, value)}
-                        />
-                    ))}
-                </div>
             </div>
+            <details className="study-mark-switcher">
+                <summary>
+                    <span>Choose another mark</span>
+                    <em>{observations.length} marks</em>
+                </summary>
+                <ObservationList
+                    observations={observations}
+                    selectedId={activeObservationId}
+                    onSelectObservation={onSelectObservation}
+                    workStage="interpret"
+                />
+            </details>
             <StudyTextArea
                 label="Chapter interpretation notes"
                 value={interpretValue}

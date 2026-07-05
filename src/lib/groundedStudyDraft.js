@@ -90,7 +90,7 @@ function makeMainThought({ cards, observation }) {
     const reference = cleanText(observation.reference);
 
     if (passageCard?.claim && crossReferenceCard?.claim) {
-        return `${truncateSentence(passageCard.claim, 170)} Use cross references as next-step leads, not as the foundation.`;
+        return truncateSentence(passageCard.claim, 72);
     }
 
     if (passageCard?.claim) {
