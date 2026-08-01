@@ -16,6 +16,9 @@ dist-ssr
 public/study-packs/
 sources/study/imported/
 
+# Native iOS build products
+native/ios/build/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
