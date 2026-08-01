@@ -42,6 +42,7 @@ export default function ChapterReader({
     onToggleBookmark,
     hasNote,
     onOpenNote,
+    onOpenStudyThread,
     translation,
     translationState,
     studyMode = false,
@@ -100,8 +101,39 @@ export default function ChapterReader({
              );
           }
 
-    const handleVerseToggle = (verse) => {
-        onToggleBookmark?.(book.id, chapterNum, verse);
+    const openStudyThread = (verse, quote, selection = null) => {
+        if (!onOpenStudyThread) return;
+
+        onOpenStudyThread({
+            id: selection?.id ?? `${book.id}-${chapterNum}-${verse}-verse-thread`,
+            bookId: book.id,
+            bookName: book.name,
+            chapter: chapterNum,
+            verse,
+            reference: `${book.name} ${chapterNum}:${verse}`,
+            quote,
+            selections: selection ? [selection] : [],
+        });
+    };
+
+    const handleReaderPhraseSelection = (event, verse) => {
+        if (studyMode) return;
+
+        const selectedText = getSelectedText(event.currentTarget);
+        if (!selectedText) return;
+
+        const selection = makePhraseSelection({
+            bookId: book.id,
+            bookName: book.name,
+            chapter: chapterNum,
+            verse,
+            quote: selectedText,
+        });
+
+        if (selection) {
+            event.stopPropagation();
+            openStudyThread(verse, selection.text, selection);
+        }
     };
 
     const addStudyPhrase = (verse, quote) => {
@@ -223,7 +255,7 @@ export default function ChapterReader({
                           id={`verse-${v.verse}`}
                           onClick={() => {
                               if (!studyMode) {
-                                  handleVerseToggle(v.verse);
+                                  openStudyThread(v.verse, v.text);
                                   return;
                               }
 
@@ -234,7 +266,13 @@ export default function ChapterReader({
                        >
                            <span className="verse-number">{v.verse}</span>{' '}
                             {studyMode ? renderStudyText(v, verseObservations) : (
-                                <span className="verse-text">{v.text}</span>
+                                <span
+                                    className="verse-text reader-study-target"
+                                    onMouseUp={(event) => handleReaderPhraseSelection(event, v.verse)}
+                                    onTouchEnd={(event) => handleReaderPhraseSelection(event, v.verse)}
+                                >
+                                    {v.text}
+                                </span>
                             )}
                             {!studyMode && (
                                 <>

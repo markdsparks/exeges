@@ -16,6 +16,7 @@ import FontSizeControl from './components/Shared/FontSizeControl';
 import SearchPanel from './components/Search/SearchPanel';
 import NoteEditor from './components/Notes/NoteEditor';
 import StudyMode from './components/Study/StudyMode';
+import StudyThread from './components/Study/StudyThread';
 
 import { useBibleData } from './hooks/useBibleData';
 import { useBookmarks } from './hooks/useBookmarks';
@@ -79,6 +80,7 @@ export default function App() {
     const [searchQuery, setSearchQuery] = useState('');
     const [noteTarget, setNoteTarget] = useState(null);
     const [studyTarget, setStudyTarget] = useState(null);
+    const [studyThreadTarget, setStudyThreadTarget] = useState(null);
     const [studyStage, setStudyStage] = useState('observe');
     const [studySelection, setStudySelection] = useState([]);
     const [studyWorkflow, setStudyWorkflow] = useState(null);
@@ -274,6 +276,7 @@ export default function App() {
         navigateTo(bookId, chapterNum);
         setSidebarOpen(false);
         setStudyTarget(null);
+        setStudyThreadTarget(null);
         setStudySelection([]);
         setStudyWorkflow(null);
         window.history.pushState(null, '', `#${bookId}/${chapterNum}`);
@@ -286,6 +289,7 @@ export default function App() {
         setSidebarOpen(false);
         setSearchOpen(false);
         setStudyTarget(null);
+        setStudyThreadTarget(null);
         setStudySelection([]);
         setStudyWorkflow(null);
         window.history.pushState(null, '', `#${bookId}/${chapterNum}/v${verseNum}`);
@@ -321,34 +325,83 @@ export default function App() {
     const activeStudy = studyTarget
         ? getStudy(studyTarget.bookId, studyTarget.chapter)
         : null;
+    const activeStudyThreadStudy = studyThreadTarget
+        ? getStudy(studyThreadTarget.bookId, studyThreadTarget.chapter)
+        : null;
+    const activeStudyThreadObservation = activeStudyThreadStudy?.observations?.find(observation => (
+        observation.reference === studyThreadTarget?.reference
+        && observation.quote === studyThreadTarget?.quote
+    )) ?? null;
 
     const handleOpenSearch = useCallback(() => {
         setHideControls(false);
         setSearchOpen(true);
     }, []);
 
-    const handleOpenStudy = useCallback((bookId = selectedBookId, chapterNum = selectedChapterNum) => {
-        const studyBook = bibles?.find(b => b.id === bookId);
-        if (!studyBook || !chapterNum) return;
+    const handleOpenStudy = useCallback((study) => {
+        const firstObservation = study?.observations?.[0];
+        if (!study?.bookId || !study?.chapter || !firstObservation) return;
 
-        if (bookId !== selectedBookId || chapterNum !== selectedChapterNum) {
-            setTargetVerse(null);
-            navigateTo(bookId, chapterNum);
-            window.history.pushState(null, '', `#${bookId}/${chapterNum}`);
-            window.scrollTo({ top: 0, behavior: 'auto' });
-        }
+        navigateTo(study.bookId, study.chapter);
+        setTargetVerse(firstObservation.verse);
+        setSidebarOpen(false);
+        setStudyTarget(null);
+        setStudySelection([]);
+        setStudyWorkflow(null);
+        setStudyThreadTarget({
+            id: firstObservation.id,
+            bookId: study.bookId,
+            bookName: study.bookName,
+            chapter: study.chapter,
+            verse: firstObservation.verse,
+            reference: firstObservation.reference || `${study.bookName} ${study.chapter}:${firstObservation.verse}`,
+            quote: firstObservation.quote,
+            selections: firstObservation.selections ?? [],
+        });
+        window.history.pushState(null, '', `#${study.bookId}/${study.chapter}/v${firstObservation.verse}`);
+    }, [navigateTo]);
+
+    const handleOpenStudyThread = useCallback((target) => {
+        if (!target?.bookId || !target?.chapter || !target?.verse || !target?.quote) return;
 
         setHideControls(false);
         setSidebarOpen(false);
-        setStudyStage('observe');
-        setStudySelection([]);
-        setStudyWorkflow(null);
-        setStudyTarget({
-            bookId,
-            bookName: studyBook.name,
-            chapter: chapterNum,
+        setNoteTarget(null);
+        setStudyThreadTarget(target);
+    }, []);
+
+    const handleSaveStudyThreadThought = useCallback((thought) => {
+        if (!studyThreadTarget || !thought.trim()) return;
+
+        const existingObservation = getStudy(
+            studyThreadTarget.bookId,
+            studyThreadTarget.chapter,
+        )?.observations?.find(observation => (
+            observation.reference === studyThreadTarget.reference
+            && observation.quote === studyThreadTarget.quote
+        ));
+
+        if (existingObservation) {
+            updateObservation(
+                studyThreadTarget.bookId,
+                studyThreadTarget.chapter,
+                existingObservation.id,
+                { note: thought },
+            );
+            return;
+        }
+
+        addObservation(studyThreadTarget.bookId, studyThreadTarget.chapter, {
+            id: studyThreadTarget.id,
+            type: 'note',
+            scope: studyThreadTarget.selections?.length ? 'selection' : 'verse',
+            verse: studyThreadTarget.verse,
+            quote: studyThreadTarget.quote,
+            reference: studyThreadTarget.reference,
+            selections: studyThreadTarget.selections ?? [],
+            note: thought,
         });
-    }, [bibles, navigateTo, selectedBookId, selectedChapterNum]);
+    }, [addObservation, getStudy, studyThreadTarget, updateObservation]);
 
     const handleToggleStudySelection = useCallback((item) => {
         if (!item?.id) return;
@@ -540,6 +593,7 @@ export default function App() {
                 onToggleBookmark={toggleBookmark}
                 hasNote={hasNote}
                 onOpenNote={handleOpenNote}
+                onOpenStudyThread={handleOpenStudyThread}
                 translation={selectedTranslation}
                 translationState={translationState}
                 studyMode={!!studyTarget}
@@ -626,6 +680,18 @@ export default function App() {
                 onClose={() => setNoteTarget(null)}
             />
 
+            {studyThreadTarget && (
+                <StudyThread
+                    target={studyThreadTarget}
+                    observation={activeStudyThreadObservation}
+                    book={readerBook}
+                    chapter={activeChapter}
+                    bibles={bibles}
+                    onSaveThought={handleSaveStudyThreadThought}
+                    onClose={() => setStudyThreadTarget(null)}
+                />
+            )}
+
             {/* Header */}
             <header className={`app-header ${hideControls ? 'hidden' : ''}`}>
                 <button onClick={() => setSidebarOpen(true)} aria-label="Menu">☰</button>
@@ -690,12 +756,6 @@ export default function App() {
                     title="Search"
                     aria-label="Search scripture"
                 >⌕</button>
-                <button
-                    className="control-button study-control-button"
-                    onClick={() => handleOpenStudy()}
-                    title="Study"
-                    aria-label={`Study ${book?.name ?? 'current book'} ${selectedChapterNum ?? ''}`}
-                >Study</button>
                 <FontSizeControl fontSize={fontSize} onCycle={cycleFontSize} />
             </div>
         </div>
