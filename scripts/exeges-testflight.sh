@@ -31,6 +31,7 @@ fi
 
 archive="$ROOT/native/ios/build/Exeges-${build}.xcarchive"
 export_path="$ROOT/native/ios/build/upload-testflight-${build}"
+ipa="$export_path/Exeges.ipa"
 
 printf 'Archiving Exeges build %s...\n' "$build"
 xcodebuild \
@@ -42,15 +43,25 @@ xcodebuild \
   archive \
   -allowProvisioningUpdates
 
-printf 'Uploading Exeges build %s to TestFlight...\n' "$build"
+printf 'Exporting Exeges build %s for App Store Connect...\n' "$build"
 xcodebuild \
-  -exportArchive \
-  -archivePath "$archive" \
-  -exportPath "$export_path" \
-  -exportOptionsPlist "$EXPORT_OPTIONS" \
-  -allowProvisioningUpdates \
-  -authenticationKeyPath "$KEY_PATH" \
-  -authenticationKeyID "$KEY_ID" \
-  -authenticationKeyIssuerID "$ISSUER_ID"
+	-exportArchive \
+	-archivePath "$archive" \
+	-exportPath "$export_path" \
+	-exportOptionsPlist "$EXPORT_OPTIONS" \
+	-allowProvisioningUpdates
+
+if [[ ! -f "$ipa" ]]; then
+	printf 'FAIL  Expected exported IPA not found: %s\n' "$ipa" >&2
+	exit 1
+fi
+
+printf 'Uploading Exeges build %s to TestFlight...\n' "$build"
+API_PRIVATE_KEYS_DIR="$(dirname "$KEY_PATH")" \
+	xcrun altool \
+		--upload-package "$ipa" \
+		--api-key "$KEY_ID" \
+		--api-issuer "$ISSUER_ID" \
+		--output-format json
 
 printf 'PASS  Exeges build %s uploaded to TestFlight\n' "$build"
