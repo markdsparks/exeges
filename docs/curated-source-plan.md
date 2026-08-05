@@ -15,6 +15,17 @@ This is the source plan for Exeges study grounding. The core rule: the model is 
 - Modern lexicons and study Bible notes: likely copyrighted or restrictively licensed unless explicitly licensed.
 - ESV text: use only through the existing licensed API/proxy path; do not import full text into source packs.
 
+## Explorer Commentary
+
+The Explorer can load one public-domain commentary source at a time for the current chapter. This is reader-visible source material, not an automatically trusted model input: a user may inspect it, make a note, and decide how it bears on the passage.
+
+- Matthew Henry Bible Commentary: public-domain text, delivered at runtime by the HelloAO Bible API.
+- John Calvin's Commentaries: public-domain text, delivered at runtime by the HelloAO Bible API where available.
+- Jamieson-Fausset-Brown: public-domain text, delivered at runtime by the HelloAO Bible API.
+- Keil & Delitzsch: public-domain Old Testament commentary, delivered at runtime by the HelloAO Bible API.
+
+The UI preserves each source's attribution and source link. It loads a selected source and chapter only after the reader opens Commentary; it does not bulk-import the corpus into GitHub Pages assets or mix raw commentary prose into the grounded synthesis pipeline. Pulpit Commentary remains a future import after we identify and audit a reliable structured source.
+
 ## Engineering Shape
 
 Hand-curated source records live in `sources/study/curated-records.json`.

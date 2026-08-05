@@ -5,6 +5,8 @@ import {
 } from '../../lib/localStudyGrounding';
 import { resolveBibleReference } from '../../lib/localStudyDraftAudit';
 import { classifyBackgroundQuestion } from '../../lib/backgroundGuides';
+import { loadTranslationChapter } from '../../lib/chapterTranslation';
+import { loadPublicCommentary, PUBLIC_COMMENTARY_SOURCES } from '../../lib/publicCommentary';
 
 function unique(values = []) {
     return [...new Set(values.filter(Boolean))];
@@ -21,16 +23,184 @@ function getCrossReferenceTargets(finding, target) {
     ));
 }
 
-function ResolvedPassage({ reference }) {
+function getVersesFromChapter(reference, book) {
+    const chapter = book?.chapters?.[0];
+    const verses = chapter?.verses?.filter(verse => (
+        verse.verse >= reference.startVerse && verse.verse <= reference.endVerse
+    )) ?? [];
+
+    return verses.length === reference.endVerse - reference.startVerse + 1 ? verses : [];
+}
+
+function useTranslatedReferences(references, bibles, translation) {
+    const localTargets = useMemo(() => (
+        references
+            .map(reference => resolveBibleReference(reference, bibles))
+            .filter(result => result.status === 'valid')
+    ), [bibles, references]);
+    const [translatedTargets, setTranslatedTargets] = useState([]);
+
+    useEffect(() => {
+        if (translation?.source !== 'remote') {
+            setTranslatedTargets(localTargets);
+            return undefined;
+        }
+
+        let cancelled = false;
+        const controller = new AbortController();
+
+        Promise.all(localTargets.map(async target => {
+            const book = bibles.find(item => item.name === target.bookName);
+
+            try {
+                const result = await loadTranslationChapter({
+                    translation,
+                    book,
+                    chapterNum: target.chapter,
+                    signal: controller.signal,
+                });
+                const verses = getVersesFromChapter(target, result.chapter);
+
+                if (result.status !== 'ready' || !verses.length) {
+                    return {
+                        ...target,
+                        status: 'unavailable',
+                        verses: [],
+                        reason: result.message || `${translation.name} is not available for this passage.`,
+                    };
+                }
+
+                return { ...target, verses };
+            } catch (error) {
+                if (controller.signal.aborted) return null;
+
+                return {
+                    ...target,
+                    status: 'unavailable',
+                    verses: [],
+                    reason: error.message || `${translation.name} could not be loaded for this passage.`,
+                };
+            }
+        })).then(targets => {
+            if (!cancelled) setTranslatedTargets(targets.filter(Boolean));
+        });
+
+        return () => {
+            cancelled = true;
+            controller.abort();
+        };
+    }, [bibles, localTargets, translation]);
+
+    if (translation?.source !== 'remote') return localTargets;
+
+    return translatedTargets.length
+        ? translatedTargets
+        : localTargets.map(target => ({
+            ...target,
+            status: 'loading',
+            verses: [],
+            reason: `Loading ${translation?.name || 'selected translation'}...`,
+        }));
+}
+
+function ResolvedPassage({ reference, translationName, onOpenPassage }) {
     return (
         <article className="study-thread-passage">
-            <strong>{reference.reference}</strong>
-            {reference.verses.map(verse => (
+            <div>
+                <strong>{reference.reference}</strong>
+                {onOpenPassage && (
+                    <button type="button" onClick={() => onOpenPassage(reference)}>
+                        Read in {translationName}
+                    </button>
+                )}
+            </div>
+            {reference.status === 'valid' ? reference.verses.map(verse => (
                 <p key={`${reference.reference}-${verse.verse}`}>
                     <sup>{verse.verse}</sup>{verse.text}
                 </p>
-            ))}
+            )) : (
+                <p className="study-thread-passage-unavailable">{reference.reason}</p>
+            )}
         </article>
+    );
+}
+
+function CommentaryPanel({ bookName, chapterNumber, targetVerse }) {
+    const [sourceId, setSourceId] = useState(PUBLIC_COMMENTARY_SOURCES[0].id);
+    const [open, setOpen] = useState(false);
+    const [state, setState] = useState({ status: 'idle', source: null, entries: [], message: '' });
+
+    useEffect(() => {
+        if (!open) {
+            setState({ status: 'idle', source: null, entries: [], message: '' });
+            return undefined;
+        }
+
+        const controller = new AbortController();
+        setState({ status: 'loading', source: null, entries: [], message: '' });
+
+        loadPublicCommentary({ sourceId, bookName, chapterNumber, signal: controller.signal })
+            .then(result => {
+                if (!controller.signal.aborted) setState(result);
+            })
+            .catch(error => {
+                if (!controller.signal.aborted) {
+                    setState({
+                        status: 'error',
+                        source: PUBLIC_COMMENTARY_SOURCES.find(item => item.id === sourceId) ?? null,
+                        entries: [],
+                        message: error.message || 'This commentary could not be loaded right now.',
+                    });
+                }
+            });
+        return () => controller.abort();
+    }, [bookName, chapterNumber, open, sourceId]);
+
+    return (
+        <details
+            className="study-thread-commentary"
+            onToggle={(event) => {
+                if (event.target === event.currentTarget) setOpen(event.currentTarget.open);
+            }}
+        >
+            <summary>
+                <span>Commentary</span>
+                <em>Public-domain sources</em>
+            </summary>
+            <div>
+                <label>
+                    <span>Source</span>
+                    <select value={sourceId} onChange={event => setSourceId(event.target.value)}>
+                        {PUBLIC_COMMENTARY_SOURCES.map(source => (
+                            <option key={source.id} value={source.id}>
+                                {source.label} - {source.coverage}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+                {state.source && (
+                    <p className="study-thread-commentary-credit">
+                        {state.source.title}. {state.source.license} text, shown as source material rather than a conclusion.
+                    </p>
+                )}
+                {state.status === 'loading' && <p className="study-thread-loading">Loading commentary...</p>}
+                {state.status === 'error' && <p className="study-thread-loading">{state.message}</p>}
+                {state.status === 'unavailable' && <p className="study-thread-loading">{state.message}</p>}
+                {state.status === 'ready' && (
+                    <div className="study-thread-commentary-entries">
+                        {state.entries.map((entry, index) => (
+                            <details key={`${entry.verse ?? 'chapter'}-${index}`} open={entry.verse === targetVerse || (!targetVerse && index === 0)}>
+                                <summary>{entry.verse ? `On verse ${entry.verse}` : 'Chapter note'}</summary>
+                                <p>{entry.text}</p>
+                            </details>
+                        ))}
+                    </div>
+                )}
+                {state.source?.href && (
+                    <a href={state.source.href} target="_blank" rel="noreferrer">Open source</a>
+                )}
+            </div>
+        </details>
     );
 }
 
@@ -52,18 +222,18 @@ function SourceNote({ finding }) {
     );
 }
 
-function ResearchView({ target, grounding, loading, bibles }) {
+function ResearchView({ target, grounding, loading, bibles, translation, onOpenPassage }) {
     const findings = grounding?.exploreFindings ?? [];
     const draft = grounding ? buildGroundedStudyDraft(grounding.synthesisRequest) : null;
     const crossReferenceFindings = findings.filter(finding => (
         finding.source?.id === 'openbible-cross-references'
     ));
-    const referenceTargets = unique(crossReferenceFindings.flatMap(finding => (
-        getCrossReferenceTargets(finding, target)
-    )))
-        .slice(0, 6)
-        .map(reference => resolveBibleReference(reference, bibles))
-        .filter(result => result.status === 'valid');
+    const crossReferenceTargets = useMemo(() => (
+        unique(crossReferenceFindings.flatMap(finding => (
+            getCrossReferenceTargets(finding, target)
+        ))).slice(0, 6)
+    ), [grounding, target]);
+    const referenceTargets = useTranslatedReferences(crossReferenceTargets, bibles, translation);
     const backgroundFindings = findings.filter(finding => (
         finding.source?.id !== 'passage-context'
         && finding.source?.id !== 'openbible-cross-references'
@@ -95,9 +265,14 @@ function ResearchView({ target, grounding, loading, bibles }) {
                 </div>
                 {referenceTargets.length ? (
                     <div className="study-thread-passage-list">
-                        {referenceTargets.map(reference => (
-                            <ResolvedPassage key={reference.reference} reference={reference} />
-                        ))}
+                            {referenceTargets.map(reference => (
+                            <ResolvedPassage
+                                key={reference.reference}
+                                reference={reference}
+                                translationName={translation?.name || 'Bible'}
+                                onOpenPassage={onOpenPassage}
+                            />
+                            ))}
                     </div>
                 ) : (
                     <p>There are no locally resolved cross references for this selection yet.</p>
@@ -107,7 +282,7 @@ function ResearchView({ target, grounding, loading, bibles }) {
             {backgroundFindings.length > 0 && (
                 <details className="study-thread-background">
                     <summary>
-                        <span>Background and commentary</span>
+                        <span>Background notes</span>
                         <em>{backgroundFindings.length} notes</em>
                     </summary>
                     <div>
@@ -117,6 +292,12 @@ function ResearchView({ target, grounding, loading, bibles }) {
                     </div>
                 </details>
             )}
+
+            <CommentaryPanel
+                bookName={target.bookName}
+                chapterNumber={target.chapter}
+                targetVerse={target.verse}
+            />
 
             <details className="study-thread-caution">
                 <summary>Keep the claim close to the text</summary>
@@ -132,7 +313,9 @@ export default function StudyThread({
     book,
     chapter,
     bibles = [],
+    translation,
     onSaveThought,
+    onOpenPassage,
     onClose,
 }) {
     const [view, setView] = useState('reflect');
@@ -257,6 +440,8 @@ export default function StudyThread({
                                 grounding={groundingState.grounding}
                                 loading={groundingState.status === 'loading'}
                                 bibles={bibles}
+                                translation={translation}
+                                onOpenPassage={onOpenPassage}
                             />
                             <div className="study-thread-actions study-thread-research-actions">
                                 <button type="button" className="study-thread-secondary" onClick={() => setView('reflect')}>

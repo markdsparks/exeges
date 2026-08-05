@@ -2190,6 +2190,7 @@
 .study-thread-reading,
 .study-thread-related,
 .study-thread-background,
+.study-thread-commentary,
 .study-thread-caution {
     padding: var(--space-md);
     border: 1px solid var(--color-border-soft);
@@ -2223,6 +2224,7 @@
 
 .study-thread-section-heading,
 .study-thread-background summary,
+.study-thread-commentary summary,
 .study-thread-caution summary,
 .study-thread-source > div {
     display: flex;
@@ -2233,6 +2235,7 @@
 
 .study-thread-section-heading em,
 .study-thread-background summary em,
+.study-thread-commentary summary em,
 .study-thread-source em {
     font-family: var(--font-family-ui);
     font-size: 0.7rem;
@@ -2252,11 +2255,30 @@
 }
 
 .study-thread-passage strong {
-    display: block;
-    margin-bottom: 0.2rem;
     font-family: var(--font-family-ui);
     font-size: 0.78rem;
     color: var(--color-accent);
+}
+
+.study-thread-passage > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin-bottom: 0.25rem;
+}
+
+.study-thread-passage > div button {
+    flex: 0 0 auto;
+    padding: 0;
+    border: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.72rem;
+    color: var(--color-accent);
+}
+
+.study-thread-passage-unavailable {
+    color: var(--color-text-muted) !important;
 }
 
 .study-thread-passage p {
@@ -2275,11 +2297,13 @@
 }
 
 .study-thread-background,
+.study-thread-commentary,
 .study-thread-caution {
     background-color: transparent;
 }
 
 .study-thread-background summary,
+.study-thread-commentary summary,
 .study-thread-caution summary {
     cursor: pointer;
     font-family: var(--font-family-ui);
@@ -2292,6 +2316,66 @@
     display: grid;
     gap: var(--space-md);
     padding-top: var(--space-md);
+}
+
+.study-thread-commentary > div {
+    display: grid;
+    gap: var(--space-md);
+    padding-top: var(--space-md);
+}
+
+.study-thread-commentary label {
+    display: grid;
+    gap: var(--space-xs);
+    font-family: var(--font-family-ui);
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+}
+
+.study-thread-commentary select {
+    width: 100%;
+    min-height: 38px;
+    padding: 0 var(--space-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-primary);
+    font-family: var(--font-family-ui);
+    font-size: 0.82rem;
+}
+
+.study-thread-commentary-credit,
+.study-thread-commentary-entries p,
+.study-thread-commentary > div > a {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+}
+
+.study-thread-commentary-entries {
+    display: grid;
+    border-top: 1px solid var(--color-border-soft);
+}
+
+.study-thread-commentary-entries details {
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--color-border-soft);
+}
+
+.study-thread-commentary-entries summary {
+    justify-content: flex-start;
+    color: var(--color-text-primary);
+}
+
+.study-thread-commentary-entries details[open] p {
+    padding-top: var(--space-sm);
+}
+
+.study-thread-commentary > div > a {
+    width: fit-content;
+    color: var(--color-accent);
 }
 
 .study-thread-source {

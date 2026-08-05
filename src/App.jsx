@@ -81,6 +81,7 @@ export default function App() {
     const [noteTarget, setNoteTarget] = useState(null);
     const [studyTarget, setStudyTarget] = useState(null);
     const [studyThreadTarget, setStudyThreadTarget] = useState(null);
+    const [referenceTrail, setReferenceTrail] = useState([]);
     const [studyStage, setStudyStage] = useState('observe');
     const [studySelection, setStudySelection] = useState([]);
     const [studyWorkflow, setStudyWorkflow] = useState(null);
@@ -277,19 +278,21 @@ export default function App() {
         setSidebarOpen(false);
         setStudyTarget(null);
         setStudyThreadTarget(null);
+        setReferenceTrail([]);
         setStudySelection([]);
         setStudyWorkflow(null);
         window.history.pushState(null, '', `#${bookId}/${chapterNum}`);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, [navigateTo]);
 
-    const handleNavigateToVerse = useCallback((bookId, chapterNum, verseNum) => {
+    const handleNavigateToVerse = useCallback((bookId, chapterNum, verseNum, options = {}) => {
         setTargetVerse(verseNum);
         navigateTo(bookId, chapterNum);
         setSidebarOpen(false);
         setSearchOpen(false);
         setStudyTarget(null);
         setStudyThreadTarget(null);
+        if (!options.preserveReferenceTrail) setReferenceTrail([]);
         setStudySelection([]);
         setStudyWorkflow(null);
         window.history.pushState(null, '', `#${bookId}/${chapterNum}/v${verseNum}`);
@@ -346,6 +349,7 @@ export default function App() {
         setTargetVerse(firstObservation.verse);
         setSidebarOpen(false);
         setStudyTarget(null);
+        setReferenceTrail([]);
         setStudySelection([]);
         setStudyWorkflow(null);
         setStudyThreadTarget({
@@ -369,6 +373,43 @@ export default function App() {
         setNoteTarget(null);
         setStudyThreadTarget(target);
     }, []);
+
+    const handleOpenReferencedPassage = useCallback((reference) => {
+        const destinationBook = bibles.find(item => item.name === reference.bookName);
+        if (!destinationBook) return;
+
+        setReferenceTrail(previous => [...previous, {
+            bookId: selectedBookId,
+            chapterNum: selectedChapterNum,
+            verseNum: targetVerse,
+            label: targetVerse
+                ? `${book?.name} ${selectedChapterNum}:${targetVerse}`
+                : `${book?.name} ${selectedChapterNum}`,
+        }]);
+        handleNavigateToVerse(destinationBook.id, reference.chapter, reference.startVerse, {
+            preserveReferenceTrail: true,
+        });
+    }, [bibles, book?.name, handleNavigateToVerse, selectedBookId, selectedChapterNum, targetVerse]);
+
+    const handleReturnFromReference = useCallback(() => {
+        if (!referenceTrail.length) return;
+
+        setReferenceTrail(previous => previous.slice(0, -1));
+        window.history.back();
+    }, [referenceTrail.length]);
+
+    useEffect(() => {
+        const latest = referenceTrail[referenceTrail.length - 1];
+        if (!latest) return;
+
+        if (
+            latest.bookId === selectedBookId
+            && latest.chapterNum === selectedChapterNum
+            && latest.verseNum === targetVerse
+        ) {
+            setReferenceTrail(previous => previous.slice(0, -1));
+        }
+    }, [referenceTrail, selectedBookId, selectedChapterNum, targetVerse]);
 
     const handleSaveStudyThreadThought = useCallback((thought) => {
         if (!studyThreadTarget || !thought.trim()) return;
@@ -687,7 +728,9 @@ export default function App() {
                     book={readerBook}
                     chapter={activeChapter}
                     bibles={bibles}
+                    translation={selectedTranslation}
                     onSaveThought={handleSaveStudyThreadThought}
+                    onOpenPassage={handleOpenReferencedPassage}
                     onClose={() => setStudyThreadTarget(null)}
                 />
             )}
@@ -695,9 +738,20 @@ export default function App() {
             {/* Header */}
             <header className={`app-header ${hideControls ? 'hidden' : ''}`}>
                 <button onClick={() => setSidebarOpen(true)} aria-label="Menu">☰</button>
-                <span>
-                    {book?.name} &middot; Chapter {selectedChapterNum}
-                </span>
+                {referenceTrail.length > 0 && (
+                    <button
+                        type="button"
+                        className="app-reference-back"
+                        onClick={handleReturnFromReference}
+                    >
+                        Return to {referenceTrail[referenceTrail.length - 1].label}
+                    </button>
+                )}
+                {referenceTrail.length === 0 && (
+                    <span>
+                        {book?.name} &middot; Chapter {selectedChapterNum}
+                    </span>
+                )}
             </header>
 
             {/* Reader */}

@@ -117,6 +117,21 @@ button {
     color: var(--color-accent);
 }
 
+.app-header .app-reference-back {
+    position: absolute;
+    inset-inline: 56px;
+    width: auto;
+    padding-inline: var(--space-sm);
+    justify-content: center;
+    overflow: hidden;
+    font-family: var(--font-family-ui);
+    font-size: 0.8rem;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-accent);
+}
+
 /* Header label */
 .app-header > span {
     font-family: var(--font-family-ui);
@@ -293,6 +308,10 @@ button {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+
+    .app-header .app-reference-back {
+        font-size: 0.76rem;
     }
 
     .app-main {
