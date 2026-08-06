@@ -71,6 +71,32 @@ struct ExegesWebView: UIViewRepresentable {
             model?.setError(error)
         }
 
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        ) {
+            guard navigationAction.targetFrame == nil, let url = navigationAction.request.url else {
+                decisionHandler(.allow)
+                return
+            }
+
+            UIApplication.shared.open(url)
+            decisionHandler(.cancel)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            createWebViewWith configuration: WKWebViewConfiguration,
+            for navigationAction: WKNavigationAction,
+            windowFeatures: WKWindowFeatures
+        ) -> WKWebView? {
+            guard let url = navigationAction.request.url else { return nil }
+
+            UIApplication.shared.open(url)
+            return nil
+        }
+
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
             model?.recoverFromWebContentTermination()
         }
