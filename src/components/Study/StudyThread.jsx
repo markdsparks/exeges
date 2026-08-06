@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildGroundedStudyDraft } from '../../lib/groundedStudyDraft';
 import {
     getLocalStudyGroundingWithStaticPacks,
@@ -7,6 +7,9 @@ import { resolveBibleReference } from '../../lib/localStudyDraftAudit';
 import { classifyBackgroundQuestion } from '../../lib/backgroundGuides';
 import { loadTranslationChapter } from '../../lib/chapterTranslation';
 import { loadPublicCommentary, PUBLIC_COMMENTARY_SOURCES } from '../../lib/publicCommentary';
+import { buildPassageQuestionGrounding } from '../../lib/passageQuestion';
+import { getLocalStudyCapabilities } from '../../lib/localStudyGrounding';
+import { draftLocalStudySynthesis } from '../../lib/localStudySynthesis';
 
 function unique(values = []) {
     return [...new Set(values.filter(Boolean))];
@@ -204,6 +207,139 @@ function CommentaryPanel({ bookName, chapterNumber, targetVerse }) {
     );
 }
 
+function PassageQuestion({ target, grounding, relatedPassages, translation }) {
+    const [question, setQuestion] = useState('');
+    const [state, setState] = useState({
+        status: 'idle',
+        draft: null,
+        packet: null,
+        error: '',
+    });
+    const requestIdRef = useRef(0);
+    const capabilities = getLocalStudyCapabilities();
+
+    useEffect(() => {
+        requestIdRef.current += 1;
+        setQuestion('');
+        setState({ status: 'idle', draft: null, packet: null, error: '' });
+    }, [target.id]);
+
+    const handleAsk = async () => {
+        const cleanQuestion = question.trim();
+        if (!cleanQuestion || state.status === 'loading' || state.status === 'drafting') return;
+
+        const requestId = requestIdRef.current + 1;
+        requestIdRef.current = requestId;
+        const controller = new AbortController();
+
+        setState({ status: 'loading', draft: null, packet: null, error: '' });
+
+        try {
+            const packet = await buildPassageQuestionGrounding({
+                target,
+                question: cleanQuestion,
+                route: grounding.synthesisRequest.route,
+                sourceFindings: grounding.sourceFindings,
+                relatedPassages,
+                translationName: translation?.name,
+                signal: controller.signal,
+            });
+            if (requestIdRef.current !== requestId) return;
+
+            if (!capabilities.localSlmAvailable) {
+                setState({
+                    status: 'ready',
+                    draft: buildGroundedStudyDraft(packet.synthesisRequest),
+                    packet,
+                    error: '',
+                });
+                return;
+            }
+
+            setState({ status: 'drafting', draft: null, packet, error: '' });
+            const draft = await draftLocalStudySynthesis({
+                synthesisRequest: packet.synthesisRequest,
+                onProgress: () => {},
+            });
+            if (requestIdRef.current !== requestId) return;
+
+            setState({ status: 'ready', draft, packet, error: '' });
+        } catch (error) {
+            if (requestIdRef.current !== requestId) return;
+
+            setState(current => ({
+                ...current,
+                status: 'error',
+                error: error instanceof Error
+                    ? error.message
+                    : 'The local answer could not be prepared right now.',
+            }));
+        }
+    };
+
+    const answer = state.draft?.meaning || state.draft?.context || '';
+    const isBusy = state.status === 'loading' || state.status === 'drafting';
+
+    return (
+        <section className="study-thread-question-helper">
+            <div className="study-thread-section-heading">
+                <span>Ask about this passage</span>
+                <em>Passage and sources</em>
+            </div>
+            <p>Ask one focused question. The answer stays anchored to the passage, related Scripture, and named commentary.</p>
+            <textarea
+                value={question}
+                onChange={(event) => setQuestion(event.target.value)}
+                placeholder="What would you like to understand?"
+                rows={3}
+            />
+            <div className="study-thread-question-actions">
+                <button
+                    type="button"
+                    className="study-thread-primary"
+                    onClick={handleAsk}
+                    disabled={!question.trim() || isBusy}
+                >
+                    {state.status === 'loading'
+                        ? 'Gathering sources...'
+                        : state.status === 'drafting'
+                            ? 'Drafting locally...'
+                            : 'Ask'}
+                </button>
+            </div>
+            {state.status === 'error' && <p className="study-thread-question-error">{state.error}</p>}
+            {state.status === 'ready' && state.draft && (
+                <div className="study-thread-answer">
+                    <span>{state.draft.modelId === 'curated-grounding' ? 'Source-led starting point' : 'Grounded answer'}</span>
+                    {answer ? (
+                        <p>{answer}</p>
+                    ) : (
+                        <p>The local response needs review before it can be presented as an answer.</p>
+                    )}
+                    {state.draft.guardrail && <em>{state.draft.guardrail}</em>}
+                    {state.draft.unstructured && state.draft.rawText && (
+                        <details>
+                            <summary>Raw local response</summary>
+                            <p>{state.draft.rawText}</p>
+                        </details>
+                    )}
+                    <details className="study-thread-answer-sources">
+                        <summary>
+                            <span>Sources used</span>
+                            <em>{state.packet.sourceFindings.length} excerpts</em>
+                        </summary>
+                        <div>
+                            {state.packet.sourceFindings.map(finding => (
+                                <SourceNote key={finding.id} finding={finding} />
+                            ))}
+                        </div>
+                    </details>
+                </div>
+            )}
+        </section>
+    );
+}
+
 function SourceNote({ finding }) {
     const source = finding.source;
 
@@ -278,6 +414,13 @@ function ResearchView({ target, grounding, loading, bibles, translation, onOpenP
                     <p>There are no locally resolved cross references for this selection yet.</p>
                 )}
             </section>
+
+            <PassageQuestion
+                target={target}
+                grounding={grounding}
+                relatedPassages={referenceTargets}
+                translation={translation}
+            />
 
             {backgroundFindings.length > 0 && (
                 <details className="study-thread-background">
@@ -426,7 +569,7 @@ export default function StudyThread({
                             </section>
                             <div className="study-thread-actions">
                                 <button type="button" className="study-thread-secondary" onClick={handleExplore}>
-                                    Explore this
+                                    Explore and ask
                                 </button>
                                 <button type="button" className="study-thread-primary" onClick={handleSave} disabled={!thought.trim()}>
                                     {saved ? 'Saved' : 'Save thought'}

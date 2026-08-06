@@ -97,12 +97,16 @@ async function getLocalEngine(onProgress, modelId = LOCAL_STUDY_SLM_MODEL_ID) {
 }
 
 function buildMessages(synthesisRequest, options = {}) {
+    const isQuestion = synthesisRequest?.mode === 'grounded-passage-question';
+
     return [
         {
             role: 'system',
             content: [
                 'You are an experimental local Bible study drafting function.',
-                'You are not chatting with the user; output only the requested draft sections.',
+                isQuestion
+                    ? 'Answer the user\'s focused passage question; output only the requested answer sections.'
+                    : 'You are not chatting with the user; output only the requested draft sections.',
                 'Use only the observation and evidence cards supplied in this prompt.',
                 'Do not invent facts, definitions, history, cross references, or lexical claims.',
                 'Write a concise, useful interpretation draft, even when it must stay tentative.',
@@ -140,14 +144,21 @@ function formatSynthesisPrompt(synthesisRequest, options = {}) {
         ].join('\n')
     )).join('\n\n');
 
+    const isQuestion = synthesisRequest?.mode === 'grounded-passage-question';
+
     return [
         '/no_think',
         options.retry
             ? 'Task: Retry the draft. The supplied evidence cards are enough for a tentative helper.'
-            : 'Task: Draft a small grounded interpretation helper for testing.',
+            : isQuestion
+                ? 'Task: Answer the user\'s question about this passage from the supplied evidence cards.'
+                : 'Task: Draft a small grounded interpretation helper for testing.',
         'Give a real response the user can evaluate, not only a warning or an empty schema.',
         'Do not include apologies, capability disclaimers, or requests for more evidence cards.',
         'Do not echo the question. Do not repeat the same answer.',
+        isQuestion
+            ? 'Put the direct, careful answer in Meaning. Use Context to show the nearest passage evidence first.'
+            : '',
         'If a claim is not supported by an evidence card, put it in Next question instead of asserting it.',
         'Do not introduce Bible references, people groups, events, or cross references unless one of the evidence cards contains them.',
         '',

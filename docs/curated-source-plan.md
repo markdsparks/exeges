@@ -24,7 +24,9 @@ The Explorer can load one public-domain commentary source at a time for the curr
 - Jamieson-Fausset-Brown: public-domain text, delivered at runtime by the HelloAO Bible API.
 - Keil & Delitzsch: public-domain Old Testament commentary, delivered at runtime by the HelloAO Bible API.
 
-The UI preserves each source's attribution and source link. It loads a selected source and chapter only after the reader opens Commentary; it does not bulk-import the corpus into GitHub Pages assets or mix raw commentary prose into the grounded synthesis pipeline. Pulpit Commentary remains a future import after we identify and audit a reliable structured source.
+The UI preserves each source's attribution and source link. It loads a selected source and chapter only after the reader opens Commentary; it does not bulk-import the corpus into GitHub Pages assets. Pulpit Commentary remains a future import after we identify and audit a reliable structured source.
+
+The passage-question helper may assemble a temporary, attributed evidence packet only after a user asks a focused question. It includes the selected passage context, a small set of resolved related Scriptures, and one scoped excerpt from each available commentary source. The response exposes every excerpt it used. Raw commentary is not added to the persistent study-source packs and does not silently shape the default curated draft.
 
 ## Engineering Shape
 
