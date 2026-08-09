@@ -31,10 +31,10 @@ assert.deepEqual(getAdjacentChapters(bibles, 'exodus', 1), {
 
 assert.equal(getChapterSwipeIntent({
     startX: 40, startY: 240, startTime: 0, endX: 148, endY: 250, endTime: 280,
-}), 'next');
+}), 'previous');
 assert.equal(getChapterSwipeIntent({
     startX: 260, startY: 240, startTime: 0, endX: 145, endY: 245, endTime: 320,
-}), 'previous');
+}), 'next');
 assert.equal(getChapterSwipeIntent({
     startX: 40, startY: 240, startTime: 0, endX: 112, endY: 245, endTime: 240,
 }), null);

@@ -52,5 +52,5 @@ export function getChapterSwipeIntent({ startX, startY, startTime, endX, endY, e
         return null;
     }
 
-    return horizontalDistance > 0 ? 'next' : 'previous';
+    return horizontalDistance > 0 ? 'previous' : 'next';
 }
