@@ -40,7 +40,7 @@ import {
     getPersonalStudyThreads,
     hasPersonalStudyThread,
 } from './lib/personalStudyThreads';
-import { getAdjacentChapters } from './lib/readerNavigation';
+import { getAdjacentChapters, shouldConfirmChapterSwipe } from './lib/readerNavigation';
 
 function getChapterWordSelections(book, chapter) {
     if (!book || !chapter) return [];
@@ -154,7 +154,7 @@ export default function App() {
     useEffect(() => {
         if (!chapterSwipePrompt) return undefined;
 
-        const timeout = window.setTimeout(() => setChapterSwipePrompt(null), 4800);
+        const timeout = window.setTimeout(() => setChapterSwipePrompt(null), 3600);
         return () => window.clearTimeout(timeout);
     }, [chapterSwipePrompt]);
 
@@ -651,8 +651,13 @@ export default function App() {
         if (!chapter) return;
 
         setHideControls(false);
+        if (shouldConfirmChapterSwipe(chapterSwipePrompt?.direction, direction)) {
+            handleNavigate(chapter.bookId, chapter.chapterNum);
+            return;
+        }
+
         setChapterSwipePrompt({ direction, chapter });
-    }, [chapterNav]);
+    }, [chapterNav, chapterSwipePrompt?.direction, handleNavigate]);
 
     const handleReferencePickerNavigate = useCallback(({ bookId, chapterNum, verseNum }) => {
         if (verseNum) handleNavigateToVerse(bookId, chapterNum, verseNum);
@@ -868,7 +873,6 @@ export default function App() {
                         chapterSwipePrompt.chapter.bookId,
                         chapterSwipePrompt.chapter.chapterNum,
                     )}
-                    onDismiss={() => setChapterSwipePrompt(null)}
                 />
             )}
 

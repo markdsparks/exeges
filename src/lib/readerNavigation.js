@@ -54,3 +54,7 @@ export function getChapterSwipeIntent({ startX, startY, startTime, endX, endY, e
 
     return horizontalDistance > 0 ? 'previous' : 'next';
 }
+
+export function shouldConfirmChapterSwipe(pendingDirection, direction) {
+    return pendingDirection === direction;
+}

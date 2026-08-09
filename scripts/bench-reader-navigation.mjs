@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
-import { getAdjacentChapters, getChapterSwipeIntent } from '../src/lib/readerNavigation.js';
+import {
+    getAdjacentChapters,
+    getChapterSwipeIntent,
+    shouldConfirmChapterSwipe,
+} from '../src/lib/readerNavigation.js';
 
 const bibles = [
     {
@@ -44,5 +48,9 @@ assert.equal(getChapterSwipeIntent({
 assert.equal(getChapterSwipeIntent({
     startX: 40, startY: 240, startTime: 0, endX: 160, endY: 245, endTime: 1200,
 }), null);
+
+assert.equal(shouldConfirmChapterSwipe(null, 'next'), false);
+assert.equal(shouldConfirmChapterSwipe('next', 'previous'), false);
+assert.equal(shouldConfirmChapterSwipe('next', 'next'), true);
 
 console.log('Reader navigation checks passed.');

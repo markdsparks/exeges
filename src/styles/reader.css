@@ -335,21 +335,18 @@
 .chapter-swipe-prompt {
     position: fixed;
     z-index: 90;
-    bottom: calc(var(--safe-area-inset-bottom) + 4.35rem);
-    left: 50%;
-    width: min(430px, calc(100vw - 2rem));
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: var(--space-sm);
-    padding: var(--space-xs) var(--space-xs) var(--space-xs) var(--space-md);
-    border: 1px solid var(--color-border-soft);
-    border-radius: var(--radius-md);
-    background-color: var(--color-bg-elevated);
-    box-shadow: 0 18px 42px var(--color-shadow);
-    -webkit-backdrop-filter: blur(18px);
-    backdrop-filter: blur(18px);
-    transform: translateX(-50%);
+    bottom: calc(var(--safe-area-inset-bottom) + 4.8rem);
+    max-width: min(19rem, calc(100vw - 3rem));
+}
+
+.chapter-swipe-prompt.previous {
+    left: 0;
+    animation: chapter-turn-reveal-left var(--transition-base) both;
+}
+
+.chapter-swipe-prompt.next {
+    right: 0;
+    animation: chapter-turn-reveal-right var(--transition-base) both;
 }
 
 .chapter-swipe-label {
@@ -362,39 +359,99 @@
 }
 
 .chapter-swipe-confirm {
+    width: 100%;
+    min-height: 60px;
+    display: grid;
+    align-items: center;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.65rem;
+    padding: 0.55rem var(--space-md) 0.55rem 0.65rem;
+    border: 1px solid var(--color-border-soft);
+    border-left: 0;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    font-family: var(--font-family-ui);
+    color: var(--color-text-primary);
+    background-color: color-mix(in srgb, var(--color-bg-elevated) 94%, transparent);
+    box-shadow: 0 12px 28px var(--color-shadow);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+}
+
+.chapter-swipe-prompt.next .chapter-swipe-confirm {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.55rem 0.65rem 0.55rem var(--space-md);
+    border-right: 0;
+    border-left: 1px solid var(--color-border-soft);
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    text-align: right;
+}
+
+.chapter-swipe-copy {
     min-width: 0;
-    display: flex;
+    display: grid;
+    gap: 0.12rem;
+}
+
+.chapter-swipe-reference {
+    overflow: hidden;
+    font-family: var(--font-family-heading);
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-accent);
+}
+
+.chapter-swipe-arrow {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-sm);
-    min-height: 42px;
-    padding: var(--space-xs) var(--space-sm);
-    border-radius: var(--radius-sm);
-    font-family: var(--font-family-ui);
-    font-size: 0.9rem;
-    line-height: 1.25;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    line-height: 1;
     color: var(--color-accent);
     background-color: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 
 .chapter-swipe-confirm:hover {
-    background-color: color-mix(in srgb, var(--color-accent) 16%, transparent);
+    background-color: var(--color-bg-elevated);
 }
 
-.chapter-swipe-dismiss {
-    width: 38px;
-    height: 38px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-sm);
-    font-size: 1.3rem;
-    color: var(--color-text-muted);
+.chapter-swipe-confirm:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
 }
 
-.chapter-swipe-dismiss:hover {
-    color: var(--color-accent);
-    background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
+@keyframes chapter-turn-reveal-left {
+    from {
+        opacity: 0;
+        transform: translateX(-1.5rem);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes chapter-turn-reveal-right {
+    from {
+        opacity: 0;
+        transform: translateX(1.5rem);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .chapter-swipe-prompt.previous,
+    .chapter-swipe-prompt.next {
+        animation: none;
+    }
 }
 
 @media (max-width: 520px) {
