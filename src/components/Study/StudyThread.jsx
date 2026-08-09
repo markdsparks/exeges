@@ -328,15 +328,33 @@ function CommentaryComparison({ target, passageFindings }) {
     const comparison = comparisonState.comparison;
     const sourceCount = state.findings.length;
     const sourceTotal = PUBLIC_COMMENTARY_SOURCES.length;
+    const hasOneCommentary = sourceCount === 1;
+    const hasNoCommentary = sourceCount === 0;
+    const commentaryHeading = hasNoCommentary
+        ? 'Commentary'
+        : hasOneCommentary
+            ? 'A commentary perspective'
+            : 'Across the commentaries';
+    const availabilityLabel = state.status === 'loading'
+        ? 'Gathering sources'
+        : hasNoCommentary
+            ? 'No excerpts available'
+            : hasOneCommentary
+            ? '1 source available'
+            : `${sourceCount} of ${sourceTotal} available`;
 
     return (
         <section className="study-thread-commentary-synthesis">
             <div className="study-thread-section-heading">
-                <span>Across the commentaries</span>
-                <em>{state.status === 'loading' ? 'Gathering sources' : `${sourceCount} of ${sourceTotal} available`}</em>
+                <span>{commentaryHeading}</span>
+                <em>{availabilityLabel}</em>
             </div>
             <p className="study-thread-commentary-intro">
-                Compare what the available historical commentators emphasize, then inspect their words for yourself.
+                {hasOneCommentary
+                    ? 'Read this historical perspective, then inspect its words for yourself.'
+                    : hasNoCommentary
+                        ? 'Relevant commentary excerpts appear here when available.'
+                    : 'Compare what the available historical commentators emphasize, then inspect their words for yourself.'}
             </p>
 
             {state.status === 'loading' && <p className="study-thread-loading">Reading the available commentary excerpts...</p>}
@@ -353,11 +371,27 @@ function CommentaryComparison({ target, passageFindings }) {
             {state.status === 'ready' && state.overview && (
                 <>
                     <div className="study-thread-commentary-overview">
-                        <div>
-                            <span>Shared attention</span>
-                            <p>{state.overview.shared}</p>
-                        </div>
-                        {!comparison && (
+                        {state.overview.mode === 'single' ? (
+                            <div>
+                                <span>One perspective</span>
+                                <p>{state.overview.summary}</p>
+                                <div className="study-thread-commentary-perspectives">
+                                    {state.overview.perspectives.map(perspective => (
+                                        <article key={perspective.id}>
+                                            <strong>{perspective.source.label}</strong>
+                                            <p>{perspective.text}</p>
+                                        </article>
+                                    ))}
+                                </div>
+                                <em>{state.overview.caution}</em>
+                            </div>
+                        ) : (
+                            <div>
+                                <span>Shared attention</span>
+                                <p>{state.overview.shared}</p>
+                            </div>
+                        )}
+                        {!comparison && state.overview.mode === 'multiple' && (
                             <div>
                                 <span>Different emphases</span>
                                 <p>{state.overview.differences}</p>
@@ -454,7 +488,7 @@ function CommentaryComparison({ target, passageFindings }) {
                     <details className="study-thread-commentary-excerpts">
                         <summary>
                             <span>Read the selected excerpts</span>
-                            <em>{sourceCount} sources</em>
+                            <em>{hasOneCommentary ? '1 source' : `${sourceCount} sources`}</em>
                         </summary>
                         <div>
                             {state.findings.map(finding => (

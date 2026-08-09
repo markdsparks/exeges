@@ -237,19 +237,41 @@ export function buildCommentaryOverview({ target, commentaryFindings }) {
     const findings = commentaryFindings ?? [];
     const sharedTerms = getSharedTerms(findings);
     const sourceCount = findings.length;
+    const perspectives = findings.map(finding => ({
+        id: finding.id,
+        source: finding.source,
+        reference: finding.references?.[0] ?? target.reference,
+        text: excerpt(getRepresentativeExcerpt(finding, target), 190),
+    }));
+
+    if (sourceCount === 1) {
+        return {
+            mode: 'single',
+            summary: `${findings[0].source.label} offers one historical perspective on this passage.`,
+            caution: 'One source cannot show consensus or disagreement. Read it alongside the passage and use your own judgment.',
+            perspectives,
+            sourceCount,
+        };
+    }
+
+    if (sourceCount === 0) {
+        return {
+            mode: 'empty',
+            summary: 'No commentary excerpt could be matched confidently to this passage.',
+            caution: 'There is no commentary perspective to compare here.',
+            perspectives,
+            sourceCount,
+        };
+    }
 
     return {
+        mode: 'multiple',
         shared: sharedTerms.length
             ? `Across ${sourceCount} commentaries, the excerpts share attention to ${joinTerms(sharedTerms)}.`
             : `The ${sourceCount} available commentaries approach this passage from different angles; their excerpts do not reveal a clear shared emphasis automatically.`,
         differences: 'The source notes below show each commentator\'s distinct emphasis. Different emphasis is not necessarily direct disagreement.',
         why: 'These excerpts can show which details each work emphasizes. They cannot safely establish an author\'s motive or theological cause unless the source itself makes that reasoning explicit.',
-        perspectives: findings.map(finding => ({
-            id: finding.id,
-            source: finding.source,
-            reference: finding.references?.[0] ?? target.reference,
-            text: excerpt(getRepresentativeExcerpt(finding, target), 190),
-        })),
+        perspectives,
         sourceCount,
     };
 }

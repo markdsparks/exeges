@@ -102,9 +102,25 @@ const commentaryFindings = [
 
 const overview = buildCommentaryOverview({ target, commentaryFindings });
 assert.equal(overview.sourceCount, 3);
+assert.equal(overview.mode, 'multiple');
 assert.match(overview.shared, /God|light|word/i);
 assert.match(overview.differences, /not necessarily direct disagreement/i);
 assert.equal(overview.perspectives.length, 3);
+
+const singleSourceOverview = buildCommentaryOverview({
+    target,
+    commentaryFindings: [commentaryFindings[0]],
+});
+assert.equal(singleSourceOverview.mode, 'single');
+assert.match(singleSourceOverview.summary, /First source offers one historical perspective/i);
+assert.match(singleSourceOverview.caution, /cannot show consensus or disagreement/i);
+assert.equal(singleSourceOverview.perspectives.length, 1);
+
+const emptyOverview = buildCommentaryOverview({ target, commentaryFindings: [] });
+assert.equal(emptyOverview.mode, 'empty');
+assert.match(emptyOverview.summary, /no commentary excerpt could be matched/i);
+assert.doesNotMatch(emptyOverview.summary, /commentaries|consensus|disagreement/i);
+assert.equal(emptyOverview.perspectives.length, 0);
 
 const request = buildCommentaryComparisonRequest({
     target,

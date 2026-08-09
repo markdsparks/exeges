@@ -69,6 +69,7 @@ There is currently no general automated test suite or separate type-check comman
 - Use structured parsers for structured data and keep generated artifacts generated.
 - Do not add a production dependency without explaining its need, maintenance cost, bundle impact, and simpler alternatives.
 - Never commit, push, deploy, change external systems, or modify production configuration unless the CEO explicitly asks.
+- Once the CEO has authorized user-test deployments, treat a verified user-testable product change as ready to commit, push to `main`, and confirm on GitHub Pages unless the CEO asks to keep it local.
 - Never overwrite unrelated user changes in a dirty worktree.
 
 ## Verification
