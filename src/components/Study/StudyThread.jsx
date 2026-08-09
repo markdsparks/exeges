@@ -9,7 +9,12 @@ import { loadTranslationChapter } from '../../lib/chapterTranslation';
 import { loadPublicCommentary, PUBLIC_COMMENTARY_SOURCES } from '../../lib/publicCommentary';
 import { buildPassageQuestionGrounding } from '../../lib/passageQuestion';
 import { getLocalStudyCapabilities } from '../../lib/localStudyGrounding';
-import { draftLocalStudySynthesis } from '../../lib/localStudySynthesis';
+import { draftLocalCommentaryComparison, draftLocalStudySynthesis } from '../../lib/localStudySynthesis';
+import {
+    buildCommentaryComparisonRequest,
+    buildCommentaryOverview,
+    loadPassageCommentaryReport,
+} from '../../lib/commentaryComparison';
 
 function unique(values = []) {
     return [...new Set(values.filter(Boolean))];
@@ -167,8 +172,8 @@ function CommentaryPanel({ bookName, chapterNumber, targetVerse }) {
             }}
         >
             <summary>
-                <span>Commentary</span>
-                <em>Public-domain sources</em>
+                <span>Read a full commentary</span>
+                <em>One source at a time</em>
             </summary>
             <div>
                 <label>
@@ -204,6 +209,262 @@ function CommentaryPanel({ bookName, chapterNumber, targetVerse }) {
                 )}
             </div>
         </details>
+    );
+}
+
+function CommentaryEvidence({ evidence }) {
+    return (
+        <blockquote className="study-thread-commentary-evidence">
+            <div>
+                <strong>{evidence.sourceLabel}</strong>
+                <span>{evidence.reference}</span>
+            </div>
+            <p>&ldquo;{evidence.quote}&rdquo;</p>
+            {evidence.sourceUrl && (
+                <a href={evidence.sourceUrl} target="_blank" rel="noreferrer">Open source</a>
+            )}
+        </blockquote>
+    );
+}
+
+function CommentaryComparison({ target, passageFindings }) {
+    const [state, setState] = useState({
+        status: 'loading',
+        findings: [],
+        overview: null,
+        request: null,
+        error: '',
+    });
+    const [comparisonState, setComparisonState] = useState({
+        status: 'idle',
+        comparison: null,
+        progress: '',
+        error: '',
+    });
+    const [reloadKey, setReloadKey] = useState(0);
+    const comparisonRequestId = useRef(0);
+    const capabilities = getLocalStudyCapabilities();
+
+    useEffect(() => {
+        const controller = new AbortController();
+        comparisonRequestId.current += 1;
+        setState({ status: 'loading', findings: [], overview: null, request: null, error: '' });
+        setComparisonState({ status: 'idle', comparison: null, progress: '', error: '' });
+
+        loadPassageCommentaryReport({ target, signal: controller.signal })
+            .then(report => {
+                if (controller.signal.aborted) return;
+                const findings = report.findings;
+                const totalFailure = report.failedSourceCount === report.sourceCount;
+                const partialFailure = report.failedSourceCount > 0 && !totalFailure;
+
+                setState({
+                    status: totalFailure ? 'error' : findings.length ? 'ready' : 'empty',
+                    findings,
+                    overview: buildCommentaryOverview({ target, commentaryFindings: findings }),
+                    request: findings.length > 1
+                        ? buildCommentaryComparisonRequest({
+                            target,
+                            passageFindings,
+                            commentaryFindings: findings,
+                        })
+                        : null,
+                    error: totalFailure
+                        ? 'The commentary sources could not be reached right now.'
+                        : partialFailure
+                            ? `${report.failedSourceCount} commentary source${report.failedSourceCount === 1 ? '' : 's'} could not be reached. The available excerpts are shown below.`
+                            : '',
+                });
+            })
+            .catch(error => {
+                if (controller.signal.aborted) return;
+
+                setState({
+                    status: 'error',
+                    findings: [],
+                    overview: null,
+                    request: null,
+                    error: error.message || 'Commentary could not be gathered right now.',
+                });
+            });
+
+        return () => {
+            controller.abort();
+            comparisonRequestId.current += 1;
+        };
+    }, [passageFindings, reloadKey, target]);
+
+    const handleCompare = async () => {
+        if (!state.request || comparisonState.status === 'loading') return;
+
+        const requestId = comparisonRequestId.current + 1;
+        comparisonRequestId.current = requestId;
+        setComparisonState({ status: 'loading', comparison: null, progress: 'Preparing excerpts...', error: '' });
+
+        try {
+            const comparison = await draftLocalCommentaryComparison({
+                synthesisRequest: state.request,
+                onProgress: progress => {
+                    if (comparisonRequestId.current !== requestId) return;
+                    setComparisonState(current => ({
+                        ...current,
+                        progress: progress.text || 'Comparing excerpts...',
+                    }));
+                },
+            });
+            if (comparisonRequestId.current !== requestId) return;
+            setComparisonState({ status: 'ready', comparison, progress: '', error: '' });
+        } catch (error) {
+            if (comparisonRequestId.current !== requestId) return;
+            setComparisonState({
+                status: 'error',
+                comparison: null,
+                progress: '',
+                error: error.message || 'A grounded comparison could not be prepared.',
+            });
+        }
+    };
+
+    const comparison = comparisonState.comparison;
+    const sourceCount = state.findings.length;
+    const sourceTotal = PUBLIC_COMMENTARY_SOURCES.length;
+
+    return (
+        <section className="study-thread-commentary-synthesis">
+            <div className="study-thread-section-heading">
+                <span>Across the commentaries</span>
+                <em>{state.status === 'loading' ? 'Gathering sources' : `${sourceCount} of ${sourceTotal} available`}</em>
+            </div>
+            <p className="study-thread-commentary-intro">
+                Compare what the available historical commentators emphasize, then inspect their words for yourself.
+            </p>
+
+            {state.status === 'loading' && <p className="study-thread-loading">Reading the available commentary excerpts...</p>}
+            {state.error && <p className="study-thread-question-error">{state.error}</p>}
+            {state.status === 'error' && (
+                <button type="button" className="study-thread-secondary" onClick={() => setReloadKey(key => key + 1)}>
+                    Try commentary again
+                </button>
+            )}
+            {state.status === 'empty' && (
+                <p className="study-thread-loading">No commentary excerpt could be matched confidently to this passage.</p>
+            )}
+
+            {state.status === 'ready' && state.overview && (
+                <>
+                    <div className="study-thread-commentary-overview">
+                        <div>
+                            <span>Shared attention</span>
+                            <p>{state.overview.shared}</p>
+                        </div>
+                        {!comparison && (
+                            <div>
+                                <span>Different emphases</span>
+                                <p>{state.overview.differences}</p>
+                                <div className="study-thread-commentary-perspectives">
+                                    {state.overview.perspectives.map(perspective => (
+                                        <article key={perspective.id}>
+                                            <strong>{perspective.source.label}</strong>
+                                            <p>{perspective.text}</p>
+                                        </article>
+                                    ))}
+                                </div>
+                                <em>{state.overview.why}</em>
+                            </div>
+                        )}
+                    </div>
+
+                    {comparison && (
+                        <div className="study-thread-commentary-comparison">
+                            <div className="study-thread-commentary-comparison-heading">
+                                <span>Grounded comparison</span>
+                                <em>{comparison.comparedSourceIds.length} sources represented</em>
+                            </div>
+
+                            {comparison.agreements.length > 0 && (
+                                <section>
+                                    <h3>Agreement in these excerpts</h3>
+                                    {comparison.agreements.map((group, index) => (
+                                        <div className="study-thread-commentary-group" key={`agreement-${index}`}>
+                                            {group.evidence.map(evidence => (
+                                                <CommentaryEvidence
+                                                    key={`${evidence.cardId}-${evidence.quote}`}
+                                                    evidence={evidence}
+                                                />
+                                            ))}
+                                        </div>
+                                    ))}
+                                </section>
+                            )}
+
+                            {comparison.differences.length > 0 && (
+                                <section>
+                                    <h3>Where the excerpts differ</h3>
+                                    {comparison.differences.map((group, index) => (
+                                        <div className="study-thread-commentary-group" key={`difference-${index}`}>
+                                            <strong>Different emphasis</strong>
+                                            {group.evidence.map(evidence => (
+                                                <CommentaryEvidence
+                                                    key={`${evidence.cardId}-${evidence.quote}`}
+                                                    evidence={evidence}
+                                                />
+                                            ))}
+                                            <div className="study-thread-commentary-reason">
+                                                <span>Why they may differ</span>
+                                                <p>{group.reason}</p>
+                                                {group.reasonEvidence.map(evidence => (
+                                                    <CommentaryEvidence
+                                                        key={`reason-${evidence.cardId}-${evidence.quote}`}
+                                                        evidence={evidence}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </section>
+                            )}
+                        </div>
+                    )}
+
+                    {capabilities.localSlmAvailable && state.request && comparisonState.status !== 'ready' && (
+                        <div className="study-thread-commentary-compare-action">
+                            <button
+                                type="button"
+                                className="study-thread-primary"
+                                onClick={handleCompare}
+                                disabled={comparisonState.status === 'loading'}
+                            >
+                                {comparisonState.status === 'loading'
+                                    ? 'Comparing excerpts...'
+                                    : 'Compare agreement and differences'}
+                            </button>
+                            {comparisonState.status === 'loading' && <em>{comparisonState.progress}</em>}
+                            {comparisonState.status !== 'loading' && (
+                                <em>
+                                    Quotations are checked against these excerpts
+                                    {capabilities.localSlmRisk ? '; experimental on this device' : ''}
+                                </em>
+                            )}
+                        </div>
+                    )}
+                    {comparisonState.status === 'error' && (
+                        <p className="study-thread-question-error">{comparisonState.error}</p>
+                    )}
+
+                    <details className="study-thread-commentary-excerpts">
+                        <summary>
+                            <span>Read the selected excerpts</span>
+                            <em>{sourceCount} sources</em>
+                        </summary>
+                        <div>
+                            {state.findings.map(finding => (
+                                <SourceNote key={finding.id} finding={finding} />
+                            ))}
+                        </div>
+                    </details>
+                </>
+            )}
+        </section>
     );
 }
 
@@ -394,6 +655,11 @@ function ResearchView({ target, grounding, loading, bibles, translation, onOpenP
                 )}
             </section>
 
+            <CommentaryComparison
+                target={target}
+                passageFindings={grounding.sourceFindings ?? []}
+            />
+
             <section className="study-thread-related">
                 <div className="study-thread-section-heading">
                     <span>Related Scripture</span>
@@ -552,6 +818,27 @@ export default function StudyThread({
                 <div className="study-thread-body">
                     <blockquote>&ldquo;{target.quote}&rdquo;</blockquote>
 
+                    <div className="study-thread-tabs" role="tablist" aria-label="Study thread view">
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={view === 'reflect'}
+                            className={view === 'reflect' ? 'active' : ''}
+                            onClick={() => setView('reflect')}
+                        >
+                            My thought
+                        </button>
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={view === 'explore'}
+                            className={view === 'explore' ? 'active' : ''}
+                            onClick={handleExplore}
+                        >
+                            Explore
+                        </button>
+                    </div>
+
                     {view === 'reflect' ? (
                         <>
                             <section className="study-thread-reflection">
@@ -568,11 +855,11 @@ export default function StudyThread({
                                 />
                             </section>
                             <div className="study-thread-actions">
-                                <button type="button" className="study-thread-secondary" onClick={handleExplore}>
-                                    Explore and ask
-                                </button>
-                                <button type="button" className="study-thread-primary" onClick={handleSave} disabled={!thought.trim()}>
+                                <button type="button" className="study-thread-secondary" onClick={handleSave} disabled={!thought.trim()}>
                                     {saved ? 'Saved' : 'Save thought'}
+                                </button>
+                                <button type="button" className="study-thread-primary study-thread-explore-action" onClick={handleExplore}>
+                                    Explore this passage
                                 </button>
                             </div>
                         </>
@@ -586,14 +873,11 @@ export default function StudyThread({
                                 translation={translation}
                                 onOpenPassage={onOpenPassage}
                             />
-                            <div className="study-thread-actions study-thread-research-actions">
-                                <button type="button" className="study-thread-secondary" onClick={() => setView('reflect')}>
-                                    Back to thought
-                                </button>
+                            {thought.trim() && <div className="study-thread-actions study-thread-research-actions">
                                 <button type="button" className="study-thread-primary" onClick={handleSave} disabled={!thought.trim()}>
                                     {saved ? 'Saved' : 'Save thought'}
                                 </button>
-                            </div>
+                            </div>}
                         </>
                     )}
                 </div>

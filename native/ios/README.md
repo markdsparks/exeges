@@ -15,8 +15,9 @@ Create an iOS app record in App Store Connect with:
 - Primary language: English (U.S.)
 
 The Apple developer team must register the same App ID and have a valid Apple
-Distribution certificate available on this Mac. The Xcode project uses team
-`22PRZ6YK2P` and automatic signing for the single app target.
+Distribution certificate and `Exeges App Distribution` provisioning profile
+available on this Mac. The Xcode project uses team `22PRZ6YK2P`; Debug uses
+automatic signing and Release uses manual signing.
 
 ## TestFlight upload
 
@@ -29,6 +30,11 @@ EXEGES_ASC_ISSUER_ID=your-issuer-id \
 scripts/exeges-testflight.sh
 ```
 
-The script archives build `1` and uploads it for internal TestFlight testing.
-Increment `CURRENT_PROJECT_VERSION` in `Exeges.xcodeproj/project.pbxproj` before
-each later upload.
+The script reads the current build number from the Xcode project, verifies that
+all configurations agree, then archives and uploads that exact build for
+TestFlight testing. Inspect the current value and increment every
+`CURRENT_PROJECT_VERSION` entry in `Exeges.xcodeproj/project.pbxproj` before a
+later upload.
+
+Uploading changes an external system and is never a routine verification step.
+Run the script only with explicit CEO authorization.

@@ -2111,6 +2111,31 @@
     color: var(--color-text-primary);
 }
 
+.study-thread-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 3px;
+    border: 1px solid var(--color-border-soft);
+    border-radius: var(--radius-md);
+    background-color: color-mix(in srgb, var(--color-bg-surface) 74%, transparent);
+}
+
+.study-thread-tabs button {
+    min-width: 0;
+    min-height: 42px;
+    padding: 0.5rem var(--space-sm);
+    border-radius: calc(var(--radius-md) - 2px);
+    font-family: var(--font-family-ui);
+    font-size: 0.84rem;
+    color: var(--color-text-secondary);
+}
+
+.study-thread-tabs button.active {
+    color: var(--color-accent);
+    background-color: var(--color-bg-elevated);
+    box-shadow: 0 1px 4px color-mix(in srgb, var(--color-shadow) 70%, transparent);
+}
+
 .study-thread-reflection {
     display: grid;
     gap: var(--space-sm);
@@ -2173,6 +2198,20 @@
     cursor: not-allowed;
 }
 
+.study-thread-secondary:disabled {
+    opacity: 0.46;
+    cursor: not-allowed;
+}
+
+.study-thread-explore-action {
+    color: var(--color-bg-elevated);
+    background-color: var(--color-accent);
+}
+
+.study-thread-explore-action:hover {
+    background-color: var(--color-accent-hover);
+}
+
 .study-thread-secondary {
     color: var(--color-text-secondary);
 }
@@ -2190,6 +2229,7 @@
 .study-thread-reading,
 .study-thread-related,
 .study-thread-question-helper,
+.study-thread-commentary-synthesis,
 .study-thread-background,
 .study-thread-commentary,
 .study-thread-caution {
@@ -2197,6 +2237,211 @@
     border: 1px solid var(--color-border-soft);
     border-radius: var(--radius-md);
     background-color: var(--color-bg-note);
+}
+
+.study-thread-commentary-synthesis {
+    display: grid;
+    gap: var(--space-md);
+    border-color: color-mix(in srgb, var(--color-accent) 30%, var(--color-border-soft));
+    background-color: color-mix(in srgb, var(--color-bg-note) 88%, var(--color-bg-elevated));
+}
+
+.study-thread-commentary-intro,
+.study-thread-commentary-overview p,
+.study-thread-commentary-overview em,
+.study-thread-commentary-reason p,
+.study-thread-commentary-compare-action em {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+}
+
+.study-thread-commentary-overview {
+    display: grid;
+    gap: var(--space-md);
+    padding-block: var(--space-sm);
+    border-block: 1px solid var(--color-border-soft);
+}
+
+.study-thread-commentary-overview > div {
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.study-thread-commentary-overview span,
+.study-thread-commentary-comparison-heading > span,
+.study-thread-commentary-reason > span {
+    font-family: var(--font-family-ui);
+    font-size: 0.7rem;
+    line-height: 1.2;
+    text-transform: uppercase;
+    color: var(--color-accent);
+}
+
+.study-thread-commentary-overview em {
+    font-size: 0.76rem;
+    font-style: normal;
+    color: var(--color-text-muted);
+}
+
+.study-thread-commentary-perspectives {
+    display: grid;
+    gap: var(--space-sm);
+    margin-block: var(--space-xs);
+}
+
+.study-thread-commentary-perspectives article {
+    display: grid;
+    gap: 0.2rem;
+    padding-left: var(--space-sm);
+    border-left: 2px solid color-mix(in srgb, var(--color-illumination) 56%, transparent);
+}
+
+.study-thread-commentary-perspectives strong {
+    font-family: var(--font-family-ui);
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-accent-strong);
+}
+
+.study-thread-commentary-perspectives p {
+    font-family: var(--font-family-body);
+    font-size: 0.88rem;
+    line-height: 1.46;
+    color: var(--color-text-primary);
+}
+
+.study-thread-commentary-comparison {
+    display: grid;
+    gap: var(--space-lg);
+}
+
+.study-thread-commentary-comparison-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-sm);
+}
+
+.study-thread-commentary-comparison-heading em {
+    font-family: var(--font-family-ui);
+    font-size: 0.7rem;
+    font-style: normal;
+    color: var(--color-text-muted);
+}
+
+.study-thread-commentary-comparison > section {
+    display: grid;
+    gap: var(--space-sm);
+}
+
+.study-thread-commentary-comparison h3 {
+    margin: 0;
+    font-family: var(--font-family-heading);
+    font-size: 1rem;
+    color: var(--color-text-primary);
+}
+
+.study-thread-commentary-group {
+    display: grid;
+    gap: var(--space-sm);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border-soft);
+}
+
+.study-thread-commentary-group > strong {
+    font-family: var(--font-family-ui);
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+.study-thread-commentary-evidence {
+    display: grid;
+    gap: var(--space-xs);
+    margin: 0;
+    padding-left: var(--space-sm);
+    border-left: 2px solid color-mix(in srgb, var(--color-illumination) 62%, transparent);
+}
+
+.study-thread-commentary-evidence > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    font-family: var(--font-family-ui);
+    font-size: 0.7rem;
+}
+
+.study-thread-commentary-evidence strong {
+    color: var(--color-accent);
+}
+
+.study-thread-commentary-evidence span {
+    color: var(--color-text-muted);
+}
+
+.study-thread-commentary-evidence p {
+    margin: 0;
+    font-family: var(--font-family-body);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: var(--color-text-primary);
+}
+
+.study-thread-commentary-evidence a {
+    width: fit-content;
+    font-family: var(--font-family-ui);
+    font-size: 0.72rem;
+}
+
+.study-thread-commentary-reason {
+    display: grid;
+    gap: var(--space-xs);
+    padding-top: var(--space-xs);
+}
+
+.study-thread-commentary-compare-action {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.study-thread-commentary-compare-action em {
+    font-size: 0.72rem;
+    font-style: normal;
+    color: var(--color-text-muted);
+}
+
+.study-thread-commentary-excerpts {
+    border-top: 1px solid var(--color-border-soft);
+    padding-top: var(--space-sm);
+}
+
+.study-thread-commentary-excerpts > summary {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    cursor: pointer;
+    font-family: var(--font-family-ui);
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+}
+
+.study-thread-commentary-excerpts > summary em {
+    font-size: 0.7rem;
+    font-style: normal;
+    color: var(--color-text-muted);
+}
+
+.study-thread-commentary-excerpts > div {
+    display: grid;
+    gap: var(--space-md);
+    padding-top: var(--space-md);
 }
 
 .study-thread-reading {

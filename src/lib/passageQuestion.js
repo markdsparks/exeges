@@ -1,26 +1,5 @@
-import { PUBLIC_COMMENTARY_SOURCES, loadPublicCommentary } from './publicCommentary.js';
 import { buildStudySynthesisRequest } from './studySynthesisRequest.js';
-
-const QUESTION_STOPWORDS = new Set([
-    'about', 'after', 'again', 'also', 'and', 'are', 'been', 'being', 'but', 'can', 'could',
-    'does', 'for', 'from', 'have', 'how', 'into', 'is', 'its', 'more', 'not', 'of', 'or',
-    'should', 'that', 'the', 'their', 'there', 'this', 'to', 'what', 'when', 'which', 'why',
-    'with', 'would', 'you', 'your',
-]);
-
-function normalize(value) {
-    return String(value ?? '')
-        .toLowerCase()
-        .replace(/[\u2019']/g, '')
-        .replace(/[^a-z0-9]+/g, ' ')
-        .trim();
-}
-
-function getTerms(value) {
-    return [...new Set(normalize(value)
-        .split(/\s+/)
-        .filter(term => term.length > 2 && !QUESTION_STOPWORDS.has(term)))];
-}
+import { getPassageCommentaryFindings } from './commentaryComparison.js';
 
 function excerpt(text, limit = 560) {
     const clean = String(text ?? '').replace(/\s+/g, ' ').trim();
@@ -54,68 +33,6 @@ function toRelatedScriptureFinding(reference, translationName) {
     };
 }
 
-function selectCommentaryEntry(entries, { targetVerse, terms }) {
-    return entries
-        .map((entry, index) => {
-            const text = normalize(entry.text);
-            const termScore = terms.reduce((score, term) => (
-                score + (text.includes(term) ? 1 : 0)
-            ), 0);
-            const targetScore = entry.verse === targetVerse ? 12 : 0;
-            const chapterScore = entry.verse === null ? 1 : 0;
-
-            return { entry, index, score: targetScore + termScore + chapterScore };
-        })
-        .sort((first, second) => second.score - first.score || first.index - second.index)[0]?.entry ?? null;
-}
-
-function toCommentaryFinding(source, entry, bookName, chapterNumber) {
-    const reference = entry.verse
-        ? `${bookName} ${chapterNumber}:${entry.verse}`
-        : `${bookName} ${chapterNumber}`;
-
-    return {
-        id: `commentary-${source.id}-${bookName}-${chapterNumber}-${entry.verse ?? 'chapter'}`
-            .replace(/[^a-z0-9]+/gi, '-').toLowerCase(),
-        title: `${source.label} on ${reference}`,
-        text: excerpt(entry.text),
-        references: [reference],
-        confidence: 'low',
-        reviewStatus: 'source-text',
-        allowedUse: 'Treat this historical commentary as a named perspective, not as final authority. Keep the passage primary and name the source when drawing on it.',
-        source: {
-            id: `commentary-${source.id}`,
-            label: source.label,
-            href: source.href,
-            license: source.license,
-        },
-    };
-}
-
-async function getCommentaryFindings({ target, question, signal }) {
-    const terms = getTerms(`${question} ${target.quote}`);
-    const results = await Promise.allSettled(PUBLIC_COMMENTARY_SOURCES.map(async source => {
-        const result = await loadPublicCommentary({
-            sourceId: source.id,
-            bookName: target.bookName,
-            chapterNumber: target.chapter,
-            signal,
-        });
-        if (result.status !== 'ready') return null;
-
-        const entry = selectCommentaryEntry(result.entries, {
-            targetVerse: target.verse,
-            terms,
-        });
-        return entry ? toCommentaryFinding(source, entry, target.bookName, target.chapter) : null;
-    }));
-
-    return results
-        .filter(result => result.status === 'fulfilled')
-        .map(result => result.value)
-        .filter(Boolean);
-}
-
 export async function buildPassageQuestionGrounding({
     target,
     question,
@@ -129,7 +46,7 @@ export async function buildPassageQuestionGrounding({
         .filter(passage => passage.status === 'valid' && passage.verses?.length)
         .slice(0, 3)
         .map(passage => toRelatedScriptureFinding(passage, translationName));
-    const commentary = await getCommentaryFindings({ target, question, signal });
+    const commentary = await getPassageCommentaryFindings({ target, query: question, signal });
     const findings = [
         ...sourceFindings.slice(0, 4),
         ...relatedScripture,

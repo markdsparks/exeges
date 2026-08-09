@@ -17,14 +17,16 @@ This is the source plan for Exeges study grounding. The core rule: the model is 
 
 ## Explorer Commentary
 
-The Explorer can load one public-domain commentary source at a time for the current chapter. This is reader-visible source material, not an automatically trusted model input: a user may inspect it, make a note, and decide how it bears on the passage.
+The Explorer gathers one passage-scoped excerpt from each available public-domain commentary and presents their shared attention and distinct emphases before the raw source text. This is reader-visible source material, not automatically trusted authority: a user may inspect it, make a note, and decide how it bears on the passage.
 
 - Matthew Henry Bible Commentary: public-domain text, delivered at runtime by the HelloAO Bible API.
 - John Calvin's Commentaries: public-domain text, delivered at runtime by the HelloAO Bible API where available.
 - Jamieson-Fausset-Brown: public-domain text, delivered at runtime by the HelloAO Bible API.
 - Keil & Delitzsch: public-domain Old Testament commentary, delivered at runtime by the HelloAO Bible API.
 
-The UI preserves each source's attribution and source link. It loads a selected source and chapter only after the reader opens Commentary; it does not bulk-import the corpus into GitHub Pages assets. Pulpit Commentary remains a future import after we identify and audit a reliable structured source.
+The UI preserves each source's attribution and source link. It loads only the current chapter after the reader opens Explore; it does not bulk-import the corpus into GitHub Pages assets. A separate progressively disclosed control still lets the reader inspect one full commentary at a time. Pulpit Commentary remains a future import after we identify and audit a reliable structured source.
+
+The default overview is deterministic and extractive. It may describe shared terms and show one representative passage from each source, but it does not infer direct disagreement or an author's reason for differing. When the reader explicitly requests a deeper comparison, the optional on-device model may group agreement and distinct emphasis using exact quotations from at least two named commentary cards. A model-suggested disagreement is conservatively shown as a difference of emphasis until a deterministic contradiction check exists. Claims about why sources differ use a constrained reason category and are downgraded to unclear unless the supplied excerpts contain supporting evidence.
 
 The passage-question helper may assemble a temporary, attributed evidence packet only after a user asks a focused question. It includes the selected passage context, a small set of resolved related Scriptures, and one scoped excerpt from each available commentary source. The response exposes every excerpt it used. Raw commentary is not added to the persistent study-source packs and does not silently shape the default curated draft.
 
@@ -87,3 +89,5 @@ The retrieval layer can run fully local. A future on-device SLM should only synt
 `src/lib/studySynthesisRequest.js` defines the model-facing request shape. The important constraint is that a model receives an observation, a route, and retrieved source chunks. It should not browse freely or answer from uncited memory.
 
 `src/lib/localStudySynthesis.js` is the experimental on-device synthesis adapter. It lazy-loads WebLLM only after the user taps the local draft action, uses a small WebGPU model, and asks for structured output from the grounded packet.
+
+`src/lib/commentaryComparison.js` owns passage-level commentary selection, the extractive overview, comparison request construction, and deterministic validation of model-produced comparison groups. Run `npm run bench:commentary-comparison` when changing this contract.
