@@ -9,6 +9,8 @@ import './styles/study.css';
 
 import ChapterReader from './components/Reader/ChapterReader';
 import ChapterNav from './components/Navigation/ChapterNav';
+import ChapterSwipePrompt from './components/Navigation/ChapterSwipePrompt';
+import ReferencePicker from './components/Navigation/ReferencePicker';
 import BackToTop from './components/Shared/BackToTop';
 import Sidebar from './components/Navigation/Sidebar';
 import ReadingProgress from './components/Navigation/ReadingProgress';
@@ -38,6 +40,7 @@ import {
     getPersonalStudyThreads,
     hasPersonalStudyThread,
 } from './lib/personalStudyThreads';
+import { getAdjacentChapters } from './lib/readerNavigation';
 
 function getChapterWordSelections(book, chapter) {
     if (!book || !chapter) return [];
@@ -90,6 +93,8 @@ export default function App() {
     const [studyStage, setStudyStage] = useState('observe');
     const [studySelection, setStudySelection] = useState([]);
     const [studyWorkflow, setStudyWorkflow] = useState(null);
+    const [referencePickerOpen, setReferencePickerOpen] = useState(false);
+    const [chapterSwipePrompt, setChapterSwipePrompt] = useState(null);
 
     // Shared ref for the reader container - used by ChapterReader and BackToTop
     const readerRef = useRef(null);
@@ -145,6 +150,13 @@ export default function App() {
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, [studyTarget]);
+
+    useEffect(() => {
+        if (!chapterSwipePrompt) return undefined;
+
+        const timeout = window.setTimeout(() => setChapterSwipePrompt(null), 4800);
+        return () => window.clearTimeout(timeout);
+    }, [chapterSwipePrompt]);
 
     // Group all books by testament for sidebar
     const bookGroups = bibles ? (() => {
@@ -254,6 +266,9 @@ export default function App() {
             if (match) {
                 navigateTo(match[1], parseInt(match[2], 10));
                 setTargetVerse(match[3] ? parseInt(match[3], 10) : null);
+            } else {
+                navigateTo('genesis', 1);
+                setTargetVerse(null);
             }
         };
 
@@ -275,6 +290,8 @@ export default function App() {
         setReferenceTrail([]);
         setStudySelection([]);
         setStudyWorkflow(null);
+        setReferencePickerOpen(false);
+        setChapterSwipePrompt(null);
         window.history.pushState(null, '', `#${bookId}/${chapterNum}`);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, [navigateTo]);
@@ -289,6 +306,8 @@ export default function App() {
         if (!options.preserveReferenceTrail) setReferenceTrail([]);
         setStudySelection([]);
         setStudyWorkflow(null);
+        setReferencePickerOpen(false);
+        setChapterSwipePrompt(null);
         window.history.pushState(null, '', `#${bookId}/${chapterNum}/v${verseNum}`);
     }, [navigateTo]);
 
@@ -333,6 +352,10 @@ export default function App() {
     const handleOpenSearch = useCallback(() => {
         setHideControls(false);
         setSearchOpen(true);
+    }, []);
+
+    const handleCloseReferencePicker = useCallback(() => {
+        setReferencePickerOpen(false);
     }, []);
 
     const handleOpenStudy = useCallback((thread) => {
@@ -615,39 +638,26 @@ export default function App() {
         setHideControls(false);
     }, []);
 
-    // Chapter navigation - prev/next with book-boundary logic
     const chapterNav = useMemo(() => {
-        if (!book || !bibles) return null;
-        const idx = bibles.findIndex(b => b.id === selectedBookId);
-        if (idx === -1) return null;
+        const adjacent = getAdjacentChapters(bibles, selectedBookId, selectedChapterNum);
+        return {
+            prevChapter: adjacent.previous,
+            nextChapter: adjacent.next,
+        };
+    }, [bibles, selectedBookId, selectedChapterNum]);
 
-        const currentChapterIndex = book.chapters?.findIndex(c => c.chapter === selectedChapterNum) ?? -1;
+    const handleChapterSwipeIntent = useCallback((direction) => {
+        const chapter = direction === 'next' ? chapterNav.nextChapter : chapterNav.prevChapter;
+        if (!chapter) return;
 
-        // Next: same book +1, or first chapter of next book
-        let nextInfo = null;
-        if (currentChapterIndex >= 0 && currentChapterIndex < book.chapters.length - 1) {
-            nextInfo = { bookId: book.id, bookName: book.name, chapterNum: book.chapters[currentChapterIndex + 1].chapter };
-        } else if (idx < bibles.length - 1) {
-            const nextBook = bibles[idx + 1];
-            if (nextBook?.chapters?.[0]) {
-                nextInfo = { bookId: nextBook.id, bookName: nextBook.name, chapterNum: nextBook.chapters[0].chapter };
-            }
-        }
+        setHideControls(false);
+        setChapterSwipePrompt({ direction, chapter });
+    }, [chapterNav]);
 
-        // Prev: same book -1, or last chapter of previous book
-        let prevInfo = null;
-        if (currentChapterIndex > 0) {
-            prevInfo = { bookId: book.id, bookName: book.name, chapterNum: book.chapters[currentChapterIndex - 1].chapter };
-        } else if (idx > 0) {
-            const prevBook = bibles[idx - 1];
-            if (prevBook?.chapters?.length) {
-                const lastChap = prevBook.chapters[prevBook.chapters.length - 1].chapter;
-                prevInfo = { bookId: prevBook.id, bookName: prevBook.name, chapterNum: lastChap };
-            }
-        }
-
-        return { prevChapter: prevInfo, nextChapter: nextInfo };
-    }, [bibles, book, selectedBookId, selectedChapterNum]);
+    const handleReferencePickerNavigate = useCallback(({ bookId, chapterNum, verseNum }) => {
+        if (verseNum) handleNavigateToVerse(bookId, chapterNum, verseNum);
+        else handleNavigate(bookId, chapterNum);
+    }, [handleNavigate, handleNavigateToVerse]);
 
     const readerContent = book ? (
         <>
@@ -675,6 +685,7 @@ export default function App() {
                 onClearStudySelection={handleClearStudySelection}
                 onStartStudyContrast={handleStartContrast}
                 onCancelStudyWorkflow={() => setStudyWorkflow(null)}
+                onChapterSwipeIntent={handleChapterSwipeIntent}
             />
             {(chapterNav?.prevChapter || chapterNav?.nextChapter) && (
                 <ChapterNav
@@ -739,6 +750,16 @@ export default function App() {
                 onSelectResult={handleSearchResult}
             />
 
+            <ReferencePicker
+                open={referencePickerOpen}
+                bibles={bibles}
+                currentBookId={selectedBookId}
+                currentChapterNum={selectedChapterNum}
+                currentVerse={targetVerse}
+                onNavigate={handleReferencePickerNavigate}
+                onClose={handleCloseReferencePicker}
+            />
+
             <NoteEditor
                 open={!!noteTarget}
                 noteTarget={noteTarget}
@@ -776,9 +797,18 @@ export default function App() {
                     </button>
                 )}
                 {referenceTrail.length === 0 && (
-                    <span>
-                        {book?.name} &middot; Chapter {selectedChapterNum}
-                    </span>
+                    <button
+                        type="button"
+                        className="app-reference-picker-trigger"
+                        onClick={() => {
+                            setHideControls(false);
+                            setChapterSwipePrompt(null);
+                            setReferencePickerOpen(true);
+                        }}
+                        aria-label={`Open passage picker, currently ${book?.name} chapter ${selectedChapterNum}${targetVerse ? ` verse ${targetVerse}` : ''}`}
+                    >
+                        {book?.name} &middot; Chapter {selectedChapterNum}{targetVerse ? `:${targetVerse}` : ''}
+                    </button>
                 )}
             </header>
 
@@ -829,6 +859,18 @@ export default function App() {
                     </div>
                 )}
             </main>
+
+            {chapterSwipePrompt && !studyTarget && (
+                <ChapterSwipePrompt
+                    direction={chapterSwipePrompt.direction}
+                    chapter={chapterSwipePrompt.chapter}
+                    onConfirm={() => handleNavigate(
+                        chapterSwipePrompt.chapter.bookId,
+                        chapterSwipePrompt.chapter.chapterNum,
+                    )}
+                    onDismiss={() => setChapterSwipePrompt(null)}
+                />
+            )}
 
             {/* Bottom Controls */}
             <div className={`controls-bar ${hideControls ? 'hidden' : ''}`}>

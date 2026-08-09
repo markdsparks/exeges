@@ -9,6 +9,7 @@ import {
     makeWordSelection,
     tokenizeStudyText,
 } from '../../lib/studyMethod';
+import { getChapterSwipeIntent } from '../../lib/readerNavigation';
 
 function getSelectedText(container) {
     const selection = window.getSelection?.();
@@ -57,11 +58,13 @@ export default function ChapterReader({
     onClearStudySelection,
     onStartStudyContrast,
     onCancelStudyWorkflow,
+    onChapterSwipeIntent,
 }) {
     const fallbackRef = useRef(null);
     const ref = readerRef ?? fallbackRef;
     const chapter = book?.chapters?.find(c => c.chapter === chapterNum);
     const [highlightedVerse, setHighlightedVerse] = useState(null);
+    const swipeStartRef = useRef(null);
 
        // Scroll to top when chapter changes
     useEffect(() => {
@@ -231,8 +234,45 @@ export default function ChapterReader({
     const lastWorkflowVerse = workflowSideA[workflowSideA.length - 1]?.verse;
     const inlinePanelVerse = studyMode && studyCanSelect ? (lastSelectionVerse ?? lastWorkflowVerse ?? null) : null;
 
+    const isGestureExempt = (target) => (
+        target instanceof Element
+        && Boolean(target.closest('button, input, select, textarea, a, [data-reader-gesture-exempt]'))
+    );
+
+    const handleTouchStart = (event) => {
+        if (studyMode || !onChapterSwipeIntent || event.touches.length !== 1 || isGestureExempt(event.target)) {
+            swipeStartRef.current = null;
+            return;
+        }
+
+        const touch = event.touches[0];
+        swipeStartRef.current = {
+            x: touch.clientX,
+            y: touch.clientY,
+            time: Date.now(),
+        };
+    };
+
+    const handleTouchEnd = (event) => {
+        const start = swipeStartRef.current;
+        swipeStartRef.current = null;
+        if (!start || event.changedTouches.length !== 1 || isGestureExempt(event.target)) return;
+
+        const touch = event.changedTouches[0];
+        const intent = getChapterSwipeIntent({
+            startX: start.x,
+            startY: start.y,
+            startTime: start.time,
+            endX: touch.clientX,
+            endY: touch.clientY,
+            endTime: Date.now(),
+        });
+
+        if (intent) onChapterSwipeIntent(intent);
+    };
+
     return (
-           <div className="reader-container" ref={ref}>
+           <div className="reader-container" ref={ref} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
                {/* Chapter header */}
                 <header className="chapter-header">
                    <h2 className="chapter-number">Chapter {chapterNum}</h2>

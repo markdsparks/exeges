@@ -145,12 +145,27 @@ button {
 }
 
 /* Header label */
-.app-header > span {
+.app-header > span,
+.app-reference-picker-trigger {
     font-family: var(--font-family-ui);
     font-size: 0.85rem;
     color: var(--color-text-secondary);
     text-align: center;
     letter-spacing: 0;
+}
+
+.app-reference-picker-trigger {
+    width: auto !important;
+    height: 44px;
+    flex: 0 1 auto;
+    min-height: 44px;
+    padding: 0 var(--space-md);
+    border-radius: var(--radius-md);
+}
+
+.app-reference-picker-trigger:hover {
+    color: var(--color-accent);
+    background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
 }
 
 /* Main reading area */
@@ -315,7 +330,8 @@ button {
         padding-inline: var(--space-sm);
     }
 
-    .app-header > span {
+    .app-header > span,
+    .app-reference-picker-trigger {
         max-width: calc(100vw - 112px);
         overflow: hidden;
         text-overflow: ellipsis;

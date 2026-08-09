@@ -6,6 +6,7 @@ Exeges is an internal alpha distributed on the web and through a thin iOS TestFl
 
 - Immersive local KJV reading and remotely loaded ESV.
 - Search, bookmarks, verse notes, saved studies, reading position, themes, and typography preferences.
+- Header-based book, chapter, and verse navigation, plus confirmation-based touch navigation between adjacent chapters.
 - Reader-first study threads opened from selected Scripture.
 - Personal study threads that preserve the reader's own takeaway, reopen at the selected passage, and remain visible as a subtle reading marker and a private thread list.
 - Related passages resolved to readable Bible text in the selected translation when available.

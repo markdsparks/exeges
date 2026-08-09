@@ -11,6 +11,7 @@
     "bench:study-synthesis": "node scripts/bench-local-study-synthesis.mjs",
     "bench:commentary-comparison": "node scripts/bench-commentary-comparison.mjs",
     "bench:personal-study-threads": "node scripts/bench-personal-study-threads.mjs",
+    "bench:reader-navigation": "node scripts/bench-reader-navigation.mjs",
     "build": "vite build",
     "build:study-sources": "npm run import:openbible-crossrefs -- --input=sources/study/raw/openbible-cross-references.zip --quiet && node scripts/build-study-source-pack.mjs",
     "import:openbible-crossrefs": "node scripts/import-openbible-cross-references.mjs",
