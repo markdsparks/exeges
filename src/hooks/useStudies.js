@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 const STORAGE_KEY = 'exeges-studies';
 const INTERPRETATION_KEYS = ['anchor', 'context', 'meaning', 'guardrail', 'summary'];
@@ -67,6 +67,7 @@ function normalizeObservation(observation) {
         interpretation: normalizeFieldMap(observation?.interpretation, INTERPRETATION_KEYS),
         application: normalizeFieldMap(observation?.application, APPLICATION_KEYS),
         createdAt: observation?.createdAt ?? Date.now(),
+        updatedAt: observation?.updatedAt ?? observation?.createdAt ?? Date.now(),
     };
 }
 
@@ -115,6 +116,19 @@ export function useStudies() {
             return {};
         }
     });
+    const studiesRef = useRef(studies);
+
+    const commitStudies = useCallback((next) => {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        } catch {
+            return false;
+        }
+
+        studiesRef.current = next;
+        setStudies(next);
+        return true;
+    }, []);
 
     const getStudy = useCallback(
         (bookId, chapter) => {
@@ -131,135 +145,105 @@ export function useStudies() {
 
     const saveStudy = useCallback((bookId, chapter, fields) => {
         const key = makeStudyKey(bookId, chapter);
-
-        setStudies(prev => {
-            const next = { ...prev };
-            const previousStudy = normalizeStudy(prev[key]);
-            const cleanStudy = normalizeStudy({
-                ...previousStudy,
-                ...fields,
-                observations: fields?.observations ?? previousStudy.observations,
-            });
-
-            if (hasStudyText(cleanStudy)) {
-                next[key] = { ...cleanStudy, updatedAt: Date.now() };
-            } else {
-                delete next[key];
-            }
-
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-            } catch {}
-
-            return next;
+        const next = { ...studiesRef.current };
+        const previousStudy = normalizeStudy(next[key]);
+        const cleanStudy = normalizeStudy({
+            ...previousStudy,
+            ...fields,
+            observations: fields?.observations ?? previousStudy.observations,
         });
-    }, []);
+
+        if (hasStudyText(cleanStudy)) {
+            next[key] = { ...cleanStudy, updatedAt: Date.now() };
+        } else {
+            delete next[key];
+        }
+
+        return commitStudies(next);
+    }, [commitStudies]);
 
     const addObservation = useCallback((bookId, chapter, observation) => {
         const key = makeStudyKey(bookId, chapter);
         const cleanObservation = normalizeObservation(observation);
-        if (!cleanObservation) return;
+        if (!cleanObservation) return false;
 
-        setStudies(prev => {
-            const next = { ...prev };
-            const previousStudy = normalizeStudy(prev[key]);
-            const alreadySaved = previousStudy.observations.some(item => (
-                item.type === cleanObservation.type
-                && item.verse === cleanObservation.verse
-                && item.quote.toLowerCase() === cleanObservation.quote.toLowerCase()
-                && item.note.toLowerCase() === cleanObservation.note.toLowerCase()
-            ));
-            const observations = alreadySaved
-                ? previousStudy.observations
-                : [cleanObservation, ...previousStudy.observations];
+        const next = { ...studiesRef.current };
+        const previousStudy = normalizeStudy(next[key]);
+        const alreadySaved = previousStudy.observations.some(item => (
+            item.type === cleanObservation.type
+            && item.verse === cleanObservation.verse
+            && item.quote.toLowerCase() === cleanObservation.quote.toLowerCase()
+            && item.note.toLowerCase() === cleanObservation.note.toLowerCase()
+        ));
+        if (alreadySaved) return true;
 
-            next[key] = {
-                ...previousStudy,
-                observations,
-                updatedAt: Date.now(),
-            };
+        next[key] = {
+            ...previousStudy,
+            observations: [cleanObservation, ...previousStudy.observations],
+            updatedAt: Date.now(),
+        };
 
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-            } catch {}
-
-            return next;
-        });
-    }, []);
+        return commitStudies(next);
+    }, [commitStudies]);
 
     const removeObservation = useCallback((bookId, chapter, observationId) => {
         const key = makeStudyKey(bookId, chapter);
+        const next = { ...studiesRef.current };
+        const previousStudy = normalizeStudy(next[key]);
+        const observations = previousStudy.observations.filter(item => item.id !== observationId);
+        if (observations.length === previousStudy.observations.length) return false;
 
-        setStudies(prev => {
-            const next = { ...prev };
-            const previousStudy = normalizeStudy(prev[key]);
-            const observations = previousStudy.observations.filter(item => item.id !== observationId);
-            const cleanStudy = { ...previousStudy, observations };
+        const cleanStudy = { ...previousStudy, observations };
+        if (hasStudyText(cleanStudy)) {
+            next[key] = { ...cleanStudy, updatedAt: Date.now() };
+        } else {
+            delete next[key];
+        }
 
-            if (hasStudyText(cleanStudy)) {
-                next[key] = { ...cleanStudy, updatedAt: Date.now() };
-            } else {
-                delete next[key];
-            }
-
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-            } catch {}
-
-            return next;
-        });
-    }, []);
+        return commitStudies(next);
+    }, [commitStudies]);
 
     const updateObservation = useCallback((bookId, chapter, observationId, fields) => {
         const key = makeStudyKey(bookId, chapter);
+        const next = { ...studiesRef.current };
+        const previousStudy = normalizeStudy(next[key]);
+        let didUpdate = false;
+        const observations = previousStudy.observations.map(item => {
+            if (item.id !== observationId) return item;
+            didUpdate = true;
 
-        setStudies(prev => {
-            const next = { ...prev };
-            const previousStudy = normalizeStudy(prev[key]);
-            const observations = previousStudy.observations.map(item => {
-                if (item.id !== observationId) return item;
+            return normalizeObservation({
+                ...item,
+                ...fields,
+                updatedAt: Date.now(),
+                interpretation: fields?.interpretation
+                    ? { ...item.interpretation, ...fields.interpretation }
+                    : item.interpretation,
+                application: fields?.application
+                    ? { ...item.application, ...fields.application }
+                    : item.application,
+            });
+        }).filter(Boolean);
+        if (!didUpdate) return false;
 
-                return normalizeObservation({
-                    ...item,
-                    ...fields,
-                    interpretation: fields?.interpretation
-                        ? { ...item.interpretation, ...fields.interpretation }
-                        : item.interpretation,
-                    application: fields?.application
-                        ? { ...item.application, ...fields.application }
-                        : item.application,
-                });
-            }).filter(Boolean);
-            const cleanStudy = { ...previousStudy, observations };
+        const cleanStudy = { ...previousStudy, observations };
+        if (hasStudyText(cleanStudy)) {
+            next[key] = { ...cleanStudy, updatedAt: Date.now() };
+        } else {
+            delete next[key];
+        }
 
-            if (hasStudyText(cleanStudy)) {
-                next[key] = { ...cleanStudy, updatedAt: Date.now() };
-            } else {
-                delete next[key];
-            }
-
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-            } catch {}
-
-            return next;
-        });
-    }, []);
+        return commitStudies(next);
+    }, [commitStudies]);
 
     const deleteStudy = useCallback((bookId, chapter) => {
         const key = makeStudyKey(bookId, chapter);
+        if (!studiesRef.current[key]) return false;
 
-        setStudies(prev => {
-            const next = { ...prev };
-            delete next[key];
-
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-            } catch {}
-
-            return next;
-        });
-    }, []);
+        const next = { ...studiesRef.current };
+        delete next[key];
+        return commitStudies(next);
+    }, [commitStudies]);
 
     const getAllStudies = useCallback(() => {
         return Object.entries(studies)

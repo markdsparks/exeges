@@ -758,19 +758,24 @@ export default function StudyThread({
     bibles = [],
     translation,
     onSaveThought,
+    onDeleteThought,
     onOpenPassage,
     onClose,
 }) {
     const [view, setView] = useState('reflect');
     const [thought, setThought] = useState(observation?.note ?? '');
+    const [editingThought, setEditingThought] = useState(!observation?.note?.trim());
     const [saved, setSaved] = useState(false);
+    const [persistenceError, setPersistenceError] = useState('');
     const [researchInput, setResearchInput] = useState('');
     const [groundingState, setGroundingState] = useState({ status: 'idle', grounding: null });
 
     useEffect(() => {
         setView('reflect');
         setThought(observation?.note ?? '');
+        setEditingThought(!observation?.note?.trim());
         setSaved(false);
+        setPersistenceError('');
         setResearchInput('');
         setGroundingState({ status: 'idle', grounding: null });
     }, [target.id]);
@@ -822,14 +827,32 @@ export default function StudyThread({
     if (!target) return null;
 
     const handleSave = () => {
-        onSaveThought?.(thought);
+        if (!onSaveThought?.(thought)) {
+            setPersistenceError('Your takeaway could not be saved on this device. Keep it here while you try again.');
+            return;
+        }
+
+        setPersistenceError('');
         setSaved(true);
+        setEditingThought(false);
     };
 
     const handleExplore = () => {
         setSaved(false);
         setResearchInput(thought);
         setView('explore');
+    };
+
+    const handleDelete = () => {
+        if (!onDeleteThought?.()) {
+            setPersistenceError('Your takeaway could not be removed on this device.');
+            return;
+        }
+
+        setPersistenceError('');
+        setThought('');
+        setSaved(false);
+        setEditingThought(true);
     };
 
     return (
@@ -860,7 +883,7 @@ export default function StudyThread({
                             className={view === 'reflect' ? 'active' : ''}
                             onClick={() => setView('reflect')}
                         >
-                            My thought
+                            My takeaway
                         </button>
                         <button
                             type="button"
@@ -874,29 +897,57 @@ export default function StudyThread({
                     </div>
 
                     {view === 'reflect' ? (
-                        <>
+                        editingThought ? (
                             <section className="study-thread-reflection">
-                                <span>Your thought</span>
-                                <p>What do you notice, wonder, or want to understand here?</p>
+                                <span>Your takeaway</span>
+                                <p>In your own words, what do you think this passage is saying?</p>
                                 <textarea
                                     value={thought}
                                     onChange={(event) => {
                                         setThought(event.target.value);
                                         setSaved(false);
+                                        setPersistenceError('');
                                     }}
-                                    placeholder="Write what you are seeing..."
+                                    placeholder="Write what you are taking from this passage..."
                                     rows={5}
                                 />
+                                <div className="study-thread-actions">
+                                    {observation?.note?.trim() && (
+                                        <button type="button" className="study-thread-secondary" onClick={() => {
+                                            setThought(observation.note);
+                                            setEditingThought(false);
+                                        }}>
+                                            Cancel
+                                        </button>
+                                    )}
+                                    <button type="button" className="study-thread-secondary" onClick={handleExplore}>
+                                        Explore this passage
+                                    </button>
+                                    <button type="button" className="study-thread-primary study-thread-explore-action" onClick={handleSave} disabled={!thought.trim()}>
+                                        {saved ? 'Saved' : 'Save takeaway'}
+                                    </button>
+                                </div>
+                                {persistenceError && <p className="study-thread-persistence-error">{persistenceError}</p>}
                             </section>
-                            <div className="study-thread-actions">
-                                <button type="button" className="study-thread-secondary" onClick={handleSave} disabled={!thought.trim()}>
-                                    {saved ? 'Saved' : 'Save thought'}
-                                </button>
-                                <button type="button" className="study-thread-primary study-thread-explore-action" onClick={handleExplore}>
-                                    Explore this passage
-                                </button>
-                            </div>
-                        </>
+                        ) : (
+                            <section className="study-thread-takeaway">
+                                <span>Your takeaway</span>
+                                <p>{thought}</p>
+                                <em>Anchored in {target.reference}</em>
+                                <div className="study-thread-actions">
+                                    <button type="button" className="study-thread-delete" onClick={handleDelete}>
+                                        Remove takeaway
+                                    </button>
+                                    <button type="button" className="study-thread-secondary" onClick={() => setEditingThought(true)}>
+                                        Refine takeaway
+                                    </button>
+                                    <button type="button" className="study-thread-primary study-thread-explore-action" onClick={handleExplore}>
+                                        Explore this passage
+                                    </button>
+                                </div>
+                                {persistenceError && <p className="study-thread-persistence-error">{persistenceError}</p>}
+                            </section>
+                        )
                     ) : (
                         <>
                             <ResearchView
@@ -907,11 +958,20 @@ export default function StudyThread({
                                 translation={translation}
                                 onOpenPassage={onOpenPassage}
                             />
-                            {thought.trim() && <div className="study-thread-actions study-thread-research-actions">
-                                <button type="button" className="study-thread-primary" onClick={handleSave} disabled={!thought.trim()}>
-                                    {saved ? 'Saved' : 'Save thought'}
-                                </button>
-                            </div>}
+                            <section className="study-thread-return">
+                                <span>{thought.trim() ? 'Your takeaway' : 'Before you return'}</span>
+                                <p>{thought.trim()
+                                    ? 'Keep refining your own understanding as you weigh the passage and the sources.'
+                                    : 'Put what you are taking from this passage into your own words.'}</p>
+                                <div className="study-thread-actions study-thread-research-actions">
+                                    <button type="button" className="study-thread-primary" onClick={() => {
+                                        setView('reflect');
+                                        setEditingThought(true);
+                                    }}>
+                                        {thought.trim() ? 'Review my takeaway' : 'Write my takeaway'}
+                                    </button>
+                                </div>
+                            </section>
                         </>
                     )}
                 </div>

@@ -114,6 +114,23 @@
     box-shadow: inset -2px 0 0 color-mix(in srgb, var(--color-accent) 48%, transparent);
 }
 
+.verse-group.has-saved-thread {
+    box-shadow: inset 2px 0 0 color-mix(in srgb, var(--color-accent) 46%, transparent);
+}
+
+.verse-group.has-saved-thread.noted {
+    box-shadow:
+        inset 2px 0 0 color-mix(in srgb, var(--color-accent) 46%, transparent),
+        inset -2px 0 0 color-mix(in srgb, var(--color-accent) 48%, transparent);
+}
+
+@media (forced-colors: active) {
+    .verse-group.has-saved-thread {
+        outline: 1px solid Highlight;
+        outline-offset: 2px;
+    }
+}
+
 /* Verse number */
 .verse-number {
     font-family: var(--font-family-ui);

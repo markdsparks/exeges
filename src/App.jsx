@@ -33,6 +33,11 @@ import {
     sortSelectionItems,
     tokenizeStudyText,
 } from './lib/studyMethod';
+import {
+    findPersonalStudyThreadObservation,
+    getPersonalStudyThreads,
+    hasPersonalStudyThread,
+} from './lib/personalStudyThreads';
 
 function getChapterWordSelections(book, chapter) {
     if (!book || !chapter) return [];
@@ -187,26 +192,14 @@ export default function App() {
         }).filter(Boolean);
     }, [bibles, getAllNotes]);
 
-    const savedStudies = useMemo(() => {
-        if (!bibles) return [];
+    const savedThreads = useMemo(
+        () => getPersonalStudyThreads(getAllStudies(), bibles),
+        [bibles, getAllStudies],
+    );
 
-        return getAllStudies().map(study => {
-            const studyBook = bibles.find(b => b.id === study.bookId);
-            if (!studyBook) return null;
-
-            const observationCount = study.observations?.length ?? 0;
-            const firstObservation = study.observations?.[0]?.quote;
-            const summary = observationCount > 0
-                ? `${observationCount} observation${observationCount === 1 ? '' : 's'}${firstObservation ? `: ${firstObservation}` : ''}`
-                : study.observe || study.interpret || study.apply;
-
-            return {
-                ...study,
-                bookName: studyBook.name,
-                summary,
-            };
-        }).filter(Boolean);
-    }, [bibles, getAllStudies]);
+    const hasSavedThread = useCallback((bookId, chapterNum, verseNum) => (
+        hasPersonalStudyThread(getStudy(bookId, chapterNum), verseNum)
+    ), [getStudy]);
 
     const searchContext = useMemo(() => ({
         bookId: selectedBookId,
@@ -257,6 +250,7 @@ export default function App() {
     useEffect(() => {
         const onHashChange = () => {
             const match = window.location.hash.match(/^#\/?([\w-]+)\/(\d+)(?:\/v(\d+))?$/);
+            setStudyThreadTarget(null);
             if (match) {
                 navigateTo(match[1], parseInt(match[2], 10));
                 setTargetVerse(match[3] ? parseInt(match[3], 10) : null);
@@ -331,38 +325,56 @@ export default function App() {
     const activeStudyThreadStudy = studyThreadTarget
         ? getStudy(studyThreadTarget.bookId, studyThreadTarget.chapter)
         : null;
-    const activeStudyThreadObservation = activeStudyThreadStudy?.observations?.find(observation => (
-        observation.reference === studyThreadTarget?.reference
-        && observation.quote === studyThreadTarget?.quote
-    )) ?? null;
+    const activeStudyThreadObservation = findPersonalStudyThreadObservation(
+        activeStudyThreadStudy,
+        studyThreadTarget,
+    );
 
     const handleOpenSearch = useCallback(() => {
         setHideControls(false);
         setSearchOpen(true);
     }, []);
 
-    const handleOpenStudy = useCallback((study) => {
-        const firstObservation = study?.observations?.[0];
-        if (!study?.bookId || !study?.chapter || !firstObservation) return;
+    const handleOpenStudy = useCallback((thread) => {
+        if (!thread?.bookId || !thread?.chapter) return;
 
-        navigateTo(study.bookId, study.chapter);
-        setTargetVerse(firstObservation.verse);
+        if (thread.kind === 'legacy') {
+            navigateTo(thread.bookId, thread.chapter);
+            setTargetVerse(null);
+            setSidebarOpen(false);
+            setReferenceTrail([]);
+            setStudySelection([]);
+            setStudyWorkflow(null);
+            setStudyThreadTarget(null);
+            setStudyTarget({
+                bookId: thread.bookId,
+                bookName: thread.bookName,
+                chapter: thread.chapter,
+            });
+            window.history.pushState(null, '', `#${thread.bookId}/${thread.chapter}`);
+            return;
+        }
+
+        if (!thread.verse || !thread.quote) return;
+
+        navigateTo(thread.bookId, thread.chapter);
+        setTargetVerse(thread.verse);
         setSidebarOpen(false);
         setStudyTarget(null);
         setReferenceTrail([]);
         setStudySelection([]);
         setStudyWorkflow(null);
         setStudyThreadTarget({
-            id: firstObservation.id,
-            bookId: study.bookId,
-            bookName: study.bookName,
-            chapter: study.chapter,
-            verse: firstObservation.verse,
-            reference: firstObservation.reference || `${study.bookName} ${study.chapter}:${firstObservation.verse}`,
-            quote: firstObservation.quote,
-            selections: firstObservation.selections ?? [],
+            id: thread.id,
+            bookId: thread.bookId,
+            bookName: thread.bookName,
+            chapter: thread.chapter,
+            verse: thread.verse,
+            reference: thread.reference || `${thread.bookName} ${thread.chapter}:${thread.verse}`,
+            quote: thread.quote,
+            selections: thread.selections ?? [],
         });
-        window.history.pushState(null, '', `#${study.bookId}/${study.chapter}/v${firstObservation.verse}`);
+        window.history.pushState(null, '', `#${thread.bookId}/${thread.chapter}/v${thread.verse}`);
     }, [navigateTo]);
 
     const handleOpenStudyThread = useCallback((target) => {
@@ -414,25 +426,21 @@ export default function App() {
     const handleSaveStudyThreadThought = useCallback((thought) => {
         if (!studyThreadTarget || !thought.trim()) return;
 
-        const existingObservation = getStudy(
+        const existingObservation = findPersonalStudyThreadObservation(getStudy(
             studyThreadTarget.bookId,
             studyThreadTarget.chapter,
-        )?.observations?.find(observation => (
-            observation.reference === studyThreadTarget.reference
-            && observation.quote === studyThreadTarget.quote
-        ));
+        ), studyThreadTarget);
 
         if (existingObservation) {
-            updateObservation(
+            return updateObservation(
                 studyThreadTarget.bookId,
                 studyThreadTarget.chapter,
                 existingObservation.id,
                 { note: thought },
             );
-            return;
         }
 
-        addObservation(studyThreadTarget.bookId, studyThreadTarget.chapter, {
+        return addObservation(studyThreadTarget.bookId, studyThreadTarget.chapter, {
             id: studyThreadTarget.id,
             type: 'note',
             scope: studyThreadTarget.selections?.length ? 'selection' : 'verse',
@@ -443,6 +451,24 @@ export default function App() {
             note: thought,
         });
     }, [addObservation, getStudy, studyThreadTarget, updateObservation]);
+
+    const handleDeleteStudyThreadThought = useCallback(() => {
+        if (!studyThreadTarget) return;
+
+        const existingObservation = findPersonalStudyThreadObservation(getStudy(
+            studyThreadTarget.bookId,
+            studyThreadTarget.chapter,
+        ), studyThreadTarget);
+
+        if (existingObservation) {
+            return removeObservation(
+                studyThreadTarget.bookId,
+                studyThreadTarget.chapter,
+                existingObservation.id,
+            );
+        }
+        return false;
+    }, [getStudy, removeObservation, studyThreadTarget]);
 
     const handleToggleStudySelection = useCallback((item) => {
         if (!item?.id) return;
@@ -635,6 +661,7 @@ export default function App() {
                 hasNote={hasNote}
                 onOpenNote={handleOpenNote}
                 onOpenStudyThread={handleOpenStudyThread}
+                hasSavedThread={hasSavedThread}
                 translation={selectedTranslation}
                 translationState={translationState}
                 studyMode={!!studyTarget}
@@ -687,7 +714,7 @@ export default function App() {
                     onSelectTheme={toggleMode}
                     bookmarks={bookmarkedVerses}
                     notes={notedVerses}
-                    studies={savedStudies}
+                    studies={savedThreads}
                     onSelectTranslation={selectTranslation}
                     onNavigate={handleNavigate}
                     onNavigateToVerse={handleNavigateToVerse}
@@ -730,6 +757,7 @@ export default function App() {
                     bibles={bibles}
                     translation={selectedTranslation}
                     onSaveThought={handleSaveStudyThreadThought}
+                    onDeleteThought={handleDeleteStudyThreadThought}
                     onOpenPassage={handleOpenReferencedPassage}
                     onClose={() => setStudyThreadTarget(null)}
                 />

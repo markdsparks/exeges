@@ -206,24 +206,24 @@ export default function Sidebar({
                 </section>
 
                 <section className="studies-section">
-                    <h3 className="testament-label">Study threads</h3>
+                    <h3 className="testament-label">Your study threads</h3>
                     {studies.length > 0 ? (
                         <div className="study-list">
                             {studies.slice(0, 12).map(study => (
                                 <button
-                                    key={`${study.bookId}-${study.chapter}`}
+                                    key={study.id}
                                     className="study-row"
                                     onClick={() => onOpenStudy?.(study)}
                                 >
                                     <span className="study-row-reference">
-                                        {study.bookName} {study.chapter}
+                                        {study.reference}
                                     </span>
-                                    <span className="study-row-snippet">{study.summary}</span>
+                                    <span className="study-row-snippet">{study.takeaway}</span>
                                 </button>
                             ))}
                         </div>
                     ) : (
-                        <p className="study-empty">Saved thoughts and study threads will appear here.</p>
+                        <p className="study-empty">Your saved takeaways will appear here.</p>
                     )}
                 </section>
 

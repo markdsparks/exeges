@@ -41,6 +41,7 @@ export default function ChapterReader({
     isBookmarked,
     onToggleBookmark,
     hasNote,
+    hasSavedThread,
     onOpenNote,
     onOpenStudyThread,
     translation,
@@ -243,6 +244,7 @@ export default function ChapterReader({
                 {chapter.verses.map((v) => {
                     const bookmarked = isBookmarked?.(book.id, chapterNum, v.verse) ?? false;
                     const noted = hasNote?.(book.id, chapterNum, v.verse) ?? false;
+                    const savedThread = hasSavedThread?.(book.id, chapterNum, v.verse) ?? false;
                     const verseObservations = studyObservations.filter(item => item.verse === v.verse);
                     const verseSelectedItems = studySelection.filter(item => item.verse === v.verse);
                     const selectedForStudy = verseSelectedItems.length > 0;
@@ -250,7 +252,7 @@ export default function ChapterReader({
                     return (
                        <div
                           key={v.verse}
-                         className={`verse-group ${bookmarked && !studyMode ? 'bookmarked' : ''} ${noted && !studyMode ? 'noted' : ''} ${highlightedVerse === v.verse ? 'linked' : ''} ${studyMode ? 'study-enabled' : ''} ${studyMode && !studyCanSelect ? 'study-readonly' : ''} ${verseObservations.length ? 'studied' : ''} ${selectedForStudy ? 'study-selected' : ''}`}
+                         className={`verse-group ${bookmarked && !studyMode ? 'bookmarked' : ''} ${noted && !studyMode ? 'noted' : ''} ${savedThread && !studyMode ? 'has-saved-thread' : ''} ${highlightedVerse === v.verse ? 'linked' : ''} ${studyMode ? 'study-enabled' : ''} ${studyMode && !studyCanSelect ? 'study-readonly' : ''} ${verseObservations.length ? 'studied' : ''} ${selectedForStudy ? 'study-selected' : ''}`}
                           data-verse={v.verse}
                           id={`verse-${v.verse}`}
                           onClick={() => {
@@ -265,6 +267,7 @@ export default function ChapterReader({
                           }}
                        >
                            <span className="verse-number">{v.verse}</span>{' '}
+                            {savedThread && !studyMode && <span className="sr-only">Saved study thread.</span>}
                             {studyMode ? renderStudyText(v, verseObservations) : (
                                 <span
                                     className="verse-text reader-study-target"

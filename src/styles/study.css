@@ -2059,6 +2059,8 @@
 
 .study-thread-header span,
 .study-thread-reflection > span,
+.study-thread-takeaway > span,
+.study-thread-return > span,
 .study-thread-reading > span,
 .study-thread-section-heading > span,
 .study-thread-source > div > span {
@@ -2141,6 +2143,34 @@
     gap: var(--space-sm);
 }
 
+.study-thread-takeaway,
+.study-thread-return {
+    display: grid;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 28%, var(--color-border-soft));
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg-note);
+}
+
+.study-thread-takeaway > p {
+    margin: 0;
+    font-family: var(--font-family-body);
+    font-size: 1.08rem;
+    line-height: 1.58;
+    color: var(--color-text-primary);
+}
+
+.study-thread-takeaway > em,
+.study-thread-return > p {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.82rem;
+    font-style: normal;
+    line-height: 1.48;
+    color: var(--color-text-secondary);
+}
+
 .study-thread-reflection > p,
 .study-thread-related > p,
 .study-thread-loading {
@@ -2149,6 +2179,14 @@
     font-size: 0.88rem;
     line-height: 1.5;
     color: var(--color-text-secondary);
+}
+
+.study-thread-persistence-error {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--color-accent-strong);
 }
 
 .study-thread-reflection textarea {
@@ -2173,6 +2211,7 @@
 
 .study-thread-actions {
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
     gap: var(--space-sm);
 }
@@ -2219,6 +2258,19 @@
 .study-thread-secondary:hover {
     color: var(--color-accent);
     background-color: color-mix(in srgb, var(--color-accent) 9%, transparent);
+}
+
+.study-thread-delete {
+    min-height: 38px;
+    padding: 0.42rem 0.25rem;
+    font-family: var(--font-family-ui);
+    font-size: 0.78rem;
+    line-height: 1.2;
+    color: var(--color-text-muted);
+}
+
+.study-thread-delete:hover {
+    color: var(--color-accent-strong);
 }
 
 .study-thread-research {
