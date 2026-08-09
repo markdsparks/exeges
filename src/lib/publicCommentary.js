@@ -69,6 +69,34 @@ function cleanText(value) {
         .trim();
 }
 
+function isCalvinPassageHeading(value) {
+    return /^(?:[1-3]\s+)?[A-Za-z]+(?:\s+[A-Za-z]+)*\s+\d+:\d+(?:-\d+)?$/.test(value);
+}
+
+function isCalvinPassageLine(value) {
+    return /^\d+\.\s/.test(value);
+}
+
+export function cleanPublicCommentaryText(value, sourceId) {
+    if (sourceId !== 'john-calvin') return cleanText(value);
+
+    const paragraphs = getText(value)
+        .replace(/<[^>]*>/g, ' ')
+        .split(/\n\s*\n/)
+        .map(paragraph => paragraph.replace(/\s+/g, ' ').trim())
+        .filter(Boolean);
+
+    if (!isCalvinPassageHeading(paragraphs[0] ?? '')) return paragraphs.join(' ');
+
+    const firstCommentaryIndex = paragraphs.findIndex((paragraph, index) => (
+        index > 0 && !isCalvinPassageLine(paragraph)
+    ));
+
+    return firstCommentaryIndex === -1
+        ? ''
+        : paragraphs.slice(firstCommentaryIndex).join(' ');
+}
+
 async function getBooks(sourceId, signal) {
     if (booksBySource.has(sourceId)) return booksBySource.get(sourceId);
 
@@ -118,7 +146,7 @@ export async function loadPublicCommentary({ sourceId, bookName, chapterNumber, 
     const entries = (payload.chapter?.content ?? [])
         .map(item => ({
             verse: Number.isFinite(item.number) ? item.number : null,
-            text: cleanText(item.content),
+            text: cleanPublicCommentaryText(item.content, sourceId),
         }))
         .filter(item => item.text);
 
