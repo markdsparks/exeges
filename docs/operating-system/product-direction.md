@@ -5,7 +5,7 @@
 Exeges is an internal alpha distributed on the web and through a thin iOS TestFlight shell. The current experience includes:
 
 - Immersive local KJV reading and remotely loaded ESV.
-- Search, bookmarks, verse notes, saved studies, reading position, themes, and typography preferences.
+- Search, bookmarks, verse notes, saved studies, verse-level resume reading, themes, and typography preferences.
 - Header-based book, chapter, and verse navigation, plus confirmation-based touch navigation between adjacent chapters.
 - Reader-first study threads opened from selected Scripture.
 - Personal study threads that preserve the reader's own takeaway, reopen at the selected passage, and remain visible as a subtle reading marker and a private thread list.
@@ -56,6 +56,12 @@ These outcomes are provisional and should be reprioritized by the CEO:
 - Local AI offers enough privacy or responsiveness benefit to justify its mobile cost and quality limits.
 - A thin hosted-web iOS shell is sufficient for the current learning stage.
 
+## Current Alpha Slice
+
+**Provisional implementation hypothesis.** The next tester-facing improvement is the return-to-reading loop: after an interruption, a reader should reopen the app at the verse near where they stopped, while a deliberate shared URL still opens exactly at its reference. The menu exposes the saved location as a compact “Resume reading” entry.
+
+This is intentionally a reading-integrity investment, not another study surface. The qualitative success signal is that testers can leave a chapter, return later, and continue without having to reconstruct where they were. The position remains private to the device and is approximate to the reading line rather than a claim to remember an exact scroll pixel.
+
 ## Next Product Decision
 
-The next brief should name one primary user, one read-to-explore job, and one observable success signal. That decision should precede further expansion of commentary, AI, ontology, or expert-study features.
+After this return loop has been tested, the CEO should name one primary reader and one read-to-explore job before expanding commentary, AI, ontology, or expert-study features. The brief should include one observable success signal for that job.

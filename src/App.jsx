@@ -41,6 +41,13 @@ import {
     hasPersonalStudyThread,
 } from './lib/personalStudyThreads';
 import { getAdjacentChapters, shouldConfirmChapterSwipe } from './lib/readerNavigation';
+import {
+    normalizeReadingPosition,
+    parseReadingPosition,
+    READING_POSITION_STORAGE_KEY,
+    sameReadingPosition,
+    serializeReadingPosition,
+} from './lib/readingPosition';
 
 function getChapterWordSelections(book, chapter) {
     if (!book || !chapter) return [];
@@ -56,6 +63,25 @@ function getChapterWordSelections(book, chapter) {
                 token,
             }))
     ));
+}
+
+function resolveReadingPosition(bibles, candidate) {
+    const position = normalizeReadingPosition(candidate);
+    if (!position) return null;
+
+    const savedBook = bibles.find(item => item.id === position.bookId);
+    const savedChapter = savedBook?.chapters?.find(item => item.chapter === position.chapterNum);
+    if (!savedBook || !savedChapter) return null;
+
+    const verseNum = savedChapter.verses.some(verse => verse.verse === position.verseNum)
+        ? position.verseNum
+        : null;
+
+    return {
+        ...position,
+        bookName: savedBook.name,
+        verseNum,
+    };
 }
 
 export default function App() {
@@ -95,11 +121,15 @@ export default function App() {
     const [studyWorkflow, setStudyWorkflow] = useState(null);
     const [referencePickerOpen, setReferencePickerOpen] = useState(false);
     const [chapterSwipePrompt, setChapterSwipePrompt] = useState(null);
+    const [resumePosition, setResumePosition] = useState(null);
+    const [resumeVerse, setResumeVerse] = useState(null);
+    const [readingPositionReady, setReadingPositionReady] = useState(false);
 
     // Shared ref for the reader container - used by ChapterReader and BackToTop
     const readerRef = useRef(null);
     const lastScrollYRef = useRef(0);
     const tickingRef = useRef(false);
+    const latestReadingPositionRef = useRef(null);
 
     // Sync dark-mode class on documentElement with theme state
     useEffect(() => {
@@ -232,57 +262,79 @@ export default function App() {
         [readerBook, activeChapter]
     );
 
-    // Load last reading position from localStorage on mount
+    // A deliberate URL always wins over local resume state so shared links remain reliable.
     useEffect(() => {
-        if (window.location.hash) return;
-
-        if (!selectedBookId || selectedBookId === 'genesis') {
-            try {
-                const pos = JSON.parse(localStorage.getItem('exes-position'));
-                if (pos?.bookId && pos?.chapterNum) {
-                    navigateTo(pos.bookId, pos.chapterNum);
-                }
-            } catch {}
-        }
-    }, []);
-
-    // Persist reading position
-    useEffect(() => {
-        if (selectedBookId && selectedChapterNum) {
-            try {
-                localStorage.setItem(
-                    'exes-position',
-                    JSON.stringify({ bookId: selectedBookId, chapterNum: selectedChapterNum })
-                );
-            } catch {}
-        }
-    }, [selectedBookId, selectedChapterNum]);
-
-    // Handle URL hash for shareable links
-    useEffect(() => {
-        const onHashChange = () => {
+        const navigateFromLocation = (isInitialLoad) => {
             const match = window.location.hash.match(/^#\/?([\w-]+)\/(\d+)(?:\/v(\d+))?$/);
             setStudyThreadTarget(null);
-            if (match) {
-                navigateTo(match[1], parseInt(match[2], 10));
-                setTargetVerse(match[3] ? parseInt(match[3], 10) : null);
+
+            if (isInitialLoad) {
+                let storedPosition = null;
+                try {
+                    storedPosition = parseReadingPosition(localStorage.getItem(READING_POSITION_STORAGE_KEY));
+                } catch {}
+
+                const savedPosition = resolveReadingPosition(bibles, storedPosition);
+                latestReadingPositionRef.current = savedPosition;
+                setResumePosition(savedPosition);
+            }
+
+            const linkedPosition = match
+                ? resolveReadingPosition(bibles, {
+                    bookId: match[1],
+                    chapterNum: Number(match[2]),
+                    verseNum: match[3] ? Number(match[3]) : null,
+                })
+                : null;
+
+            if (linkedPosition) {
+                navigateTo(linkedPosition.bookId, linkedPosition.chapterNum);
+                setTargetVerse(linkedPosition.verseNum);
+                setResumeVerse(null);
+            } else if (isInitialLoad && latestReadingPositionRef.current) {
+                const savedPosition = latestReadingPositionRef.current;
+                navigateTo(savedPosition.bookId, savedPosition.chapterNum);
+                setTargetVerse(null);
+                setResumeVerse(savedPosition.verseNum);
             } else {
                 navigateTo('genesis', 1);
                 setTargetVerse(null);
+                setResumeVerse(null);
             }
+
+            setReadingPositionReady(true);
         };
 
-        onHashChange();
-        window.addEventListener('hashchange', onHashChange);
-        window.addEventListener('popstate', onHashChange);
+        navigateFromLocation(true);
+        const onLocationChange = () => navigateFromLocation(false);
+        window.addEventListener('hashchange', onLocationChange);
+        window.addEventListener('popstate', onLocationChange);
         return () => {
-            window.removeEventListener('hashchange', onHashChange);
-            window.removeEventListener('popstate', onHashChange);
+            window.removeEventListener('hashchange', onLocationChange);
+            window.removeEventListener('popstate', onLocationChange);
         };
-    }, [navigateTo]);
+    }, [bibles, navigateTo]);
+
+    const handleReadingPositionChange = useCallback((position) => {
+        if (!readingPositionReady) return;
+
+        const resolvedPosition = resolveReadingPosition(bibles, position);
+        if (!resolvedPosition || sameReadingPosition(latestReadingPositionRef.current, resolvedPosition)) return;
+
+        latestReadingPositionRef.current = resolvedPosition;
+        setResumePosition(resolvedPosition);
+
+        try {
+            const serializedPosition = serializeReadingPosition(resolvedPosition);
+            if (serializedPosition) {
+                localStorage.setItem(READING_POSITION_STORAGE_KEY, serializedPosition);
+            }
+        } catch {}
+    }, [bibles, readingPositionReady]);
 
     const handleNavigate = useCallback((bookId, chapterNum) => {
         setTargetVerse(null);
+        setResumeVerse(null);
         navigateTo(bookId, chapterNum);
         setSidebarOpen(false);
         setStudyTarget(null);
@@ -298,6 +350,7 @@ export default function App() {
 
     const handleNavigateToVerse = useCallback((bookId, chapterNum, verseNum, options = {}) => {
         setTargetVerse(verseNum);
+        setResumeVerse(null);
         navigateTo(bookId, chapterNum);
         setSidebarOpen(false);
         setSearchOpen(false);
@@ -310,6 +363,17 @@ export default function App() {
         setChapterSwipePrompt(null);
         window.history.pushState(null, '', `#${bookId}/${chapterNum}/v${verseNum}`);
     }, [navigateTo]);
+
+    const handleResumeReading = useCallback(() => {
+        if (!resumePosition) return;
+
+        handleNavigate(resumePosition.bookId, resumePosition.chapterNum);
+        setResumeVerse(resumePosition.verseNum);
+    }, [handleNavigate, resumePosition]);
+
+    const handleResumeComplete = useCallback(() => {
+        setResumeVerse(null);
+    }, []);
 
     const handleSearchResult = useCallback((result) => {
         handleNavigateToVerse(result.bookId, result.chapter, result.verse);
@@ -671,6 +735,7 @@ export default function App() {
                 chapterNum={selectedChapterNum}
                 readerRef={readerRef}
                 targetVerse={targetVerse}
+                resumeVerse={resumeVerse}
                 isBookmarked={isBookmarked}
                 onToggleBookmark={toggleBookmark}
                 hasNote={hasNote}
@@ -691,6 +756,8 @@ export default function App() {
                 onStartStudyContrast={handleStartContrast}
                 onCancelStudyWorkflow={() => setStudyWorkflow(null)}
                 onChapterSwipeIntent={handleChapterSwipeIntent}
+                onResumeComplete={handleResumeComplete}
+                onReadingPositionChange={handleReadingPositionChange}
             />
             {(chapterNav?.prevChapter || chapterNav?.nextChapter) && (
                 <ChapterNav
@@ -722,8 +789,7 @@ export default function App() {
                 <Sidebar
                     booksByTestament={bookGroups}
                     activeBookId={selectedBookId}
-                    activeBookName={book?.name}
-                    activeChapterNum={selectedChapterNum}
+                    resumeReading={resumePosition}
                     activeTranslationId={selectedTranslationId}
                     translationStatus={translationStatus}
                     themePreference={themePreference}
@@ -735,6 +801,7 @@ export default function App() {
                     onNavigate={handleNavigate}
                     onNavigateToVerse={handleNavigateToVerse}
                     onOpenStudy={handleOpenStudy}
+                    onResumeReading={handleResumeReading}
                     onClose={() => setSidebarOpen(false)}
                 />
             </div>

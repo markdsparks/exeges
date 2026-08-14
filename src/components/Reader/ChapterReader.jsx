@@ -59,12 +59,17 @@ export default function ChapterReader({
     onStartStudyContrast,
     onCancelStudyWorkflow,
     onChapterSwipeIntent,
+    resumeVerse,
+    onResumeComplete,
+    onReadingPositionChange,
 }) {
     const fallbackRef = useRef(null);
     const ref = readerRef ?? fallbackRef;
     const chapter = book?.chapters?.find(c => c.chapter === chapterNum);
     const [highlightedVerse, setHighlightedVerse] = useState(null);
     const swipeStartRef = useRef(null);
+    const lastReportedVerseRef = useRef(null);
+    const resumeAwaitingInteractionRef = useRef(false);
 
        // Scroll to top when chapter changes
     useEffect(() => {
@@ -76,19 +81,84 @@ export default function ChapterReader({
         if (!ref.current) return;
 
         const hashVerse = window.location.hash.match(/#?\/?[\w-]+\/\d+\/v(\d+)/)?.[1];
-        const verseNum = targetVerse ?? (hashVerse ? parseInt(hashVerse, 10) : null);
+        const verseNum = targetVerse ?? resumeVerse ?? (hashVerse ? parseInt(hashVerse, 10) : null);
 
         if (verseNum) {
                 const el = ref.current.querySelector(`[data-verse="${verseNum}"]`);
                 if (el) {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    if (resumeVerse) resumeAwaitingInteractionRef.current = true;
+                    el.scrollIntoView({
+                        behavior: resumeVerse && !targetVerse ? 'auto' : 'smooth',
+                        block: 'center',
+                    });
                     setHighlightedVerse(verseNum);
 
                     const timeout = window.setTimeout(() => setHighlightedVerse(null), 1600);
-                    return () => window.clearTimeout(timeout);
+                    const frame = resumeVerse
+                        ? window.requestAnimationFrame(() => onResumeComplete?.())
+                        : null;
+                    return () => {
+                        window.clearTimeout(timeout);
+                        if (frame) window.cancelAnimationFrame(frame);
+                    };
                 }
               }
-           }, [chapterNum, book?.id, targetVerse]);
+           }, [chapterNum, book?.id, onResumeComplete, ref, resumeVerse, targetVerse]);
+
+    useEffect(() => {
+        if (!chapter || !ref.current || !onReadingPositionChange || resumeVerse) return undefined;
+
+        lastReportedVerseRef.current = null;
+        let frame = null;
+        const reportVisibleVerse = () => {
+            frame = null;
+
+            const verseElements = [...ref.current.querySelectorAll('[data-verse]')];
+            if (!verseElements.length) return;
+
+            const readingLine = window.innerHeight * 0.34;
+            const currentVerse = verseElements.reduce((current, element) => (
+                element.getBoundingClientRect().top <= readingLine ? element : current
+            ), verseElements[0]);
+            const verseNum = Number(currentVerse.dataset.verse);
+
+            if (!Number.isInteger(verseNum) || verseNum === lastReportedVerseRef.current) return;
+
+            lastReportedVerseRef.current = verseNum;
+            onReadingPositionChange({
+                bookId: book.id,
+                chapterNum,
+                verseNum,
+            });
+        };
+        const handleScroll = () => {
+            if (resumeAwaitingInteractionRef.current) return;
+            if (frame === null) frame = window.requestAnimationFrame(reportVisibleVerse);
+        };
+        const resumeTrackingAfterInteraction = () => {
+            resumeAwaitingInteractionRef.current = false;
+        };
+        const resumeTrackingAfterKey = (event) => {
+            if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' '].includes(event.key)) {
+                resumeTrackingAfterInteraction();
+            }
+        };
+
+        if (!resumeAwaitingInteractionRef.current) reportVisibleVerse();
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        window.addEventListener('resize', handleScroll);
+        window.addEventListener('wheel', resumeTrackingAfterInteraction, { passive: true });
+        window.addEventListener('touchmove', resumeTrackingAfterInteraction, { passive: true });
+        window.addEventListener('keydown', resumeTrackingAfterKey);
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('resize', handleScroll);
+            window.removeEventListener('wheel', resumeTrackingAfterInteraction);
+            window.removeEventListener('touchmove', resumeTrackingAfterInteraction);
+            window.removeEventListener('keydown', resumeTrackingAfterKey);
+            if (frame !== null) window.cancelAnimationFrame(frame);
+        };
+    }, [book?.id, chapter, chapterNum, onReadingPositionChange, ref, resumeVerse]);
 
        // Loading state
     if (!book || !chapter) {

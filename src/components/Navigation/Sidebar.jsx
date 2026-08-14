@@ -98,8 +98,7 @@ function BookItem({ name, chapterCount, isActive, isOpen, onOpen, onSelect }) {
 export default function Sidebar({
     booksByTestament,
     activeBookId,
-    activeBookName,
-    activeChapterNum,
+    resumeReading,
     activeTranslationId,
     translationStatus,
     themePreference,
@@ -111,6 +110,7 @@ export default function Sidebar({
     onNavigate,
     onNavigateToVerse,
     onOpenStudy,
+    onResumeReading,
     onClose
 }) {
     const [openBookId, setOpenBookId] = useState(null);
@@ -129,15 +129,17 @@ export default function Sidebar({
 
             {/* Content */}
             <div className="sidebar-content">
-                <section className="reader-state-section">
-                    <button
-                        className="continue-reading"
-                        onClick={() => onNavigate?.(activeBookId, activeChapterNum)}
-                    >
-                        <span className="continue-label">Continue</span>
-                        <span className="continue-reference">{activeBookName} {activeChapterNum}</span>
-                    </button>
-                </section>
+                {resumeReading && (
+                    <section className="reader-state-section">
+                        <button className="continue-reading" onClick={onResumeReading}>
+                            <span className="continue-label">Resume reading</span>
+                            <span className="continue-reference">
+                                {resumeReading.bookName} {resumeReading.chapterNum}
+                                {resumeReading.verseNum ? `:${resumeReading.verseNum}` : ''}
+                            </span>
+                        </button>
+                    </section>
+                )}
 
                 <TranslationPicker
                     activeId={activeTranslationId}

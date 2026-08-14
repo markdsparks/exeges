@@ -23,7 +23,7 @@ Exeges is a React 19 single-page application built by Vite 8 and hosted under th
 
 ### Reading And Persistence
 
-The local KJV corpus loads into browser memory. Book/chapter navigation updates the URL hash and local reading position. Notes, bookmarks, studies, translation, theme, and font preferences persist in local storage only.
+The local KJV corpus loads into browser memory. Book/chapter navigation updates the URL hash. The app stores a validated local reading position containing book, chapter, and the verse nearest the reader's reading line; legacy book/chapter positions are accepted and upgraded as a reader continues. A valid URL reference always takes precedence over that local resume state. Notes, bookmarks, studies, translation, theme, and font preferences persist in local storage only.
 
 ### ESV
 
@@ -65,7 +65,7 @@ The source ZIP at `sources/study/raw/openbible-cross-references.zip` and the hos
 | --- | --- |
 | Documentation or agent config only | Validate links/config syntax; inspect diff |
 | React, hooks, styles, general UI | `npm run lint`; `npm run build`; manual affected journey at desktop and mobile widths |
-| Search, navigation, persistence, translation | Above plus focused success, empty, error, refresh, and back-navigation checks |
+| Search, navigation, persistence, translation | Above plus focused success, empty, error, refresh, and back-navigation checks; run the relevant focused benchmark such as `npm run bench:reading-position` |
 | Source schema, ingestion, or retrieval | `npm run lint`; `npm run build`; `npm run bench:study-sources` |
 | Grounding, audit, prompt, or synthesis | `npm run lint`; `npm run build`; relevant source, synthesis, and commentary-comparison benchmarks; inspect representative raw evidence and output |
 | Dependency or release readiness | Above as applicable; `npm audit --audit-level=high`; `npm audit --omit=dev`; review lockfile and license impact |
