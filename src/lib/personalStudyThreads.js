@@ -39,6 +39,8 @@ export function getPersonalStudyThreads(studies, bibles) {
                 chapter: study.chapter,
                 verse: observation.verse,
                 reference: observation.reference || `${book.name} ${study.chapter}:${observation.verse}`,
+                translationId: observation.translationId ?? '',
+                sourceTextExcluded: observation.sourceTextExcluded === true,
                 quote: observation.quote,
                 selections: observation.selections ?? [],
                 takeaway: cleanText(observation.note),

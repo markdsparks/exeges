@@ -84,5 +84,27 @@ export function useBookmarks() {
             .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     }, [bookmarks]);
 
-    return { bookmarks, isBookmarked, toggleBookmark, getBookmarksForChapter, getAllBookmarks };
+    const replaceBookmarks = useCallback((nextBookmarks) => {
+        if (!nextBookmarks || typeof nextBookmarks !== 'object' || Array.isArray(nextBookmarks)) {
+            return false;
+        }
+
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(nextBookmarks));
+        } catch {
+            return false;
+        }
+
+        setBookmarks(nextBookmarks);
+        return true;
+    }, []);
+
+    return {
+        bookmarks,
+        isBookmarked,
+        toggleBookmark,
+        getBookmarksForChapter,
+        getAllBookmarks,
+        replaceBookmarks,
+    };
 }

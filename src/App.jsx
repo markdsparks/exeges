@@ -17,6 +17,7 @@ import ReadingProgress from './components/Navigation/ReadingProgress';
 import FontSizeControl from './components/Shared/FontSizeControl';
 import SearchPanel from './components/Search/SearchPanel';
 import NoteEditor from './components/Notes/NoteEditor';
+import BackupPanel from './components/Navigation/BackupPanel';
 import StudyMode from './components/Study/StudyMode';
 import StudyThread from './components/Study/StudyThread';
 
@@ -41,6 +42,7 @@ import {
     hasPersonalStudyThread,
 } from './lib/personalStudyThreads';
 import { getAdjacentChapters, shouldConfirmChapterSwipe } from './lib/readerNavigation';
+import { applyUserBackupTransaction } from './lib/userBackup';
 import {
     normalizeReadingPosition,
     parseReadingPosition,
@@ -84,11 +86,39 @@ function resolveReadingPosition(bibles, candidate) {
     };
 }
 
+function makePersistableStudyObservation(observation) {
+    if (observation?.translationId !== 'esv') return observation;
+
+    return {
+        ...observation,
+        quote: `Verse ${observation.verse}`,
+        selections: [],
+        relatedSelections: [],
+        contrast: null,
+        sourceTextExcluded: true,
+    };
+}
+
 export default function App() {
     const { book, bibles, selectedBookId, selectedChapterNum, navigateTo } = useBibleData();
-    const { isBookmarked, toggleBookmark, getAllBookmarks } = useBookmarks();
-    const { getNote, hasNote, saveNote, deleteNote, getAllNotes } = useNotes();
     const {
+        bookmarks,
+        isBookmarked,
+        toggleBookmark,
+        getAllBookmarks,
+        replaceBookmarks,
+    } = useBookmarks();
+    const {
+        notes,
+        getNote,
+        hasNote,
+        saveNote,
+        deleteNote,
+        getAllNotes,
+        replaceNotes,
+    } = useNotes();
+    const {
+        studies,
         getStudy,
         saveStudy,
         addObservation,
@@ -96,8 +126,16 @@ export default function App() {
         updateObservation,
         deleteStudy,
         getAllStudies,
+        replaceStudies,
     } = useStudies();
-    const { mode, themePreference, toggleMode, fontSize, cycleFontSize } = useTheme();
+    const {
+        mode,
+        themePreference,
+        toggleMode,
+        fontSize,
+        cycleFontSize,
+        setReaderFontSize,
+    } = useTheme();
     const {
         selectedTranslation,
         selectedTranslationId,
@@ -119,6 +157,7 @@ export default function App() {
     const [studyStage, setStudyStage] = useState('observe');
     const [studySelection, setStudySelection] = useState([]);
     const [studyWorkflow, setStudyWorkflow] = useState(null);
+    const [backupOpen, setBackupOpen] = useState(false);
     const [referencePickerOpen, setReferencePickerOpen] = useState(false);
     const [chapterSwipePrompt, setChapterSwipePrompt] = useState(null);
     const [resumePosition, setResumePosition] = useState(null);
@@ -238,6 +277,26 @@ export default function App() {
         () => getPersonalStudyThreads(getAllStudies(), bibles),
         [bibles, getAllStudies],
     );
+
+    const backupData = useMemo(() => ({
+        bookmarks,
+        notes,
+        studies,
+        position: resumePosition,
+        preferences: {
+            theme: themePreference,
+            fontSize,
+            translation: selectedTranslationId,
+        },
+    }), [
+        bookmarks,
+        fontSize,
+        notes,
+        resumePosition,
+        selectedTranslationId,
+        studies,
+        themePreference,
+    ]);
 
     const hasSavedThread = useCallback((bookId, chapterNum, verseNum) => (
         hasPersonalStudyThread(getStudy(bookId, chapterNum), verseNum)
@@ -375,6 +434,83 @@ export default function App() {
         setResumeVerse(null);
     }, []);
 
+    const handleOpenBackup = useCallback(() => {
+        setHideControls(false);
+        setSidebarOpen(false);
+        setBackupOpen(true);
+    }, []);
+
+    const handleRestoreBackup = useCallback((restoredData) => {
+        const preferences = restoredData.preferences ?? {};
+        const restoredPosition = resolveReadingPosition(bibles, restoredData.position);
+        const savePosition = (position) => {
+            try {
+                const serializedPosition = serializeReadingPosition(position);
+                if (serializedPosition) {
+                    localStorage.setItem(READING_POSITION_STORAGE_KEY, serializedPosition);
+                } else {
+                    localStorage.removeItem(READING_POSITION_STORAGE_KEY);
+                }
+                return true;
+            } catch {
+                return false;
+            }
+        };
+        const transaction = applyUserBackupTransaction({
+            apply: [
+                () => replaceBookmarks(restoredData.bookmarks),
+                () => replaceNotes(restoredData.notes),
+                () => replaceStudies(restoredData.studies),
+                () => toggleMode(preferences.theme || themePreference),
+                () => setReaderFontSize(preferences.fontSize || fontSize),
+                () => selectTranslation(preferences.translation || selectedTranslationId),
+                () => savePosition(restoredPosition ?? resumePosition),
+            ],
+            rollback: [
+                () => replaceBookmarks(bookmarks),
+                () => replaceNotes(notes),
+                () => replaceStudies(studies),
+                () => toggleMode(themePreference),
+                () => setReaderFontSize(fontSize),
+                () => selectTranslation(selectedTranslationId),
+                () => savePosition(resumePosition),
+            ],
+        });
+        if (!transaction.ok) {
+            return {
+                ok: false,
+                message: transaction.rollbackComplete
+                    ? 'Restoration stopped before any changes were kept on this device.'
+                    : 'Restoration could not finish. Some changes may have been saved; make a backup before trying again.',
+            };
+        }
+
+        if (restoredPosition) {
+            latestReadingPositionRef.current = restoredPosition;
+            setResumePosition(restoredPosition);
+            handleNavigate(restoredPosition.bookId, restoredPosition.chapterNum);
+            setResumeVerse(restoredPosition.verseNum);
+        }
+
+        return { ok: true };
+    }, [
+        bibles,
+        bookmarks,
+        fontSize,
+        handleNavigate,
+        notes,
+        replaceBookmarks,
+        replaceNotes,
+        replaceStudies,
+        resumePosition,
+        selectTranslation,
+        setReaderFontSize,
+        selectedTranslationId,
+        studies,
+        themePreference,
+        toggleMode,
+    ]);
+
     const handleSearchResult = useCallback((result) => {
         handleNavigateToVerse(result.bookId, result.chapter, result.verse);
     }, [handleNavigateToVerse]);
@@ -458,6 +594,8 @@ export default function App() {
             chapter: thread.chapter,
             verse: thread.verse,
             reference: thread.reference || `${thread.bookName} ${thread.chapter}:${thread.verse}`,
+            translationId: thread.translationId ?? '',
+            sourceTextExcluded: thread.sourceTextExcluded === true,
             quote: thread.quote,
             selections: thread.selections ?? [],
         });
@@ -527,16 +665,18 @@ export default function App() {
             );
         }
 
-        return addObservation(studyThreadTarget.bookId, studyThreadTarget.chapter, {
+        return addObservation(studyThreadTarget.bookId, studyThreadTarget.chapter, makePersistableStudyObservation({
             id: studyThreadTarget.id,
             type: 'note',
             scope: studyThreadTarget.selections?.length ? 'selection' : 'verse',
             verse: studyThreadTarget.verse,
             quote: studyThreadTarget.quote,
             reference: studyThreadTarget.reference,
+            translationId: studyThreadTarget.translationId ?? '',
+            sourceTextExcluded: studyThreadTarget.sourceTextExcluded === true,
             selections: studyThreadTarget.selections ?? [],
             note: thought,
-        });
+        }));
     }, [addObservation, getStudy, studyThreadTarget, updateObservation]);
 
     const handleDeleteStudyThreadThought = useCallback(() => {
@@ -622,6 +762,7 @@ export default function App() {
                 ...observation,
                 verse,
                 quote: selectedWord.text,
+                translationId: selectedTranslationId,
                 reference,
                 scope: 'word-group',
                 selections,
@@ -644,6 +785,7 @@ export default function App() {
                 ...observation,
                 verse: sideA[0]?.verse ?? sideB[0]?.verse ?? verse,
                 quote: `${sideAQuote} / ${sideBQuote}`,
+                translationId: selectedTranslationId,
                 reference: getSelectionReference([...sideA, ...sideB]),
                 scope: 'contrast',
                 selections: [...sideA, ...sideB],
@@ -655,11 +797,12 @@ export default function App() {
             ...observation,
             verse,
             quote,
+            translationId: selectedTranslationId,
             scope: selections.length > 1 ? 'selection' : selections[0]?.scope ?? 'word',
             reference,
             selections,
         };
-    }, [chapterWordSelections, selectedChapterNum, studySelection]);
+    }, [chapterWordSelections, selectedChapterNum, selectedTranslationId, studySelection]);
 
     const handleAddStudyObservation = useCallback((observation) => {
         if (!studyTarget) return;
@@ -667,7 +810,11 @@ export default function App() {
         const cleanObservation = buildObservation(observation);
         if (!cleanObservation) return;
 
-        addObservation(studyTarget.bookId, studyTarget.chapter, cleanObservation);
+        addObservation(
+            studyTarget.bookId,
+            studyTarget.chapter,
+            makePersistableStudyObservation(cleanObservation),
+        );
         setStudySelection([]);
         setStudyWorkflow(null);
     }, [addObservation, buildObservation, studyTarget]);
@@ -802,6 +949,7 @@ export default function App() {
                     onNavigateToVerse={handleNavigateToVerse}
                     onOpenStudy={handleOpenStudy}
                     onResumeReading={handleResumeReading}
+                    onOpenBackup={handleOpenBackup}
                     onClose={() => setSidebarOpen(false)}
                 />
             </div>
@@ -839,6 +987,13 @@ export default function App() {
                 onSave={(text) => noteTarget && saveNote(noteTarget.bookId, noteTarget.chapter, noteTarget.verse, text)}
                 onDelete={() => noteTarget && deleteNote(noteTarget.bookId, noteTarget.chapter, noteTarget.verse)}
                 onClose={() => setNoteTarget(null)}
+            />
+
+            <BackupPanel
+                open={backupOpen}
+                data={backupData}
+                onRestore={handleRestoreBackup}
+                onClose={() => setBackupOpen(false)}
             />
 
             {studyThreadTarget && (

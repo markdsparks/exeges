@@ -25,6 +25,8 @@ Exeges is a React 19 single-page application built by Vite 8 and hosted under th
 
 The local KJV corpus loads into browser memory. Book/chapter navigation updates the URL hash. The app stores a validated local reading position containing book, chapter, and the verse nearest the reader's reading line; legacy book/chapter positions are accepted and upgraded as a reader continues. A valid URL reference always takes precedence over that local resume state. Notes, bookmarks, studies, translation, theme, and font preferences persist in local storage only.
 
+Readers can export a versioned JSON backup of that private local data and restore it from the menu. Restore is additive: local notes win conflicts, bookmarks and distinct observations are combined, and a backup's reading place and preferences are restored when present. Licensed ESV wording, ESV responses, study source packs, and local-model assets are never exported. This is user-managed portability, not account sync or automatic recovery.
+
 ### ESV
 
 The selected reference goes from the browser to the configured ESV Worker URL. The Worker adds the secret API token, calls the ESV API, normalizes passage/search results, and returns them to the app. ESV text must not enter committed source packs or long-lived storage.
@@ -65,7 +67,7 @@ The source ZIP at `sources/study/raw/openbible-cross-references.zip` and the hos
 | --- | --- |
 | Documentation or agent config only | Validate links/config syntax; inspect diff |
 | React, hooks, styles, general UI | `npm run lint`; `npm run build`; manual affected journey at desktop and mobile widths |
-| Search, navigation, persistence, translation | Above plus focused success, empty, error, refresh, and back-navigation checks; run the relevant focused benchmark such as `npm run bench:reading-position` |
+| Search, navigation, persistence, translation | Above plus focused success, empty, error, refresh, and back-navigation checks; run the relevant focused benchmark such as `npm run bench:reading-position` or `npm run bench:user-backup` |
 | Source schema, ingestion, or retrieval | `npm run lint`; `npm run build`; `npm run bench:study-sources` |
 | Grounding, audit, prompt, or synthesis | `npm run lint`; `npm run build`; relevant source, synthesis, and commentary-comparison benchmarks; inspect representative raw evidence and output |
 | Dependency or release readiness | Above as applicable; `npm audit --audit-level=high`; `npm audit --omit=dev`; review lockfile and license impact |
@@ -85,7 +87,7 @@ A push to `main` triggers `.github/workflows/deploy-pages.yml`, installs depende
 - The current dependency audit reports two high-severity build-chain advisories through Vite (`nanoid` and `postcss`); production dependencies audit clean.
 - `App.jsx` and the legacy `StudyMode.jsx` are large, stateful ownership hotspots.
 - Legacy guided-study code remains despite the reader-first product pivot.
-- Browser local storage has no schema migration, export, backup, sync, or quota strategy.
+- Browser local storage still has no automatic sync, migration, or quota strategy. Versioned user-managed export/restore is available, but recovery remains dependent on a reader keeping their backup file.
 - The KJV corpus and WebLLM produce large download/memory pressure; iOS WebGPU has crashed during model loading.
 - Runtime commentary depends on a third-party API with no documented availability contract.
 - The ESV Worker needs an explicit production security and licensing review for origin policy, abuse/rate controls, input bounds, logging, caching, error disclosure, and required attribution/link behavior.

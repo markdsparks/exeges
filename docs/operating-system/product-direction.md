@@ -5,7 +5,7 @@
 Exeges is an internal alpha distributed on the web and through a thin iOS TestFlight shell. The current experience includes:
 
 - Immersive local KJV reading and remotely loaded ESV.
-- Search, bookmarks, verse notes, saved studies, verse-level resume reading, themes, and typography preferences.
+- Search, bookmarks, verse notes, saved studies, verse-level resume reading, themes, typography preferences, and private local backup/restore.
 - Header-based book, chapter, and verse navigation, plus confirmation-based touch navigation between adjacent chapters.
 - Reader-first study threads opened from selected Scripture.
 - Personal study threads that preserve the reader's own takeaway, reopen at the selected passage, and remain visible as a subtle reading marker and a private thread list.
@@ -42,7 +42,7 @@ These outcomes are provisional and should be reprioritized by the CEO:
 - Fluent synthesis can overstate weak, old, disputed, or irrelevant source material.
 - Source coverage is uneven: large cross-reference coverage coexists with a very small hand-reviewed source corpus.
 - On-device model loading can exhaust mobile resources or produce low-quality answers.
-- Local-only user data can be lost and cannot follow a reader across devices.
+- Local data can still be lost or fail to follow a reader across devices when they do not keep and restore a backup file.
 - The hosted-web iOS shell couples TestFlight behavior to the current GitHub Pages deployment.
 - No analytics or defined measures currently show whether the product improves reading or study.
 
@@ -58,9 +58,9 @@ These outcomes are provisional and should be reprioritized by the CEO:
 
 ## Current Alpha Slice
 
-**Provisional implementation hypothesis.** The next tester-facing improvement is the return-to-reading loop: after an interruption, a reader should reopen the app at the verse near where they stopped, while a deliberate shared URL still opens exactly at its reference. The menu exposes the saved location as a compact “Resume reading” entry.
+**Provisional implementation hypothesis.** A reader should be able to protect their private reading life without leaving the reading experience for an account or a cloud setup. The menu exposes a compact “Backup & restore” path that exports notes, bookmarks, study writing, reading place, and preferences; licensed ESV wording is omitted. Restore is deliberately additive and preserves an existing local note when two copies contain one at the same passage.
 
-This is intentionally a reading-integrity investment, not another study surface. The qualitative success signal is that testers can leave a chapter, return later, and continue without having to reconstruct where they were. The position remains private to the device and is approximate to the reading line rather than a claim to remember an exact scroll pixel.
+This is intentionally a reading-integrity investment, not another study surface or a promise of sync. The qualitative success signal is that testers can move their saved material to another browser/device or recover after a browser reset without uncertainty about what will be overwritten.
 
 ## Next Product Decision
 

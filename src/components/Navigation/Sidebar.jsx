@@ -111,6 +111,7 @@ export default function Sidebar({
     onNavigateToVerse,
     onOpenStudy,
     onResumeReading,
+    onOpenBackup,
     onClose
 }) {
     const [openBookId, setOpenBookId] = useState(null);
@@ -161,6 +162,14 @@ export default function Sidebar({
                             </button>
                         ))}
                     </div>
+                </section>
+
+                <section className="backup-section">
+                    <h3 className="testament-label">Your data</h3>
+                    <button className="backup-row" onClick={onOpenBackup}>
+                        <span>Backup &amp; restore</span>
+                        <span aria-hidden="true">›</span>
+                    </button>
                 </section>
 
                 <section className="bookmarks-section">

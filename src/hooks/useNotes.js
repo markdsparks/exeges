@@ -102,5 +102,28 @@ export function useNotes() {
             .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     }, [notes]);
 
-    return { notes, getNote, hasNote, saveNote, deleteNote, getAllNotes };
+    const replaceNotes = useCallback((nextNotes) => {
+        if (!nextNotes || typeof nextNotes !== 'object' || Array.isArray(nextNotes)) {
+            return false;
+        }
+
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(nextNotes));
+        } catch {
+            return false;
+        }
+
+        setNotes(nextNotes);
+        return true;
+    }, []);
+
+    return {
+        notes,
+        getNote,
+        hasNote,
+        saveNote,
+        deleteNote,
+        getAllNotes,
+        replaceNotes,
+    };
 }

@@ -190,6 +190,7 @@ export default function ChapterReader({
             chapter: chapterNum,
             verse,
             reference: `${book.name} ${chapterNum}:${verse}`,
+            translationId: translation?.id ?? '',
             quote,
             selections: selection ? [selection] : [],
         });

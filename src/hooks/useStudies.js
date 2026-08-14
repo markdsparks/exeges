@@ -60,6 +60,10 @@ function normalizeObservation(observation) {
         verse,
         quote,
         reference: observation?.reference?.trim() ?? '',
+        translationId: observation?.translationId === 'kjv' || observation?.translationId === 'esv'
+            ? observation.translationId
+            : '',
+        sourceTextExcluded: observation?.sourceTextExcluded === true,
         selections,
         relatedSelections,
         contrast,
@@ -269,5 +273,6 @@ export function useStudies() {
         updateObservation,
         deleteStudy,
         getAllStudies,
+        replaceStudies: commitStudies,
     };
 }

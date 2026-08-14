@@ -12,6 +12,7 @@
     "bench:commentary-comparison": "node scripts/bench-commentary-comparison.mjs",
     "bench:public-commentary": "node scripts/bench-public-commentary.mjs",
     "bench:reading-position": "node scripts/bench-reading-position.mjs",
+    "bench:user-backup": "node scripts/bench-user-backup.mjs",
     "bench:personal-study-threads": "node scripts/bench-personal-study-threads.mjs",
     "bench:reader-navigation": "node scripts/bench-reader-navigation.mjs",
     "build": "vite build",

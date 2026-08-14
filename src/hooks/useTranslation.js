@@ -54,7 +54,14 @@ export function useTranslation(book, chapterNum) {
     }, [book, chapterNum, selectedTranslation]);
 
     const selectTranslation = useCallback((translationId) => {
-        setSelectedTranslationId(getTranslationById(translationId).id);
+        const nextTranslationId = getTranslationById(translationId).id;
+        try {
+            localStorage.setItem(STORAGE_KEY, nextTranslationId);
+        } catch {
+            return false;
+        }
+        setSelectedTranslationId(nextTranslationId);
+        return true;
     }, []);
 
     const displayBook = selectedTranslation.source === 'remote'

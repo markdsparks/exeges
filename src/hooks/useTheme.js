@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 
 const STORAGE_KEY = 'exes-theme';
 const FONT_SIZE_KEY = 'exes-font-size';
+const FONT_SIZES = [14, 15, 16, 17, 18, 19, 20, 22, 24];
 
 /**
  * Hook: useTheme
@@ -51,25 +52,26 @@ export function useTheme() {
             : themePreference === 'light'
                ? 'dark'
                : 'auto';
+      try {
+         localStorage.setItem(STORAGE_KEY, nextPreference);
+      } catch {
+         return false;
+      }
       setThemePreference(nextPreference);
-         try {
-            localStorage.setItem(STORAGE_KEY, nextPreference);
-         } catch {}
+      return true;
        },
        [themePreference]
      );
 
    const cycleFontSize = useCallback((direction) => {
-         // Valid sizes: 14, 15, 16, 17, 18 (default), 19, 20, 22, 24
-         const sizes = [14, 15, 16, 17, 18, 19, 20, 22, 24];
-         const idx = sizes.indexOf(fontSize);
+         const idx = FONT_SIZES.indexOf(fontSize);
          if (idx === -1) return;
 
          const newIdx = direction === 'down'
             ? Math.max(0, idx - 1)
-            : Math.min(sizes.length - 1, idx + 1);
+            : Math.min(FONT_SIZES.length - 1, idx + 1);
 
-         const newSize = sizes[newIdx];
+         const newSize = FONT_SIZES[newIdx];
          setFontSize(newSize);
          try {
             localStorage.setItem(FONT_SIZE_KEY, String(newSize));
@@ -78,12 +80,26 @@ export function useTheme() {
        [fontSize]
      );
 
+   const setReaderFontSize = useCallback((nextSize) => {
+      if (!FONT_SIZES.includes(nextSize)) return false;
+
+      try {
+         localStorage.setItem(FONT_SIZE_KEY, String(nextSize));
+      } catch {
+         return false;
+      }
+
+      setFontSize(nextSize);
+      return true;
+   }, []);
+
    return {
       mode,
       themePreference,
       toggleMode: setPreference,
       fontSize,
       cycleFontSize,
+      setReaderFontSize,
        setMode: setThemePreference,
      };
 }
