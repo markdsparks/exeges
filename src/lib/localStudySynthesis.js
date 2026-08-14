@@ -1,34 +1,12 @@
 import { normalizeCommentaryComparisonDraft } from './commentaryComparison.js';
-
-export const LOCAL_STUDY_SLM_MODELS = [
-    {
-        id: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',
-        label: 'Qwen2.5 0.5B',
-        profile: 'qwen2',
-        description: 'Experimental',
-    },
-    {
-        id: 'Qwen3-0.6B-q4f16_1-MLC',
-        label: 'Qwen3 0.6B',
-        profile: 'qwen3',
-        description: 'Reasoning test',
-    },
-    {
-        id: 'SmolLM2-360M-Instruct-q4f16_1-MLC',
-        label: 'SmolLM2 360M',
-        profile: 'smollm',
-        description: 'Legacy',
-    },
-];
-export const LOCAL_STUDY_SLM_MODEL_ID = LOCAL_STUDY_SLM_MODELS[0].id;
+import {
+    getLocalStudyModelOption,
+    LOCAL_STUDY_SLM_MODEL_ID,
+} from './localStudyModels.js';
 
 let enginePromise = null;
 let engineWorker = null;
 let engineModelId = '';
-
-export function getLocalStudyModelOption(modelId = LOCAL_STUDY_SLM_MODEL_ID) {
-    return LOCAL_STUDY_SLM_MODELS.find(model => model.id === modelId) ?? LOCAL_STUDY_SLM_MODELS[0];
-}
 
 function assertCanUseLocalSlm(synthesisRequest) {
     if (typeof window === 'undefined' || typeof navigator === 'undefined') {

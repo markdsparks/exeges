@@ -88,6 +88,6 @@ The retrieval layer can run fully local. A future on-device SLM should only synt
 
 `src/lib/studySynthesisRequest.js` defines the model-facing request shape. The important constraint is that a model receives an observation, a route, and retrieved source chunks. It should not browse freely or answer from uncited memory.
 
-`src/lib/localStudySynthesis.js` is the experimental on-device synthesis adapter. It lazy-loads WebLLM only after the user taps the local draft action, uses a small WebGPU model, and asks for structured output from the grounded packet.
+`src/lib/localStudySynthesis.js` is the experimental on-device synthesis adapter. It lazy-loads WebLLM only after the user explicitly requests a local draft, a passage answer, or a commentary comparison; it uses a small WebGPU model and asks for structured output from the grounded packet.
 
 `src/lib/commentaryComparison.js` owns passage-level commentary selection, the extractive overview, comparison request construction, and deterministic validation of model-produced comparison groups. Run `npm run bench:commentary-comparison` when changing this contract.

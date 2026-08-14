@@ -17,8 +17,7 @@ import {
 import {
     LOCAL_STUDY_SLM_MODEL_ID,
     LOCAL_STUDY_SLM_MODELS,
-    draftLocalStudySynthesis,
-} from '../../lib/localStudySynthesis';
+} from '../../lib/localStudyModels';
 import StudySelectionPanel from './StudySelectionPanel';
 
 const EMPTY_DRAFT = {
@@ -1267,6 +1266,8 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
         });
 
         try {
+            // Keep the WebLLM runtime and worker out of the normal reading and Explore path.
+            const { draftLocalStudySynthesis } = await import('../../lib/localStudySynthesis');
             const draft = await draftLocalStudySynthesis({
                 synthesisRequest: activeGuide.grounding.synthesisRequest,
                 modelId: selectedLocalModelId,

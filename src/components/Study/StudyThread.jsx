@@ -9,7 +9,6 @@ import { loadTranslationChapter } from '../../lib/chapterTranslation';
 import { loadPublicCommentary, PUBLIC_COMMENTARY_SOURCES } from '../../lib/publicCommentary';
 import { buildPassageQuestionGrounding } from '../../lib/passageQuestion';
 import { getLocalStudyCapabilities } from '../../lib/localStudyGrounding';
-import { draftLocalCommentaryComparison, draftLocalStudySynthesis } from '../../lib/localStudySynthesis';
 import {
     buildCommentaryComparisonRequest,
     buildCommentaryOverview,
@@ -302,6 +301,8 @@ function CommentaryComparison({ target, passageFindings }) {
         setComparisonState({ status: 'loading', comparison: null, progress: 'Preparing excerpts...', error: '' });
 
         try {
+            // The optional model runtime loads only after a reader explicitly asks for a comparison.
+            const { draftLocalCommentaryComparison } = await import('../../lib/localStudySynthesis');
             const comparison = await draftLocalCommentaryComparison({
                 synthesisRequest: state.request,
                 onProgress: progress => {
@@ -552,6 +553,8 @@ function PassageQuestion({ target, grounding, relatedPassages, translation }) {
             }
 
             setState({ status: 'drafting', draft: null, packet, error: '' });
+            // Keep an ordinary Explore visit free of the local model until the reader asks a question.
+            const { draftLocalStudySynthesis } = await import('../../lib/localStudySynthesis');
             const draft = await draftLocalStudySynthesis({
                 synthesisRequest: packet.synthesisRequest,
                 onProgress: () => {},

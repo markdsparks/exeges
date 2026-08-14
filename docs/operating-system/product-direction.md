@@ -14,7 +14,7 @@ Exeges is an internal alpha distributed on the web and through a thin iOS TestFl
 - An explicit Explore view that leads with passage context, a multi-commentary overview, and progressively disclosed raw excerpts.
 - Optional grounded comparison of commentary agreement and distinct emphasis, with exact quotations for examining possible disagreement and evidence-supported reasons for differences.
 - Passage questions grounded in selected text, retrieved source records, related Scripture, and scoped commentary excerpts.
-- Optional experimental on-device synthesis using WebLLM.
+- Optional experimental on-device synthesis using WebLLM, loaded only after a reader explicitly requests a local draft, question answer, or commentary comparison.
 
 An older guided Observe/Interpret/Apply implementation remains in the codebase, but the visible product direction has shifted toward simpler reader-first study threads. This residue should not be expanded without an explicit product decision.
 
