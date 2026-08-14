@@ -138,6 +138,9 @@ export default function ChapterReader({
         const resumeTrackingAfterInteraction = () => {
             resumeAwaitingInteractionRef.current = false;
         };
+        const resumeTrackingAfterPointerMove = (event) => {
+            if (event.buttons) resumeTrackingAfterInteraction();
+        };
         const resumeTrackingAfterKey = (event) => {
             if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' '].includes(event.key)) {
                 resumeTrackingAfterInteraction();
@@ -149,12 +152,14 @@ export default function ChapterReader({
         window.addEventListener('resize', handleScroll);
         window.addEventListener('wheel', resumeTrackingAfterInteraction, { passive: true });
         window.addEventListener('touchmove', resumeTrackingAfterInteraction, { passive: true });
+        window.addEventListener('pointermove', resumeTrackingAfterPointerMove, { passive: true });
         window.addEventListener('keydown', resumeTrackingAfterKey);
         return () => {
             window.removeEventListener('scroll', handleScroll);
             window.removeEventListener('resize', handleScroll);
             window.removeEventListener('wheel', resumeTrackingAfterInteraction);
             window.removeEventListener('touchmove', resumeTrackingAfterInteraction);
+            window.removeEventListener('pointermove', resumeTrackingAfterPointerMove);
             window.removeEventListener('keydown', resumeTrackingAfterKey);
             if (frame !== null) window.cancelAnimationFrame(frame);
         };
