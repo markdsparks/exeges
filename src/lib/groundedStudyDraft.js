@@ -115,7 +115,11 @@ function makeMainThought({ cards, observation }) {
 function makeMeaning({ cards, observation }) {
     const quote = cleanText(observation.quote);
     const lexicalCard = cards.find(card => (
-        !isGenericMethodCard(card) && /lexical|word|name/i.test(`${card.title} ${card.claim}`)
+        !isGenericMethodCard(card)
+        && (
+            card.sourceId?.includes('dictionary')
+            || /lexical (?:note|study)|word and name study/i.test(card.title ?? '')
+        )
     ));
     const passageCard = getFirstCard(cards, 'passage-context');
     const crossReferenceCard = getFirstCard(cards, 'openbible-cross-references');
@@ -164,9 +168,10 @@ function makeGuardrail({ cards }) {
 function makeNextQuestion({ observation }) {
     const quote = cleanText(observation.quote);
     const note = cleanText(observation.note);
+    const reference = cleanText(observation.reference);
 
     if (quote && note) {
-        return `How does the passage itself confirm, complicate, or limit this question about ${quote}?`;
+        return `Which words or details in ${reference || 'the passage'} directly address “${note}” and keep the claim close to ${truncateSentence(quote, 90)}?`;
     }
 
     if (quote) {

@@ -19,6 +19,10 @@ const genesisOneStaticPack = JSON.parse(readFileSync(
     new URL('../public/study-packs/v1/genesis/1.json', import.meta.url),
     'utf8',
 ));
+const johnThreeStaticPack = JSON.parse(readFileSync(
+    new URL('../public/study-packs/v1/john/3.json', import.meta.url),
+    'utf8',
+));
 
 const observation = {
     id: 'bench-joshua-10-1-adoni-zedek',
@@ -85,6 +89,10 @@ assert.ok(
     groundedDraft?.guardrail.includes('word or name study'),
     'grounded draft should preserve a passage-first method guardrail',
 );
+assert.ok(
+    groundedDraft?.nextQuestion.includes('Doesn\'t Adoni have a positive meaning?'),
+    'grounded draft should keep a reader\'s exact question visible in the next source-led check',
+);
 
 const lightObservation = {
     id: 'bench-genesis-1-3-light',
@@ -141,6 +149,39 @@ assert.ok(
 assert.ok(
     !lightExploreFindingIds.includes('openbible-cross-genesis-1-30'),
     'light source explorer should not treat Genesis 1:30 as a strong match for Genesis 1:3',
+);
+
+const johnLoveFindings = retrieveStudySourceChunks({
+    observation: {
+        id: 'bench-john-3-16-love',
+        type: 'question',
+        quote: 'For God so loved the world',
+        note: "What does this passage say about God's love?",
+        reference: 'John 3:16',
+    },
+    route: {
+        id: 'theological',
+        label: 'Theological meaning question',
+    },
+    limit: 12,
+    chunks: [
+        ...STUDY_SOURCE_CHUNKS,
+        ...johnThreeStaticPack.records,
+    ],
+});
+const johnLoveFindingIds = johnLoveFindings.map(finding => finding.id);
+
+assert.ok(
+    johnLoveFindingIds.includes('openbible-cross-john-3-16'),
+    'John 3:16 should retrieve its own cross-reference source record',
+);
+assert.ok(
+    !johnLoveFindingIds.includes('passage-genesis-1-3-divine-speech'),
+    'John 3:16 should not retrieve a Genesis-only passage-context record from shared terms',
+);
+assert.ok(
+    !johnLoveFindingIds.includes('method-genesis-1-3-theological-claim'),
+    'John 3:16 should not retrieve a Genesis-only method record from shared terms',
 );
 assert.equal(
     johnLightReference.status,

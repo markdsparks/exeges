@@ -11,6 +11,55 @@ function excerpt(text, limit = 560) {
         : `${clean.slice(0, limit).trim()}...`;
 }
 
+function normalizeReference(reference = '') {
+    return String(reference)
+        .toLowerCase()
+        .replace(/[\u2013\u2014-]/g, '-')
+        .replace(/[^a-z0-9:-]+/g, ' ')
+        .trim();
+}
+
+function getReferenceChapter(reference = '') {
+    const normalized = normalizeReference(reference);
+    const match = normalized.match(/^((?:\d+\s+)?[a-z]+(?:\s+(?:of\s+)?[a-z]+)*)\s+(\d{1,3})/u);
+
+    return match ? `${match[1]} ${match[2]}` : '';
+}
+
+export function getPassageQuestionSourceFindings(sourceFindings = [], targetReference = '') {
+    const targetChapter = getReferenceChapter(targetReference);
+    if (!targetChapter) return sourceFindings;
+
+    return sourceFindings.filter(finding => {
+        const references = finding.anchorReferences?.length
+            ? finding.anchorReferences
+            : finding.references ?? [];
+        if (!references.length) return true;
+
+        return references.some(reference => getReferenceChapter(reference) === targetChapter);
+    });
+}
+
+function toSelectedPassageFinding(target, passageText, translationName) {
+    const text = excerpt(passageText || target.quote);
+
+    return {
+        id: `selected-passage-${target.id}`,
+        title: `Selected passage: ${target.reference}`,
+        text: `${target.reference}: ${text}`,
+        references: [target.reference],
+        confidence: 'medium',
+        reviewStatus: 'visible-passage',
+        allowedUse: 'Use the selected passage as primary evidence before widening to supporting sources.',
+        source: {
+            id: 'passage-context',
+            label: translationName || 'Selected Bible',
+            href: '',
+            license: '',
+        },
+    };
+}
+
 function toRelatedScriptureFinding(reference, translationName) {
     const text = reference.verses
         .map(verse => `${verse.verse} ${verse.text}`)
@@ -39,16 +88,20 @@ export async function buildPassageQuestionGrounding({
     route,
     sourceFindings = [],
     relatedPassages = [],
+    passageText,
     translationName,
     signal,
 }) {
+    const selectedPassage = toSelectedPassageFinding(target, passageText, translationName);
+    const scopedSourceFindings = getPassageQuestionSourceFindings(sourceFindings, target.reference);
     const relatedScripture = relatedPassages
         .filter(passage => passage.status === 'valid' && passage.verses?.length)
         .slice(0, 3)
         .map(passage => toRelatedScriptureFinding(passage, translationName));
     const commentary = await getPassageCommentaryFindings({ target, query: question, signal });
     const findings = [
-        ...sourceFindings.slice(0, 4),
+        selectedPassage,
+        ...scopedSourceFindings.slice(0, 4),
         ...relatedScripture,
         ...commentary,
     ];

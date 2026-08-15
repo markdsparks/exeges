@@ -33,7 +33,7 @@ The selected reference goes from the browser to the configured ESV Worker URL. T
 
 ### Grounded Study
 
-The selected verse or phrase establishes local passage context. Retrieval adds chapter-scoped curated/OpenBible records, resolved related Scripture, and on-demand commentary excerpts. `commentaryComparison.js` creates a deterministic extractive overview and a bounded comparison packet. The optional local model is dynamically loaded only after a reader explicitly requests a local draft, question answer, or commentary comparison; its result is accepted only when every group is supported by exact quotations from multiple named commentary cards. Other study output is audited and displayed alongside its source material.
+The selected verse or phrase establishes local passage context. Retrieval adds curated/OpenBible records only when their own passage anchor matches the selected reference or chapter, plus resolved related Scripture and on-demand commentary excerpts. `commentaryComparison.js` creates a deterministic extractive overview and a bounded comparison packet. Passage questions return a deterministic, passage-first starting point before a reader may opt into a local model pass. The optional local model is dynamically loaded only after a reader explicitly requests that pass, a local draft, or a commentary comparison. Commentary-comparison groups are accepted only when every group is supported by exact quotations from multiple named commentary cards; other local drafts remain clearly labeled experimental second passes alongside their retrieved source material.
 
 ### Source Generation
 

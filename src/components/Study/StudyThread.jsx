@@ -503,32 +503,65 @@ function CommentaryComparison({ target, passageFindings }) {
     );
 }
 
-function PassageQuestion({ target, grounding, relatedPassages, translation }) {
+function PassageQuestion({ target, grounding, relatedPassages, passageText, translation }) {
     const [question, setQuestion] = useState('');
     const [state, setState] = useState({
         status: 'idle',
-        draft: null,
+        sourceDraft: null,
+        localDraft: null,
+        localStatus: 'idle',
+        localProgress: '',
+        localError: '',
         packet: null,
         error: '',
     });
     const requestIdRef = useRef(0);
+    const requestControllerRef = useRef(null);
     const capabilities = getLocalStudyCapabilities();
 
     useEffect(() => {
+        requestControllerRef.current?.abort();
+        requestControllerRef.current = null;
         requestIdRef.current += 1;
         setQuestion('');
-        setState({ status: 'idle', draft: null, packet: null, error: '' });
+        setState({
+            status: 'idle',
+            sourceDraft: null,
+            localDraft: null,
+            localStatus: 'idle',
+            localProgress: '',
+            localError: '',
+            packet: null,
+            error: '',
+        });
+
+        return () => {
+            requestControllerRef.current?.abort();
+            requestControllerRef.current = null;
+            requestIdRef.current += 1;
+        };
     }, [target.id]);
 
     const handleAsk = async () => {
         const cleanQuestion = question.trim();
-        if (!cleanQuestion || state.status === 'loading' || state.status === 'drafting') return;
+        if (!cleanQuestion || state.status === 'loading') return;
 
+        requestControllerRef.current?.abort();
         const requestId = requestIdRef.current + 1;
         requestIdRef.current = requestId;
         const controller = new AbortController();
+        requestControllerRef.current = controller;
 
-        setState({ status: 'loading', draft: null, packet: null, error: '' });
+        setState({
+            status: 'loading',
+            sourceDraft: null,
+            localDraft: null,
+            localStatus: 'idle',
+            localProgress: '',
+            localError: '',
+            packet: null,
+            error: '',
+        });
 
         try {
             const packet = await buildPassageQuestionGrounding({
@@ -537,46 +570,106 @@ function PassageQuestion({ target, grounding, relatedPassages, translation }) {
                 route: grounding.synthesisRequest.route,
                 sourceFindings: grounding.sourceFindings,
                 relatedPassages,
+                passageText,
                 translationName: translation?.name,
                 signal: controller.signal,
             });
             if (requestIdRef.current !== requestId) return;
+            requestControllerRef.current = null;
 
-            if (!capabilities.localSlmAvailable) {
-                setState({
-                    status: 'ready',
-                    draft: buildGroundedStudyDraft(packet.synthesisRequest),
-                    packet,
-                    error: '',
-                });
-                return;
-            }
-
-            setState({ status: 'drafting', draft: null, packet, error: '' });
-            // Keep an ordinary Explore visit free of the local model until the reader asks a question.
-            const { draftLocalStudySynthesis } = await import('../../lib/localStudySynthesis');
-            const draft = await draftLocalStudySynthesis({
-                synthesisRequest: packet.synthesisRequest,
-                onProgress: () => {},
+            setState({
+                status: 'ready',
+                sourceDraft: buildGroundedStudyDraft(packet.synthesisRequest),
+                localDraft: null,
+                localStatus: 'idle',
+                localProgress: '',
+                localError: '',
+                packet,
+                error: '',
             });
-            if (requestIdRef.current !== requestId) return;
-
-            setState({ status: 'ready', draft, packet, error: '' });
         } catch (error) {
             if (requestIdRef.current !== requestId) return;
+            requestControllerRef.current = null;
+
+            if (controller.signal.aborted) return;
 
             setState(current => ({
                 ...current,
                 status: 'error',
                 error: error instanceof Error
                     ? error.message
-                    : 'The local answer could not be prepared right now.',
+                    : 'The source-led answer could not be prepared right now.',
             }));
         }
     };
 
-    const answer = state.draft?.meaning || state.draft?.context || '';
-    const isBusy = state.status === 'loading' || state.status === 'drafting';
+    const handleStopLocalDraft = () => {
+        requestIdRef.current += 1;
+        setState(current => ({
+            ...current,
+            localStatus: 'idle',
+            localProgress: '',
+            localError: '',
+        }));
+    };
+
+    const handleDraftLocally = async () => {
+        if (!capabilities.localSlmAvailable || !state.packet || state.localStatus === 'loading') return;
+
+        const requestId = requestIdRef.current + 1;
+        requestIdRef.current = requestId;
+        const packet = state.packet;
+
+        setState(current => ({
+            ...current,
+            localStatus: 'loading',
+            localProgress: 'Preparing local model...',
+            localError: '',
+        }));
+
+        try {
+            // The WebLLM runtime is only needed after the reader explicitly asks for this second pass.
+            const { draftLocalStudySynthesis } = await import('../../lib/localStudySynthesis');
+            const localDraft = await draftLocalStudySynthesis({
+                synthesisRequest: packet.synthesisRequest,
+                onProgress: (progress) => {
+                    if (requestIdRef.current !== requestId) return;
+
+                    setState(current => ({
+                        ...current,
+                        localProgress: progress.percent
+                            ? `${progress.text} ${progress.percent}%`
+                            : progress.text,
+                    }));
+                },
+            });
+            if (requestIdRef.current !== requestId) return;
+
+            setState(current => ({
+                ...current,
+                localStatus: 'ready',
+                localProgress: '',
+                localDraft,
+                localError: '',
+            }));
+        } catch (error) {
+            if (requestIdRef.current !== requestId) return;
+
+            setState(current => ({
+                ...current,
+                localStatus: 'error',
+                localProgress: '',
+                localError: error instanceof Error
+                    ? error.message
+                    : 'The local model could not prepare a second pass right now.',
+            }));
+        }
+    };
+
+    const sourceAnswer = state.sourceDraft?.meaning || state.sourceDraft?.context || '';
+    const localAnswer = state.localDraft?.meaning || state.localDraft?.context || '';
+    const askedQuestion = state.packet?.synthesisRequest?.observation?.note?.trim() || '';
+    const isBusy = state.status === 'loading';
 
     return (
         <section className="study-thread-question-helper">
@@ -600,26 +693,70 @@ function PassageQuestion({ target, grounding, relatedPassages, translation }) {
                 >
                     {state.status === 'loading'
                         ? 'Gathering sources...'
-                        : state.status === 'drafting'
-                            ? 'Drafting locally...'
-                            : 'Ask'}
+                        : 'Ask'}
                 </button>
             </div>
             {state.status === 'error' && <p className="study-thread-question-error">{state.error}</p>}
-            {state.status === 'ready' && state.draft && (
+            {state.status === 'ready' && state.sourceDraft && (
                 <div className="study-thread-answer">
-                    <span>{state.draft.modelId === 'curated-grounding' ? 'Source-led starting point' : 'Grounded answer'}</span>
-                    {answer ? (
-                        <p>{answer}</p>
+                    <span>Passage-first starting point</span>
+                    {askedQuestion && <p className="study-thread-answer-query">“{askedQuestion}”</p>}
+                    {sourceAnswer ? (
+                        <p>{sourceAnswer}</p>
                     ) : (
-                        <p>The local response needs review before it can be presented as an answer.</p>
+                        <p>The available sources do not support a concise answer yet. Inspect the excerpts and keep the question close to the passage.</p>
                     )}
-                    {state.draft.guardrail && <em>{state.draft.guardrail}</em>}
-                    {state.draft.unstructured && state.draft.rawText && (
-                        <details>
-                            <summary>Raw local response</summary>
-                            <p>{state.draft.rawText}</p>
+                    {state.sourceDraft.guardrail && <em>{state.sourceDraft.guardrail}</em>}
+                    {state.sourceDraft.nextQuestion && (
+                        <p className="study-thread-answer-question">{state.sourceDraft.nextQuestion}</p>
+                    )}
+                    {capabilities.localSlmAvailable && (
+                        <details className="study-thread-local-model">
+                            <summary>Optional local model</summary>
+                            <div>
+                                <p>Use a second, on-device pass after weighing the passage and sources above.</p>
+                                <button
+                                    type="button"
+                                    className="study-thread-secondary"
+                                    onClick={handleDraftLocally}
+                                    disabled={state.localStatus === 'loading'}
+                                >
+                                    {state.localStatus === 'loading'
+                                        ? 'Drafting locally...'
+                                        : state.localDraft
+                                            ? 'Refresh local pass'
+                                            : 'Draft locally'}
+                                </button>
+                                {state.localStatus === 'loading' && (
+                                    <button
+                                        type="button"
+                                        className="study-thread-secondary"
+                                        onClick={handleStopLocalDraft}
+                                    >
+                                        Stop local pass
+                                    </button>
+                                )}
+                                {state.localProgress && <em>{state.localProgress}</em>}
+                                {state.localError && <p className="study-thread-question-error">{state.localError}</p>}
+                            </div>
                         </details>
+                    )}
+                    {state.localDraft && (
+                        <section className="study-thread-local-answer">
+                            <span>Local model pass</span>
+                            {localAnswer ? (
+                                <p>{localAnswer}</p>
+                            ) : (
+                                <p>The local response needs review before it can be presented as an answer.</p>
+                            )}
+                            {state.localDraft.guardrail && <em>{state.localDraft.guardrail}</em>}
+                            {state.localDraft.unstructured && state.localDraft.rawText && (
+                                <details>
+                                    <summary>Raw local response</summary>
+                                    <p>{state.localDraft.rawText}</p>
+                                </details>
+                            )}
+                        </section>
                     )}
                     <details className="study-thread-answer-sources">
                         <summary>
@@ -656,7 +793,7 @@ function SourceNote({ finding }) {
     );
 }
 
-function ResearchView({ target, grounding, loading, bibles, translation, onOpenPassage }) {
+function ResearchView({ target, grounding, loading, bibles, passageText, translation, onOpenPassage }) {
     const findings = grounding?.exploreFindings ?? [];
     const draft = grounding ? buildGroundedStudyDraft(grounding.synthesisRequest) : null;
     const crossReferenceFindings = findings.filter(finding => (
@@ -722,6 +859,7 @@ function ResearchView({ target, grounding, loading, bibles, translation, onOpenP
                 target={target}
                 grounding={grounding}
                 relatedPassages={referenceTargets}
+                passageText={passageText}
                 translation={translation}
             />
 
@@ -805,6 +943,7 @@ export default function StudyThread({
         () => classifyBackgroundQuestion(researchObservation),
         [researchObservation],
     );
+    const passageText = chapter?.verses?.find(item => item.verse === target.verse)?.text || target.quote;
 
     useEffect(() => {
         if (view !== 'explore' || !book?.name || !chapter?.chapter) return undefined;
@@ -958,6 +1097,7 @@ export default function StudyThread({
                                 grounding={groundingState.grounding}
                                 loading={groundingState.status === 'loading'}
                                 bibles={bibles}
+                                passageText={passageText}
                                 translation={translation}
                                 onOpenPassage={onOpenPassage}
                             />

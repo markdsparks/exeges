@@ -139,6 +139,14 @@ function isGlobalMethodChunk(chunk) {
     return (chunk.references ?? []).length === 0 && chunk.sourceId === 'exegesMethod';
 }
 
+function getChunkAnchorReferences(chunk) {
+    if (chunk.anchorReferences?.length) return chunk.anchorReferences;
+
+    // Curated records predate explicit anchors. Their first reference is the
+    // passage the record describes; later references may be cross-reference leads.
+    return (chunk.references ?? []).slice(0, 1);
+}
+
 function hydrateChunk(chunk, score) {
     const source = STUDY_SOURCES[chunk.sourceId] ?? null;
 
@@ -147,6 +155,7 @@ function hydrateChunk(chunk, score) {
         title: chunk.title,
         text: chunk.text,
         references: chunk.references ?? [],
+        anchorReferences: getChunkAnchorReferences(chunk),
         license: chunk.license ?? source?.license ?? '',
         attribution: chunk.attribution ?? source?.label ?? '',
         sourceUrl: chunk.sourceUrl ?? source?.href ?? '',
@@ -234,8 +243,9 @@ function scoreChunk(chunk, { observation, route }) {
         ...(chunk.terms ?? []),
         ...(chunk.references ?? []),
     ].join(' '));
-    const referenceScore = getReferenceScore(chunk.references, observation?.reference);
-    const strongReferenceMatch = hasStrongReferenceMatch(chunk.references, observation?.reference);
+    const anchorReferences = getChunkAnchorReferences(chunk);
+    const referenceScore = getReferenceScore(anchorReferences, observation?.reference);
+    const strongReferenceMatch = hasStrongReferenceMatch(anchorReferences, observation?.reference);
     const termScore = observationTokens.reduce((score, token) => {
         if (normalizedTerms.some(term => term === token)) return score + 4;
         if (chunkText.includes(token)) return score + 2;
@@ -243,6 +253,7 @@ function scoreChunk(chunk, { observation, route }) {
     }, 0);
     const focusScore = focus && chunkText.includes(focus) ? 10 : 0;
     const routeScore = routeId && chunk.routeIds?.includes(routeId) ? 4 : 0;
+    const hasPassageAnchor = anchorReferences.length > 0;
     const weakGeneratedCrossReference = chunk.generated
         && chunk.sourceId === 'openBibleCrossReferences'
         && referenceScore > 0
@@ -252,8 +263,12 @@ function scoreChunk(chunk, { observation, route }) {
     if (
         weakGeneratedCrossReference
         || (
-            !isGlobalMethodChunk(chunk)
+            hasPassageAnchor
             && referenceScore === 0
+        )
+        || (
+            !hasPassageAnchor
+            && !isGlobalMethodChunk(chunk)
             && focusScore === 0
             && termScore === 0
         )
