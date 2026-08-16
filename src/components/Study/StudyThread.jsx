@@ -330,6 +330,21 @@ function CommentaryComparison({ target, passageFindings }) {
         }
     };
 
+    const handleStopComparison = () => {
+        if (comparisonState.status !== 'loading') return;
+
+        comparisonRequestId.current += 1;
+        setComparisonState({
+            status: 'error',
+            comparison: null,
+            progress: '',
+            error: 'Comparison stopped. The selected excerpts are still available below.',
+        });
+
+        void import('../../lib/localStudySynthesis')
+            .then(({ stopLocalStudyGeneration }) => stopLocalStudyGeneration());
+    };
+
     const comparison = comparisonState.comparison;
     const sourceCount = state.findings.length;
     const sourceTotal = PUBLIC_COMMENTARY_SOURCES.length;
@@ -479,7 +494,18 @@ function CommentaryComparison({ target, passageFindings }) {
                                         ? 'Try comparison again'
                                         : 'Compare agreement and differences'}
                             </button>
-                            {comparisonState.status === 'loading' && <em>{comparisonState.progress}</em>}
+                            {comparisonState.status === 'loading' && (
+                                <div className="study-thread-commentary-compare-progress">
+                                    <em>{comparisonState.progress}</em>
+                                    <button
+                                        type="button"
+                                        className="study-thread-text-button"
+                                        onClick={handleStopComparison}
+                                    >
+                                        Stop
+                                    </button>
+                                </div>
+                            )}
                             {comparisonState.status !== 'loading' && (
                                 <em>
                                     Quotations are checked against these excerpts
@@ -617,6 +643,9 @@ function PassageQuestion({ target, grounding, relatedPassages, passageText, tran
             localProgress: '',
             localError: '',
         }));
+
+        void import('../../lib/localStudySynthesis')
+            .then(({ stopLocalStudyGeneration }) => stopLocalStudyGeneration());
     };
 
     const handleDraftLocally = async () => {

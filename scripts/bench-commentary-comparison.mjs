@@ -9,7 +9,9 @@ import {
 } from '../src/lib/commentaryComparison.js';
 import {
     parseLocalCommentaryComparison,
+    runLocalStudyTaskWithDeadline,
     shouldRetryLocalCommentaryComparison,
+    stopLocalStudyGeneration,
 } from '../src/lib/localStudySynthesis.js';
 
 const target = {
@@ -228,5 +230,44 @@ assert.equal(
     true,
     'a syntactically valid response with unverified evidence should get one recovery attempt',
 );
+assert.doesNotThrow(
+    () => stopLocalStudyGeneration(),
+    'stopping a comparison must remain safe when no local model has loaded',
+);
+let rejectTimeoutCancellation;
+const timeoutRun = {
+    cancellation: new Promise((_, reject) => {
+        rejectTimeoutCancellation = reject;
+    }),
+    cancel(message) {
+        rejectTimeoutCancellation(new Error(message));
+    },
+};
+await assert.rejects(
+    runLocalStudyTaskWithDeadline(timeoutRun, () => new Promise(() => {}), {
+        timeoutMs: 0,
+        timeoutMessage: 'The local comparison took too long to finish.',
+    }),
+    /took too long/i,
+);
+let stopCancellation;
+let stopCalls = 0;
+const stoppedRun = {
+    cancellation: new Promise((_, reject) => {
+        stopCancellation = reject;
+    }),
+    cancel(message) {
+        stopCalls += 1;
+        stopCancellation(new Error(message));
+    },
+};
+const stoppedTask = runLocalStudyTaskWithDeadline(stoppedRun, () => new Promise(() => {}), {
+    timeoutMs: 20,
+    timeoutMessage: 'The stale deadline should not fire after stopping.',
+});
+stoppedRun.cancel('Local model pass stopped.');
+await assert.rejects(stoppedTask, /stopped/i);
+await new Promise(resolve => setTimeout(resolve, 30));
+assert.equal(stopCalls, 1, 'stopping a local run should clear its deadline before a later retry can start');
 
 console.log('PASS  Commentary comparison selection, overview, and grounding packet');

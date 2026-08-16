@@ -4,9 +4,74 @@ import {
     LOCAL_STUDY_SLM_MODEL_ID,
 } from './localStudyModels.js';
 
-let enginePromise = null;
-let engineWorker = null;
-let engineModelId = '';
+let engineState = null;
+let activeLocalRun = null;
+let nextLocalRunId = 0;
+
+const LOCAL_MODEL_LOAD_TIMEOUT_MS = 60_000;
+const LOCAL_STUDY_DRAFT_TIMEOUT_MS = 30_000;
+const COMMENTARY_COMPARISON_TIMEOUT_MS = 20_000;
+
+function createLocalRunError(message) {
+    const error = new Error(message);
+    error.name = 'LocalStudyRunError';
+    return error;
+}
+
+function resetLocalEngine(state = engineState) {
+    if (!state || engineState !== state) return;
+
+    state.worker.terminate();
+    engineState = null;
+}
+
+function beginLocalStudyRun() {
+    if (activeLocalRun) {
+        throw createLocalRunError('Another local model task is already running. Wait for it to finish or stop it before starting a new one.');
+    }
+
+    let rejectCancellation;
+    const run = {
+        id: nextLocalRunId + 1,
+        engineState: null,
+        cancelled: false,
+        cancellation: new Promise((_, reject) => {
+            rejectCancellation = reject;
+        }),
+        cancel: (message) => {
+            if (run.cancelled) return;
+
+            run.cancelled = true;
+            if (activeLocalRun === run) {
+                activeLocalRun = null;
+            }
+            try {
+                run.engineState?.engine?.interruptGenerate();
+            } catch {
+                // The worker can already be gone when a model load fails.
+            }
+            resetLocalEngine(run.engineState);
+            rejectCancellation(createLocalRunError(message));
+        },
+    };
+
+    nextLocalRunId = run.id;
+    activeLocalRun = run;
+    return run;
+}
+
+function finishLocalStudyRun(run) {
+    if (activeLocalRun === run) {
+        activeLocalRun = null;
+    }
+}
+
+export function stopLocalStudyGeneration() {
+    if (!activeLocalRun) return false;
+
+    activeLocalRun.cancel('Local model pass stopped.');
+    return true;
+}
 
 function assertCanUseLocalSlm(synthesisRequest) {
     if (typeof window === 'undefined' || typeof navigator === 'undefined') {
@@ -36,24 +101,26 @@ function createEngineProgressHandler(onProgress) {
     };
 }
 
-async function getLocalEngine(onProgress, modelId = LOCAL_STUDY_SLM_MODEL_ID) {
-    if (enginePromise && engineModelId !== modelId) {
-        engineWorker?.terminate();
-        engineWorker = null;
-        enginePromise = null;
-        engineModelId = '';
+async function getLocalEngine(run, onProgress, modelId = LOCAL_STUDY_SLM_MODEL_ID) {
+    if (engineState && engineState.modelId !== modelId) {
+        resetLocalEngine(engineState);
     }
 
-    if (!enginePromise) {
-        engineWorker = new Worker(new URL('../workers/studySlm.worker.js', import.meta.url), {
+    if (!engineState) {
+        const worker = new Worker(new URL('../workers/studySlm.worker.js', import.meta.url), {
             type: 'module',
         });
-        engineModelId = modelId;
-
-        enginePromise = import('@mlc-ai/web-llm')
+        const state = {
+            worker,
+            modelId,
+            engine: null,
+            promise: null,
+        };
+        engineState = state;
+        state.promise = import('@mlc-ai/web-llm')
             .then(async ({ CreateWebWorkerMLCEngine, prebuiltAppConfig }) => (
                 CreateWebWorkerMLCEngine(
-                    engineWorker,
+                    worker,
                     modelId,
                     {
                         appConfig: {
@@ -64,16 +131,42 @@ async function getLocalEngine(onProgress, modelId = LOCAL_STUDY_SLM_MODEL_ID) {
                     },
                 )
             ))
+            .then((engine) => {
+                state.engine = engine;
+                return engine;
+            })
             .catch((error) => {
-                engineWorker?.terminate();
-                engineWorker = null;
-                enginePromise = null;
-                engineModelId = '';
+                resetLocalEngine(state);
                 throw error;
             });
     }
 
-    return enginePromise;
+    run.engineState = engineState;
+    return runLocalStudyTaskWithDeadline(run, () => run.engineState.promise, {
+        timeoutMs: LOCAL_MODEL_LOAD_TIMEOUT_MS,
+        timeoutMessage: 'The local model took too long to load. The source-led study is still available; try again when you are ready.',
+    });
+}
+
+export async function runLocalStudyTaskWithDeadline(run, createTask, {
+    timeoutMs,
+    timeoutMessage,
+}) {
+    let timeoutId;
+    const task = Promise.resolve().then(createTask);
+    const deadline = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+            const error = createLocalRunError(timeoutMessage);
+            run.cancel(error.message);
+            reject(error);
+        }, timeoutMs);
+    });
+
+    try {
+        return await Promise.race([task, run.cancellation, deadline]);
+    } finally {
+        clearTimeout(timeoutId);
+    }
 }
 
 function buildMessages(synthesisRequest, options = {}) {
@@ -517,10 +610,15 @@ function getGenerationOptions(modelId = LOCAL_STUDY_SLM_MODEL_ID, options = {}) 
     };
 }
 
-async function createLocalDraftCompletion(engine, synthesisRequest, options = {}) {
-    const response = await engine.chat.completions.create({
-        messages: buildMessages(synthesisRequest, options),
-        ...getGenerationOptions(options.modelId, options),
+async function createLocalDraftCompletion(engine, synthesisRequest, run, options = {}) {
+    const response = await runLocalStudyTaskWithDeadline(run, () => (
+        engine.chat.completions.create({
+            messages: buildMessages(synthesisRequest, options),
+            ...getGenerationOptions(options.modelId, options),
+        })
+    ), {
+        timeoutMs: LOCAL_STUDY_DRAFT_TIMEOUT_MS,
+        timeoutMessage: 'The local draft took too long to finish. The source-led study is still available; try again when you are ready.',
     });
 
     return stripLocalModelThinking(response?.choices?.[0]?.message?.content ?? '');
@@ -565,24 +663,29 @@ function getCommentaryComparisonGenerationOptions(modelId) {
         ...getGenerationOptions(modelId),
         temperature: 0.2,
         presence_penalty: 0.6,
-        max_tokens: 480,
+        max_tokens: 220,
         response_format: { type: 'json_object' },
     };
 }
 
-async function createCommentaryComparisonCompletion(engine, synthesisRequest, modelId, options = {}) {
-    const response = await engine.chat.completions.create({
-        messages: [
-            {
-                role: 'system',
-                content: 'You are a constrained evidence classifier. Return one complete JSON object only. Do not provide commentary, explanations, or hidden reasoning.',
-            },
-            {
-                role: 'user',
-                content: formatCommentaryComparisonPrompt(synthesisRequest, options),
-            },
-        ],
-        ...getCommentaryComparisonGenerationOptions(modelId),
+async function createCommentaryComparisonCompletion(engine, synthesisRequest, modelId, run, options = {}) {
+    const response = await runLocalStudyTaskWithDeadline(run, () => (
+        engine.chat.completions.create({
+            messages: [
+                {
+                    role: 'system',
+                    content: 'You are a constrained evidence classifier. Return one complete JSON object only. Do not provide commentary, explanations, or hidden reasoning.',
+                },
+                {
+                    role: 'user',
+                    content: formatCommentaryComparisonPrompt(synthesisRequest, options),
+                },
+            ],
+            ...getCommentaryComparisonGenerationOptions(modelId),
+        })
+    ), {
+        timeoutMs: COMMENTARY_COMPARISON_TIMEOUT_MS,
+        timeoutMessage: 'The local comparison took too long to finish. The selected excerpts are still available below; try again.',
     });
 
     return stripLocalModelThinking(response?.choices?.[0]?.message?.content ?? '');
@@ -606,43 +709,49 @@ export async function draftLocalStudySynthesis({
     onProgress,
 }) {
     assertCanUseLocalSlm(synthesisRequest);
-    onProgress?.({ text: 'Loading local model...', percent: null });
+    const run = beginLocalStudyRun();
 
-    const engine = await getLocalEngine(onProgress, modelId);
-    onProgress?.({ text: 'Drafting from retrieved chunks...', percent: null });
+    try {
+        onProgress?.({ text: 'Loading local model...', percent: null });
 
-    let rawText = await createLocalDraftCompletion(engine, synthesisRequest, {
-        modelId,
-    });
+        const engine = await getLocalEngine(run, onProgress, modelId);
+        onProgress?.({ text: 'Drafting from retrieved chunks...', percent: null });
 
-    if (isLocalStudyRefusalText(rawText)) {
-        onProgress?.({ text: 'Retrying with clearer source chunks...', percent: null });
-        const retryText = await createLocalDraftCompletion(engine, synthesisRequest, {
-            retry: true,
+        let rawText = await createLocalDraftCompletion(engine, synthesisRequest, run, {
             modelId,
         });
 
-        if (normalizeTextField(retryText)) {
-            rawText = retryText;
+        if (isLocalStudyRefusalText(rawText)) {
+            onProgress?.({ text: 'Retrying with clearer source chunks...', percent: null });
+            const retryText = await createLocalDraftCompletion(engine, synthesisRequest, run, {
+                retry: true,
+                modelId,
+            });
+
+            if (normalizeTextField(retryText)) {
+                rawText = retryText;
+            }
         }
-    }
 
-    let parsed;
+        let parsed;
 
-    try {
-        parsed = parseJsonObject(rawText);
-    } catch (error) {
-        return makeUnstructuredDraft(
-            rawText,
-            synthesisRequest,
-            error instanceof Error ? error.message : 'Structured parsing failed.',
+        try {
+            parsed = parseJsonObject(rawText);
+        } catch (error) {
+            return makeUnstructuredDraft(
+                rawText,
+                synthesisRequest,
+                error instanceof Error ? error.message : 'Structured parsing failed.',
+                modelId,
+            );
+        }
+
+        return normalizeDraft(parsed, synthesisRequest, rawText, {
             modelId,
-        );
+        });
+    } finally {
+        finishLocalStudyRun(run);
     }
-
-    return normalizeDraft(parsed, synthesisRequest, rawText, {
-        modelId,
-    });
 }
 
 export async function draftLocalCommentaryComparison({
@@ -651,25 +760,31 @@ export async function draftLocalCommentaryComparison({
     onProgress,
 }) {
     assertCanUseLocalSlm(synthesisRequest);
-    onProgress?.({ text: 'Loading local model...', percent: null });
+    const run = beginLocalStudyRun();
 
-    const engine = await getLocalEngine(onProgress, modelId);
-    onProgress?.({ text: 'Comparing source excerpts...', percent: null });
-    let rawText = await createCommentaryComparisonCompletion(engine, synthesisRequest, modelId);
-    let comparison = parseLocalCommentaryComparison(rawText, synthesisRequest);
+    try {
+        onProgress?.({ text: 'Loading local model...', percent: null });
 
-    if (shouldRetryLocalCommentaryComparison(comparison)) {
-        onProgress?.({ text: 'Retrying the local comparison...', percent: null });
-        rawText = await createCommentaryComparisonCompletion(engine, synthesisRequest, modelId, { retry: true });
-        comparison = parseLocalCommentaryComparison(rawText, synthesisRequest);
-        if (!comparison) {
-            throw new Error('The local comparison came back incomplete. The excerpts are still available below; try comparing again.');
+        const engine = await getLocalEngine(run, onProgress, modelId);
+        onProgress?.({ text: 'Comparing source excerpts...', percent: null });
+        let rawText = await createCommentaryComparisonCompletion(engine, synthesisRequest, modelId, run);
+        let comparison = parseLocalCommentaryComparison(rawText, synthesisRequest);
+
+        if (shouldRetryLocalCommentaryComparison(comparison)) {
+            onProgress?.({ text: 'Retrying the local comparison...', percent: null });
+            rawText = await createCommentaryComparisonCompletion(engine, synthesisRequest, modelId, run, { retry: true });
+            comparison = parseLocalCommentaryComparison(rawText, synthesisRequest);
+            if (!comparison) {
+                throw new Error('The local comparison came back incomplete. The excerpts are still available below; try comparing again.');
+            }
         }
-    }
 
-    if (!comparison.agreements.length && !comparison.differences.length) {
-        throw new Error('No comparison survived the source checks. The selected excerpts are still available below.');
-    }
+        if (!comparison.agreements.length && !comparison.differences.length) {
+            throw new Error('No comparison survived the source checks. The selected excerpts are still available below.');
+        }
 
-    return comparison;
+        return comparison;
+    } finally {
+        finishLocalStudyRun(run);
+    }
 }

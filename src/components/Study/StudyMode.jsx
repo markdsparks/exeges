@@ -1305,6 +1305,21 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
         }
     };
 
+    const handleStopLocalDraft = () => {
+        if (!isDraftingLocally) return;
+
+        localDraftRequestRef.current += 1;
+        setLocalDraftState(current => ({
+            ...current,
+            status: 'idle',
+            progress: '',
+            error: '',
+        }));
+
+        void import('../../lib/localStudySynthesis')
+            .then(({ stopLocalStudyGeneration }) => stopLocalStudyGeneration());
+    };
+
     return (
         <section className="study-assistant-card">
             <InterpretGuideCard
@@ -1366,18 +1381,29 @@ function BackgroundGuideCard({ observation, interpretation, bibles, book, chapte
                                 <p>{localDraftState.error}</p>
                             )}
                         </div>
-                        <button
-                            type="button"
-                            className="study-selection-action"
-                            onClick={handleDraftLocally}
-                            disabled={!canDraftLocally || isDraftingLocally}
-                        >
-                            {isDraftingLocally
-                                ? 'Drafting...'
-                                : hasUsableLocalDraft
-                                    ? 'Refresh draft'
-                                    : 'Draft locally'}
-                        </button>
+                        <div className="study-assistant-local-actions">
+                            <button
+                                type="button"
+                                className="study-selection-action"
+                                onClick={handleDraftLocally}
+                                disabled={!canDraftLocally || isDraftingLocally}
+                            >
+                                {isDraftingLocally
+                                    ? 'Drafting...'
+                                    : hasUsableLocalDraft
+                                        ? 'Refresh draft'
+                                        : 'Draft locally'}
+                            </button>
+                            {isDraftingLocally && (
+                                <button
+                                    type="button"
+                                    className="study-thread-text-button"
+                                    onClick={handleStopLocalDraft}
+                                >
+                                    Stop
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {capabilities.webGpu && (
