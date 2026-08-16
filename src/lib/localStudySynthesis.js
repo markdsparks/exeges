@@ -526,7 +526,7 @@ async function createLocalDraftCompletion(engine, synthesisRequest, options = {}
     return stripLocalModelThinking(response?.choices?.[0]?.message?.content ?? '');
 }
 
-function formatCommentaryComparisonPrompt(synthesisRequest) {
+function formatCommentaryComparisonPrompt(synthesisRequest, { retry = false } = {}) {
     const cards = getEvidenceCardsForPrompt(synthesisRequest)
         .filter(card => card.sourceId?.startsWith('commentary-'));
     const evidenceText = cards.map(card => [
@@ -545,6 +545,11 @@ function formatCommentaryComparisonPrompt(synthesisRequest) {
         'For each difference, classify the supported reason as passage-scope, word-meaning, historical-assumption, theological-premise, application-focus, or unclear.',
         'Never infer an author motive, tradition, or historical cause that the excerpts do not state.',
         'Every quote must be copied exactly from its card. Use at least two different cards in every agreement or difference.',
+        'Return at most one agreement and at most one difference. Use exactly two short quotations in each group, each between 16 and 110 characters.',
+        'When the excerpts do not support a group, return an empty array for it.',
+        retry
+            ? 'Retry instruction: your previous response was incomplete. Return one small, complete JSON object now.'
+            : '',
         '',
         'BEGIN COMMENTARY CARDS',
         evidenceText,
@@ -555,23 +560,44 @@ function formatCommentaryComparisonPrompt(synthesisRequest) {
     ].join('\n');
 }
 
-async function createCommentaryComparisonCompletion(engine, synthesisRequest, modelId) {
+function getCommentaryComparisonGenerationOptions(modelId) {
+    return {
+        ...getGenerationOptions(modelId),
+        temperature: 0.2,
+        presence_penalty: 0.6,
+        max_tokens: 480,
+        response_format: { type: 'json_object' },
+    };
+}
+
+async function createCommentaryComparisonCompletion(engine, synthesisRequest, modelId, options = {}) {
     const response = await engine.chat.completions.create({
         messages: [
             {
                 role: 'system',
-                content: 'You are a constrained evidence classifier. Return JSON only. Do not provide commentary, explanations, or hidden reasoning.',
+                content: 'You are a constrained evidence classifier. Return one complete JSON object only. Do not provide commentary, explanations, or hidden reasoning.',
             },
             {
                 role: 'user',
-                content: formatCommentaryComparisonPrompt(synthesisRequest),
+                content: formatCommentaryComparisonPrompt(synthesisRequest, options),
             },
         ],
-        ...getGenerationOptions(modelId),
-        max_tokens: 360,
+        ...getCommentaryComparisonGenerationOptions(modelId),
     });
 
     return stripLocalModelThinking(response?.choices?.[0]?.message?.content ?? '');
+}
+
+export function parseLocalCommentaryComparison(rawText, synthesisRequest) {
+    try {
+        return normalizeCommentaryComparisonDraft(parseJsonObject(rawText), synthesisRequest);
+    } catch {
+        return null;
+    }
+}
+
+export function shouldRetryLocalCommentaryComparison(comparison) {
+    return !comparison || (!comparison.agreements.length && !comparison.differences.length);
 }
 
 export async function draftLocalStudySynthesis({
@@ -629,9 +655,17 @@ export async function draftLocalCommentaryComparison({
 
     const engine = await getLocalEngine(onProgress, modelId);
     onProgress?.({ text: 'Comparing source excerpts...', percent: null });
-    const rawText = await createCommentaryComparisonCompletion(engine, synthesisRequest, modelId);
-    const parsed = parseJsonObject(rawText);
-    const comparison = normalizeCommentaryComparisonDraft(parsed, synthesisRequest);
+    let rawText = await createCommentaryComparisonCompletion(engine, synthesisRequest, modelId);
+    let comparison = parseLocalCommentaryComparison(rawText, synthesisRequest);
+
+    if (shouldRetryLocalCommentaryComparison(comparison)) {
+        onProgress?.({ text: 'Retrying the local comparison...', percent: null });
+        rawText = await createCommentaryComparisonCompletion(engine, synthesisRequest, modelId, { retry: true });
+        comparison = parseLocalCommentaryComparison(rawText, synthesisRequest);
+        if (!comparison) {
+            throw new Error('The local comparison came back incomplete. The excerpts are still available below; try comparing again.');
+        }
+    }
 
     if (!comparison.agreements.length && !comparison.differences.length) {
         throw new Error('No comparison survived the source checks. The selected excerpts are still available below.');

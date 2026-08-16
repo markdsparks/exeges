@@ -7,6 +7,10 @@ import {
     selectRelevantCommentaryEntry,
     toCommentaryFinding,
 } from '../src/lib/commentaryComparison.js';
+import {
+    parseLocalCommentaryComparison,
+    shouldRetryLocalCommentaryComparison,
+} from '../src/lib/localStudySynthesis.js';
 
 const target = {
     id: 'genesis-1-3',
@@ -195,5 +199,34 @@ const rejectedComparison = normalizeCommentaryComparisonDraft({
 }, request);
 assert.equal(rejectedComparison.agreements.length, 0);
 assert.equal(rejectedComparison.differences.length, 0);
+
+const locallyParsedComparison = parseLocalCommentaryComparison(JSON.stringify({
+    agreements: [{
+        evidence: [
+            { cardId: 'commentary-one', quote: 'God speaks, and light immediately appears.' },
+            { cardId: 'commentary-two', quote: 'Light appears in response to the word God speaks.' },
+        ],
+    }],
+    differences: [],
+}), request);
+assert.equal(locallyParsedComparison?.agreements.length, 1);
+assert.equal(
+    parseLocalCommentaryComparison('{"agreements":[', request),
+    null,
+    'an incomplete local-model response should be recognized for retry instead of surfacing a JSON parser error',
+);
+assert.equal(
+    shouldRetryLocalCommentaryComparison(parseLocalCommentaryComparison(JSON.stringify({
+        agreements: [{
+            evidence: [
+                { cardId: 'commentary-one', quote: 'This is not an exact source quotation.' },
+                { cardId: 'commentary-two', quote: 'Nor is this source evidence.' },
+            ],
+        }],
+        differences: [],
+    }), request)),
+    true,
+    'a syntactically valid response with unverified evidence should get one recovery attempt',
+);
 
 console.log('PASS  Commentary comparison selection, overview, and grounding packet');

@@ -317,11 +317,15 @@ function CommentaryComparison({ target, passageFindings }) {
             setComparisonState({ status: 'ready', comparison, progress: '', error: '' });
         } catch (error) {
             if (comparisonRequestId.current !== requestId) return;
+            const message = error instanceof Error ? error.message : '';
+            const isStructuredOutputFailure = /json|structured|incomplete/i.test(message);
             setComparisonState({
                 status: 'error',
                 comparison: null,
                 progress: '',
-                error: error.message || 'A grounded comparison could not be prepared.',
+                error: isStructuredOutputFailure
+                    ? 'The local comparison could not be verified as complete. The selected excerpts are still available below; try again when you are ready.'
+                    : message || 'A grounded comparison could not be prepared.',
             });
         }
     };
@@ -471,7 +475,9 @@ function CommentaryComparison({ target, passageFindings }) {
                             >
                                 {comparisonState.status === 'loading'
                                     ? 'Comparing excerpts...'
-                                    : 'Compare agreement and differences'}
+                                    : comparisonState.status === 'error'
+                                        ? 'Try comparison again'
+                                        : 'Compare agreement and differences'}
                             </button>
                             {comparisonState.status === 'loading' && <em>{comparisonState.progress}</em>}
                             {comparisonState.status !== 'loading' && (
