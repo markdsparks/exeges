@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {
     buildCommentaryComparisonRequest,
     buildCommentaryOverview,
+    getSuggestedCommentarySourceIds,
     loadPassageCommentaryReport,
     normalizeCommentaryComparisonDraft,
     selectRelevantCommentaryEntry,
@@ -72,6 +73,26 @@ const groupedFinding = toCommentaryFinding(
 );
 assert.equal(groupedFinding.references[0], 'Genesis 1:3');
 assert.match(groupedFinding.text, /^Gen 1:3 The word of God/);
+assert.equal(groupedFinding.source.type, 'commentary');
+
+const tyndaleFinding = toCommentaryFinding(
+    {
+        id: 'tyndale',
+        label: 'Tyndale Study Notes',
+        href: 'https://tyndaleopenresources.com/',
+        license: 'CC BY-SA 4.0',
+        licenseHref: 'https://creativecommons.org/licenses/by-sa/4.0/',
+        attribution: 'Tyndale Open Study Notes Copyright 2022 Tyndale House Publishers.',
+        type: 'study-notes',
+    },
+    { verse: 3, text: 'God speaks, and light appears.' },
+    'Genesis',
+    1,
+    3,
+);
+assert.equal(tyndaleFinding.source.type, 'study-notes');
+assert.match(tyndaleFinding.allowedUse, /study notes/i);
+assert.doesNotMatch(tyndaleFinding.allowedUse, /historical commentary/i);
 
 const failedReport = await loadPassageCommentaryReport({
     target,
@@ -112,13 +133,14 @@ assert.equal(overview.mode, 'multiple');
 assert.match(overview.shared, /God|light|word/i);
 assert.match(overview.differences, /not necessarily direct disagreement/i);
 assert.equal(overview.perspectives.length, 3);
+assert.match(overview.shared, /selected source excerpts/i);
 
 const singleSourceOverview = buildCommentaryOverview({
     target,
     commentaryFindings: [commentaryFindings[0]],
 });
 assert.equal(singleSourceOverview.mode, 'single');
-assert.match(singleSourceOverview.summary, /First source offers one historical perspective/i);
+assert.match(singleSourceOverview.summary, /First source offers one commentary perspective/i);
 assert.match(singleSourceOverview.caution, /cannot show consensus or disagreement/i);
 assert.equal(singleSourceOverview.perspectives.length, 1);
 
@@ -127,6 +149,24 @@ assert.equal(emptyOverview.mode, 'empty');
 assert.match(emptyOverview.summary, /no commentary excerpt could be matched/i);
 assert.doesNotMatch(emptyOverview.summary, /commentaries|consensus|disagreement/i);
 assert.equal(emptyOverview.perspectives.length, 0);
+
+const suggestedSources = getSuggestedCommentarySourceIds([
+    commentaryFindings[0],
+    {
+        ...commentaryFindings[1],
+        source: { id: 'commentary-tyndale', label: 'Tyndale Study Notes', type: 'study-notes' },
+    },
+    commentaryFindings[2],
+], 2);
+assert.deepEqual(suggestedSources, ['commentary-tyndale', 'commentary-one']);
+assert.deepEqual(getSuggestedCommentarySourceIds([
+    commentaryFindings[0],
+    {
+        ...commentaryFindings[1],
+        source: { id: 'commentary-tyndale', label: 'Tyndale Study Notes', type: 'study-notes' },
+    },
+], 1), ['commentary-tyndale']);
+assert.equal(getSuggestedCommentarySourceIds(commentaryFindings, 9).length, 3);
 
 const request = buildCommentaryComparisonRequest({
     target,
@@ -142,6 +182,15 @@ const request = buildCommentaryComparisonRequest({
 assert.equal(request.mode, 'commentary-comparison');
 assert.equal(request.evidenceCards.length, 4);
 assert.ok(request.evidenceCards.every(card => card.id));
+
+const tyndaleRequest = buildCommentaryComparisonRequest({
+    target,
+    commentaryFindings: [tyndaleFinding, commentaryFindings[0]],
+});
+const tyndaleCard = tyndaleRequest.evidenceCards.find(card => card.id === tyndaleFinding.id);
+assert.equal(tyndaleCard.sourceType, 'study-notes');
+assert.match(tyndaleCard.attribution, /Tyndale House Publishers/i);
+assert.match(tyndaleCard.licenseUrl, /creativecommons\.org/i);
 
 const validComparison = normalizeCommentaryComparisonDraft({
     agreements: [{

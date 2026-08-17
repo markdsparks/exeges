@@ -2453,7 +2453,24 @@
     color: var(--color-text-primary);
 }
 
-.study-thread-commentary-evidence a {
+.study-thread-commentary-evidence p.study-thread-source-attribution,
+.study-thread-source p.study-thread-source-attribution,
+.study-thread-commentary-perspectives p.study-thread-source-attribution {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.72rem;
+    line-height: 1.45;
+    color: var(--color-text-muted);
+}
+
+.study-thread-source-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
+.study-thread-commentary-evidence a,
+.study-thread-source-links a {
     width: fit-content;
     font-family: var(--font-family-ui);
     font-size: 0.72rem;
@@ -2882,7 +2899,7 @@
 
 .study-thread-commentary-credit,
 .study-thread-commentary-entries p,
-.study-thread-commentary > div > a {
+.study-thread-commentary-links a {
     margin: 0;
     font-family: var(--font-family-ui);
     font-size: 0.82rem;
@@ -2909,9 +2926,90 @@
     padding-top: var(--space-sm);
 }
 
-.study-thread-commentary > div > a {
+.study-thread-commentary-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
+.study-thread-commentary-links a {
     width: fit-content;
     color: var(--color-accent);
+}
+
+.study-thread-commentary-picker {
+    display: grid;
+    gap: var(--space-sm);
+    min-width: 0;
+    margin: 0;
+    padding: var(--space-sm) 0;
+    border: 0;
+    border-block: 1px solid var(--color-border-soft);
+}
+
+.study-thread-commentary-picker legend {
+    padding: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-accent);
+}
+
+.study-thread-commentary-picker > p {
+    margin: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--color-text-secondary);
+}
+
+.study-thread-commentary-picker > div {
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.study-thread-commentary-picker label {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-sm);
+    min-height: 2.75rem;
+    padding: 0 var(--space-sm);
+    border: 1px solid var(--color-border-soft);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
+    cursor: pointer;
+}
+
+.study-thread-commentary-picker label:has(input:checked) {
+    border-color: color-mix(in srgb, var(--color-accent) 52%, var(--color-border-soft));
+    background-color: color-mix(in srgb, var(--color-bg-note) 75%, var(--color-bg-elevated));
+}
+
+.study-thread-commentary-picker input {
+    inline-size: 1rem;
+    block-size: 1rem;
+    accent-color: var(--color-accent);
+}
+
+.study-thread-commentary-picker span {
+    min-width: 0;
+    font-family: var(--font-family-ui);
+    font-size: 0.8rem;
+    line-height: 1.25;
+}
+
+.study-thread-commentary-picker em {
+    font-family: var(--font-family-ui);
+    font-size: 0.68rem;
+    font-style: normal;
+    color: var(--color-text-muted);
+}
+
+.study-thread-commentary-picker label:has(input:disabled) {
+    cursor: not-allowed;
+    opacity: 0.58;
 }
 
 .study-thread-source {

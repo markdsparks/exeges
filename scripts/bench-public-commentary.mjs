@@ -1,5 +1,12 @@
 import assert from 'node:assert/strict';
-import { cleanPublicCommentaryText } from '../src/lib/publicCommentary.js';
+import { cleanPublicCommentaryText, PUBLIC_COMMENTARY_SOURCES } from '../src/lib/publicCommentary.js';
+
+const tyndale = PUBLIC_COMMENTARY_SOURCES.find(source => source.id === 'tyndale');
+assert.ok(tyndale, 'Tyndale Open Study Notes should be available as a source');
+assert.equal(tyndale.type, 'study-notes');
+assert.equal(tyndale.license, 'CC BY-SA 4.0');
+assert.match(tyndale.attribution, /Tyndale House Publishers/i);
+assert.match(tyndale.licenseHref, /creativecommons\.org/i);
 
 const calvinEntry = [
     '1 John 4:7-10',

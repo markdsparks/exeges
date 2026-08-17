@@ -11,6 +11,8 @@ const COMMENTARY_STOPWORDS = new Set([
     'who', 'whom', 'whose', 'will', 'with', 'would', 'you', 'your',
 ]);
 
+const MAX_COMPARISON_SOURCES = 3;
+
 function normalize(value) {
     return String(value ?? '')
         .toLowerCase()
@@ -118,14 +120,37 @@ export function toCommentaryFinding(source, entry, bookName, chapterNumber, targ
         references: [reference],
         confidence: 'low',
         reviewStatus: 'source-text',
-        allowedUse: 'Treat this historical commentary as a named perspective, not as final authority. Distinguish direct disagreement from a difference of emphasis, and keep the passage primary.',
+        allowedUse: source.type === 'study-notes'
+            ? 'Treat these study notes as a named supporting perspective, not as final authority. Distinguish direct disagreement from a difference of emphasis, and keep the passage primary.'
+            : 'Treat this historical commentary as a named perspective, not as final authority. Distinguish direct disagreement from a difference of emphasis, and keep the passage primary.',
         source: {
             id: `commentary-${source.id}`,
             label: source.label,
             href: source.href,
             license: source.license,
+            licenseHref: source.licenseHref,
+            attribution: source.attribution,
+            type: source.type ?? 'commentary',
         },
     };
+}
+
+export function getSuggestedCommentarySourceIds(findings = [], limit = 2) {
+    const availableIds = new Set(findings.map(finding => finding.source?.id).filter(Boolean));
+    const desiredCount = Math.max(0, Math.min(limit, MAX_COMPARISON_SOURCES));
+    if (desiredCount === 0) return [];
+
+    const preferredIds = ['commentary-tyndale'];
+    const suggested = preferredIds.filter(id => availableIds.has(id)).slice(0, desiredCount);
+
+    for (const finding of findings) {
+        const sourceId = finding.source?.id;
+        if (!sourceId || suggested.includes(sourceId)) continue;
+        suggested.push(sourceId);
+        if (suggested.length >= desiredCount) break;
+    }
+
+    return suggested.slice(0, desiredCount);
 }
 
 export async function loadPassageCommentaryReport({
@@ -245,9 +270,12 @@ export function buildCommentaryOverview({ target, commentaryFindings }) {
     }));
 
     if (sourceCount === 1) {
+        const sourceType = findings[0].source?.type === 'study-notes'
+            ? 'study-note perspective'
+            : 'commentary perspective';
         return {
             mode: 'single',
-            summary: `${findings[0].source.label} offers one historical perspective on this passage.`,
+            summary: `${findings[0].source.label} offers one ${sourceType} on this passage.`,
             caution: 'One source cannot show consensus or disagreement. Read it alongside the passage and use your own judgment.',
             perspectives,
             sourceCount,
@@ -267,9 +295,9 @@ export function buildCommentaryOverview({ target, commentaryFindings }) {
     return {
         mode: 'multiple',
         shared: sharedTerms.length
-            ? `Across ${sourceCount} commentaries, the excerpts share attention to ${joinTerms(sharedTerms)}.`
-            : `The ${sourceCount} available commentaries approach this passage from different angles; their excerpts do not reveal a clear shared emphasis automatically.`,
-        differences: 'The source notes below show each commentator\'s distinct emphasis. Different emphasis is not necessarily direct disagreement.',
+            ? `The selected source excerpts share attention to ${joinTerms(sharedTerms)}.`
+            : 'The selected sources approach this passage from different angles; the excerpts do not reveal a clear shared emphasis automatically.',
+        differences: 'Read the source notes below for each work\'s distinct emphasis. Different emphasis is not necessarily direct disagreement.',
         why: 'These excerpts can show which details each work emphasizes. They cannot safely establish an author\'s motive or theological cause unless the source itself makes that reasoning explicit.',
         perspectives,
         sourceCount,
@@ -340,6 +368,8 @@ function normalizeEvidenceItem(item, cardsById) {
         sourceId: card.sourceId,
         sourceLabel: card.sourceLabel || card.title,
         sourceUrl: card.sourceUrl || '',
+        licenseUrl: card.licenseUrl || '',
+        attribution: card.attribution || '',
         reference: card.scope || '',
         quote,
     };

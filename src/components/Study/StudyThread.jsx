@@ -12,6 +12,7 @@ import { getLocalStudyCapabilities } from '../../lib/localStudyGrounding';
 import {
     buildCommentaryComparisonRequest,
     buildCommentaryOverview,
+    getSuggestedCommentarySourceIds,
     loadPassageCommentaryReport,
 } from '../../lib/commentaryComparison';
 
@@ -171,7 +172,7 @@ function CommentaryPanel({ bookName, chapterNumber, targetVerse }) {
             }}
         >
             <summary>
-                <span>Read a full commentary</span>
+                <span>Read a source in full</span>
                 <em>One source at a time</em>
             </summary>
             <div>
@@ -187,7 +188,7 @@ function CommentaryPanel({ bookName, chapterNumber, targetVerse }) {
                 </label>
                 {state.source && (
                     <p className="study-thread-commentary-credit">
-                        {state.source.title}. {state.source.license} text, shown as source material rather than a conclusion.
+                        {state.source.attribution || `${state.source.title}. ${state.source.license} text.`} Shown as source material rather than a conclusion.
                     </p>
                 )}
                 {state.status === 'loading' && <p className="study-thread-loading">Loading commentary...</p>}
@@ -204,7 +205,12 @@ function CommentaryPanel({ bookName, chapterNumber, targetVerse }) {
                     </div>
                 )}
                 {state.source?.href && (
-                    <a href={state.source.href} target="_blank" rel="noreferrer">Open source</a>
+                    <div className="study-thread-commentary-links">
+                        <a href={state.source.href} target="_blank" rel="noreferrer">Open source</a>
+                        {state.source.licenseHref && (
+                            <a href={state.source.licenseHref} target="_blank" rel="noreferrer">License</a>
+                        )}
+                    </div>
                 )}
             </div>
         </details>
@@ -219,10 +225,44 @@ function CommentaryEvidence({ evidence }) {
                 <span>{evidence.reference}</span>
             </div>
             <p>&ldquo;{evidence.quote}&rdquo;</p>
-            {evidence.sourceUrl && (
-                <a href={evidence.sourceUrl} target="_blank" rel="noreferrer">Open source</a>
+            {evidence.attribution && (
+                <p className="study-thread-source-attribution">{evidence.attribution}</p>
+            )}
+            {(evidence.sourceUrl || evidence.licenseUrl) && (
+                <div className="study-thread-source-links">
+                    {evidence.sourceUrl && (
+                        <a href={evidence.sourceUrl} target="_blank" rel="noreferrer">Open source</a>
+                    )}
+                    {evidence.licenseUrl && (
+                        <a href={evidence.licenseUrl} target="_blank" rel="noreferrer">License</a>
+                    )}
+                </div>
             )}
         </blockquote>
+    );
+}
+
+function CommentaryPerspective({ perspective }) {
+    const source = perspective.source;
+
+    return (
+        <article>
+            <strong>{source?.label}</strong>
+            <p>{perspective.text}</p>
+            {source?.attribution && (
+                <p className="study-thread-source-attribution">{source.attribution}</p>
+            )}
+            {(source?.href || source?.licenseHref) && (
+                <div className="study-thread-source-links">
+                    {source?.href && (
+                        <a href={source.href} target="_blank" rel="noreferrer">Open source</a>
+                    )}
+                    {source?.licenseHref && (
+                        <a href={source.licenseHref} target="_blank" rel="noreferrer">License</a>
+                    )}
+                </div>
+            )}
+        </article>
     );
 }
 
@@ -230,8 +270,6 @@ function CommentaryComparison({ target, passageFindings }) {
     const [state, setState] = useState({
         status: 'loading',
         findings: [],
-        overview: null,
-        request: null,
         error: '',
     });
     const [comparisonState, setComparisonState] = useState({
@@ -241,13 +279,14 @@ function CommentaryComparison({ target, passageFindings }) {
         error: '',
     });
     const [reloadKey, setReloadKey] = useState(0);
+    const [selectedSourceIds, setSelectedSourceIds] = useState([]);
     const comparisonRequestId = useRef(0);
     const capabilities = getLocalStudyCapabilities();
 
     useEffect(() => {
         const controller = new AbortController();
         comparisonRequestId.current += 1;
-        setState({ status: 'loading', findings: [], overview: null, request: null, error: '' });
+        setState({ status: 'loading', findings: [], error: '' });
         setComparisonState({ status: 'idle', comparison: null, progress: '', error: '' });
 
         loadPassageCommentaryReport({ target, signal: controller.signal })
@@ -257,17 +296,15 @@ function CommentaryComparison({ target, passageFindings }) {
                 const totalFailure = report.failedSourceCount === report.sourceCount;
                 const partialFailure = report.failedSourceCount > 0 && !totalFailure;
 
+                setSelectedSourceIds(current => {
+                    const availableIds = new Set(findings.map(finding => finding.source?.id));
+                    const retained = current.filter(id => availableIds.has(id));
+                    return retained.length ? retained : getSuggestedCommentarySourceIds(findings);
+                });
+
                 setState({
                     status: totalFailure ? 'error' : findings.length ? 'ready' : 'empty',
                     findings,
-                    overview: buildCommentaryOverview({ target, commentaryFindings: findings }),
-                    request: findings.length > 1
-                        ? buildCommentaryComparisonRequest({
-                            target,
-                            passageFindings,
-                            commentaryFindings: findings,
-                        })
-                        : null,
                     error: totalFailure
                         ? 'The commentary sources could not be reached right now.'
                         : partialFailure
@@ -281,8 +318,6 @@ function CommentaryComparison({ target, passageFindings }) {
                 setState({
                     status: 'error',
                     findings: [],
-                    overview: null,
-                    request: null,
                     error: error.message || 'Commentary could not be gathered right now.',
                 });
             });
@@ -293,8 +328,41 @@ function CommentaryComparison({ target, passageFindings }) {
         };
     }, [passageFindings, reloadKey, target]);
 
+    const selectedFindings = useMemo(() => (
+        state.findings.filter(finding => selectedSourceIds.includes(finding.source?.id))
+    ), [selectedSourceIds, state.findings]);
+    const overview = useMemo(() => (
+        buildCommentaryOverview({ target, commentaryFindings: selectedFindings })
+    ), [selectedFindings, target]);
+    const comparisonRequest = useMemo(() => (
+        selectedFindings.length > 1
+            ? buildCommentaryComparisonRequest({
+                target,
+                passageFindings,
+                commentaryFindings: selectedFindings,
+            })
+            : null
+    ), [passageFindings, selectedFindings, target]);
+
+    useEffect(() => {
+        comparisonRequestId.current += 1;
+        setComparisonState({ status: 'idle', comparison: null, progress: '', error: '' });
+    }, [selectedSourceIds]);
+
+    const handleSourceSelection = (sourceId) => {
+        if (comparisonState.status === 'loading') return;
+
+        setSelectedSourceIds(current => {
+            if (current.includes(sourceId)) {
+                return current.filter(id => id !== sourceId);
+            }
+            if (current.length >= 3) return current;
+            return [...current, sourceId];
+        });
+    };
+
     const handleCompare = async () => {
-        if (!state.request || comparisonState.status === 'loading') return;
+        if (!comparisonRequest || comparisonState.status === 'loading') return;
 
         const requestId = comparisonRequestId.current + 1;
         comparisonRequestId.current = requestId;
@@ -304,7 +372,7 @@ function CommentaryComparison({ target, passageFindings }) {
             // The optional model runtime loads only after a reader explicitly asks for a comparison.
             const { draftLocalCommentaryComparison } = await import('../../lib/localStudySynthesis');
             const comparison = await draftLocalCommentaryComparison({
-                synthesisRequest: state.request,
+                synthesisRequest: comparisonRequest,
                 onProgress: progress => {
                     if (comparisonRequestId.current !== requestId) return;
                     setComparisonState(current => ({
@@ -346,22 +414,21 @@ function CommentaryComparison({ target, passageFindings }) {
     };
 
     const comparison = comparisonState.comparison;
-    const sourceCount = state.findings.length;
+    const sourceCount = selectedFindings.length;
+    const availableSourceCount = state.findings.length;
     const sourceTotal = PUBLIC_COMMENTARY_SOURCES.length;
     const hasOneCommentary = sourceCount === 1;
     const hasNoCommentary = sourceCount === 0;
     const commentaryHeading = hasNoCommentary
-        ? 'Commentary'
+        ? 'Source voices'
         : hasOneCommentary
-            ? 'A commentary perspective'
-            : 'Across the commentaries';
+            ? 'A source voice'
+            : 'Source voices';
     const availabilityLabel = state.status === 'loading'
         ? 'Gathering sources'
-        : hasNoCommentary
+        : availableSourceCount === 0
             ? 'No excerpts available'
-            : hasOneCommentary
-            ? '1 source available'
-            : `${sourceCount} of ${sourceTotal} available`;
+            : `${availableSourceCount} of ${sourceTotal} available`;
 
     return (
         <section className="study-thread-commentary-synthesis">
@@ -370,11 +437,9 @@ function CommentaryComparison({ target, passageFindings }) {
                 <em>{availabilityLabel}</em>
             </div>
             <p className="study-thread-commentary-intro">
-                {hasOneCommentary
-                    ? 'Read this historical perspective, then inspect its words for yourself.'
-                    : hasNoCommentary
-                        ? 'Relevant commentary excerpts appear here when available.'
-                    : 'Compare what the available historical commentators emphasize, then inspect their words for yourself.'}
+                {availableSourceCount
+                    ? 'Choose one to three sources. The passage remains primary; every source stays open for inspection.'
+                    : 'Relevant source excerpts appear here when available.'}
             </p>
 
             {state.status === 'loading' && <p className="study-thread-loading">Reading the available commentary excerpts...</p>}
@@ -388,45 +453,70 @@ function CommentaryComparison({ target, passageFindings }) {
                 <p className="study-thread-loading">No commentary excerpt could be matched confidently to this passage.</p>
             )}
 
-            {state.status === 'ready' && state.overview && (
+            {state.status === 'ready' && (
                 <>
-                    <div className="study-thread-commentary-overview">
-                        {state.overview.mode === 'single' ? (
+                    <fieldset className="study-thread-commentary-picker">
+                        <legend>Choose source voices</legend>
+                        <p>Select up to three sources to read together. A suggested pair is selected first.</p>
+                        <div>
+                            {state.findings.map(finding => {
+                                const sourceId = finding.source?.id;
+                                const selected = selectedSourceIds.includes(sourceId);
+                                const atLimit = !selected && selectedSourceIds.length >= 3;
+
+                                return (
+                                    <label key={finding.id}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selected}
+                                            disabled={atLimit || comparisonState.status === 'loading'}
+                                            onChange={() => handleSourceSelection(sourceId)}
+                                        />
+                                        <span>{finding.source?.label}</span>
+                                        <em>{finding.source?.type === 'study-notes' ? 'Study notes' : 'Commentary'}</em>
+                                    </label>
+                                );
+                            })}
+                        </div>
+                    </fieldset>
+
+                    {sourceCount > 0 && (
+                        <div className="study-thread-commentary-overview">
+                            {overview.mode === 'single' ? (
                             <div>
                                 <span>One perspective</span>
-                                <p>{state.overview.summary}</p>
+                                <p>{overview.summary}</p>
                                 <div className="study-thread-commentary-perspectives">
-                                    {state.overview.perspectives.map(perspective => (
-                                        <article key={perspective.id}>
-                                            <strong>{perspective.source.label}</strong>
-                                            <p>{perspective.text}</p>
-                                        </article>
+                                    {overview.perspectives.map(perspective => (
+                                        <CommentaryPerspective key={perspective.id} perspective={perspective} />
                                     ))}
                                 </div>
-                                <em>{state.overview.caution}</em>
+                                <em>{overview.caution}</em>
                             </div>
                         ) : (
                             <div>
                                 <span>Shared attention</span>
-                                <p>{state.overview.shared}</p>
+                                <p>{overview.shared}</p>
                             </div>
                         )}
-                        {!comparison && state.overview.mode === 'multiple' && (
+                        {!comparison && overview.mode === 'multiple' && (
                             <div>
                                 <span>Different emphases</span>
-                                <p>{state.overview.differences}</p>
+                                <p>{overview.differences}</p>
                                 <div className="study-thread-commentary-perspectives">
-                                    {state.overview.perspectives.map(perspective => (
-                                        <article key={perspective.id}>
-                                            <strong>{perspective.source.label}</strong>
-                                            <p>{perspective.text}</p>
-                                        </article>
+                                    {overview.perspectives.map(perspective => (
+                                        <CommentaryPerspective key={perspective.id} perspective={perspective} />
                                     ))}
                                 </div>
-                                <em>{state.overview.why}</em>
+                                <em>{overview.why}</em>
                             </div>
                         )}
-                    </div>
+                        </div>
+                    )}
+
+                    {sourceCount === 0 && (
+                        <p className="study-thread-loading">Choose at least one source voice to begin.</p>
+                    )}
 
                     {comparison && (
                         <div className="study-thread-commentary-comparison">
@@ -480,7 +570,7 @@ function CommentaryComparison({ target, passageFindings }) {
                         </div>
                     )}
 
-                    {capabilities.localSlmAvailable && state.request && comparisonState.status !== 'ready' && (
+                    {capabilities.localSlmAvailable && comparisonRequest && comparisonState.status !== 'ready' && (
                         <div className="study-thread-commentary-compare-action">
                             <button
                                 type="button"
@@ -492,7 +582,7 @@ function CommentaryComparison({ target, passageFindings }) {
                                     ? 'Comparing excerpts...'
                                     : comparisonState.status === 'error'
                                         ? 'Try comparison again'
-                                        : 'Compare agreement and differences'}
+                                        : 'Compare selected sources'}
                             </button>
                             {comparisonState.status === 'loading' && (
                                 <div className="study-thread-commentary-compare-progress">
@@ -518,17 +608,19 @@ function CommentaryComparison({ target, passageFindings }) {
                         <p className="study-thread-question-error">{comparisonState.error}</p>
                     )}
 
-                    <details className="study-thread-commentary-excerpts">
-                        <summary>
-                            <span>Read the selected excerpts</span>
-                            <em>{hasOneCommentary ? '1 source' : `${sourceCount} sources`}</em>
-                        </summary>
-                        <div>
-                            {state.findings.map(finding => (
-                                <SourceNote key={finding.id} finding={finding} />
-                            ))}
-                        </div>
-                    </details>
+                    {sourceCount > 0 && (
+                        <details className="study-thread-commentary-excerpts">
+                            <summary>
+                                <span>Read the selected excerpts</span>
+                                <em>{hasOneCommentary ? '1 source' : `${sourceCount} sources`}</em>
+                            </summary>
+                            <div>
+                                {selectedFindings.map(finding => (
+                                    <SourceNote key={finding.id} finding={finding} />
+                                ))}
+                            </div>
+                        </details>
+                    )}
                 </>
             )}
         </section>
@@ -821,8 +913,18 @@ function SourceNote({ finding }) {
             </div>
             <h3>{finding.title}</h3>
             <p>{finding.text}</p>
-            {source?.href && (
-                <a href={source.href} target="_blank" rel="noreferrer">Open source</a>
+            {source?.attribution && (
+                <p className="study-thread-source-attribution">{source.attribution}</p>
+            )}
+            {(source?.href || source?.licenseHref) && (
+                <div className="study-thread-source-links">
+                    {source?.href && (
+                        <a href={source.href} target="_blank" rel="noreferrer">Open source</a>
+                    )}
+                    {source?.licenseHref && (
+                        <a href={source.licenseHref} target="_blank" rel="noreferrer">License</a>
+                    )}
+                </div>
             )}
         </article>
     );
