@@ -1,8 +1,8 @@
 # TASK-0003: Clarify the Reader Reflection Loop
 
 - **Role / owner:** Implementer / repository lead
-- **Task state:** Integrated
-- **Delivery state:** Integrated
+- **Task state:** Shipped
+- **Delivery state:** Shipped
 - **Risk / reversibility:** Low; copy, layout, and existing-dialog actions only, with no storage-schema or source/retrieval change
 - **Parent objective:** D-001, accepted by the CEO on 2026-08-19: make the serious-lay-reader “read -> record my thought/question -> inspect evidence -> return to reading” journey coherent before expanding sources, AI, or expert tools
 
@@ -101,4 +101,4 @@ No persistence schema, storage key, retrieval/grounding behavior, source selecti
 
 ### Integration And Next Action
 
-TASK-0003 is integrated locally only. It is not committed, pushed, deployed, or shipped. The next bounded action is a short serious-lay-reader alpha test of this journey, then a CEO decision on whether to deepen the same loop or shift product priority.
+TASK-0003 shipped in commit `4567ff7`; GitHub Pages deployment run `32320568257` completed successfully. The next bounded action is a short serious-lay-reader alpha test of this journey, then a CEO decision on whether to deepen the same loop or shift product priority.

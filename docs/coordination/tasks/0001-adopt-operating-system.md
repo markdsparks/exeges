@@ -1,8 +1,8 @@
 # TASK-0001: Adopt AI Product Development Operating System
 
 - **Role / owner:** Implementer / repository lead
-- **Task state:** Integrated
-- **Delivery state:** Integrated
+- **Task state:** Shipped
+- **Delivery state:** Shipped
 - **Risk / reversibility:** Medium; broad repository governance/tooling surface, but local and reversible with no runtime behavior or external-state change intended
 - **Parent objective:** CEO directive dated 2026-08-19 to transform the repository using the supplied AI Product Development Operating System
 - **Independent review:** [TASK-0002](0002-review-operating-system-adoption.md)
@@ -130,8 +130,12 @@ The repository now has a tailored shared operating authority, exact delegated ro
 
 ### Integration Notes
 
-The repaired changes are accepted into the local integration base. They are not committed, pushed, published, deployed, or shipped. The initial review's four governance findings were resolved and independently rechecked. No migration or release ordering is required for runtime behavior.
+The repaired changes are accepted into the integration base. The initial review's four governance findings were resolved and independently rechecked. No migration or release ordering was required for runtime behavior.
 
 ### Recommended Next Action
 
 Ask the CEO to decide D-001 before opening the next product feature objective. Keep physical modularization deferred until a product task needs the approved boundary phase.
+
+### Release Update
+
+On 2026-08-19, the CEO authorized a user-test push. Commit `4567ff7` shipped the operating-system layer together with TASK-0003 through GitHub Pages deployment run `32320568257`, which completed successfully. No Worker, native, credential, or other external production configuration changed.

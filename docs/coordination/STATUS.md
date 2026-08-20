@@ -2,9 +2,9 @@
 
 - **Maintainer:** Repository lead
 - **Updated:** 2026-08-19
-- **Current objective delivery state:** Integrated
-- **Current task phase:** Reader reflection loop integrated locally; not shipped
-- **Release state:** Not shipped
+- **Current objective delivery state:** Shipped
+- **Current task phase:** Reader reflection loop shipped to GitHub Pages
+- **Release state:** Shipped to GitHub Pages on 2026-08-19 via commit `4567ff7`
 
 ## Current Objective
 
@@ -23,14 +23,14 @@ The CEO accepted this objective on 2026-08-19. Its bounded implementation is rec
 | OS-05 | Add unified checks and repair baseline drift | Lead / Implementer | Integrated | OS-01, check interface | Complete |
 | OS-06 | Independently review the adoption contract and actual diff | Reviewer | Integrated | OS-02 through OS-05 implemented | Passed with known risk |
 | OS-07 | Resolve review findings and rerun integration evidence | Lead / Implementer | Integrated | Initial OS-06 findings | Complete |
-| PR-01 | Clarify the reader reflection -> sources -> return loop | Lead / Implementer | Integrated | D-001 accepted; OS-01 through OS-07 | Alpha journey feedback before prioritizing another product slice |
+| PR-01 | Clarify the reader reflection -> sources -> return loop | Lead / Implementer | Shipped | D-001 accepted; OS-01 through OS-07 | Alpha journey feedback before prioritizing another product slice |
 
 ## Authoritative Integration Queue
 
 1. Reader reflection-loop task contract and acceptance record. **Complete.**
 2. Focused study-thread guidance and explicit return action. **Complete.**
 3. Focused regression checks, desktop/mobile manual journey, and independent review. **Complete.**
-4. Lead integration on a passing recommendation. **Complete locally; not shipped.**
+4. Lead integration on a passing recommendation. **Shipped to GitHub Pages.**
 
 Only the repository lead may reorder this queue. No product-code migration, CI/release workflow change, commit, push, or deployment is queued.
 
@@ -50,6 +50,7 @@ Only the repository lead may reorder this queue. No product-code migration, CI/r
 - Independent re-review found no remaining blocking issues and recommended `Pass with known risk`. The known risks—Node 24 not independently exercised, unvalidated hand-authored SourcePack records, unenforced module boundaries, build-only production CI, and unresolved licensing/provenance decisions—are recorded and outside the unchanged runtime surface.
 - D-001 was accepted through the CEO’s 2026-08-19 directive to build the recommended serious-lay-reader journey. TASK-0003 makes the existing reflection -> source exploration -> return loop explicit without changing sources, AI, persistence, navigation, dependencies, or release configuration.
 - TASK-0003 verification passed lint, its focused persistence benchmark, production build, documentation links, whitespace check, desktop and 390px mobile browser journeys, and independent re-review. The initial review found Explore’s labeled return action below the long source content; remediation placed it persistently in the dialog header. The build retains its existing large-chunk warning.
+- Commit `4567ff7` was pushed to `main`; GitHub Actions run `32320568257` completed the Pages build and deployment successfully.
 
 ## Resource Position
 
@@ -61,8 +62,8 @@ Only the repository lead may reorder this queue. No product-code migration, CI/r
 
 ## Shipped Since Previous Brief
 
-None. This adoption exists only in the local working tree until separately authorized for commit and production release.
+- Commit `4567ff7`: the operating-system layer and TASK-0003 reader reflection loop. GitHub Pages deployment run `32320568257` succeeded.
 
 ## CEO Checkpoint
 
-The new reader loop is ready for local alpha feedback, but it has not been committed, pushed, deployed, or shipped. Decide whether to authorize a commit and user-test release under D-002, or keep the change local while the alpha journey is evaluated. The recommended architecture action remains not to start a monorepo migration; approve lightweight current-tree boundary enforcement only when a product task first needs it.
+The new reader loop is live for alpha feedback. The next CEO judgment is whether the evidence supports deepening this same journey or shifting product priority. The recommended architecture action remains not to start a monorepo migration; approve lightweight current-tree boundary enforcement only when a product task first needs it.
