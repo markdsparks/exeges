@@ -1148,11 +1148,22 @@ export default function StudyThread({
                         <span>Study thread</span>
                         <h2 id="study-thread-title">{target.reference}</h2>
                     </div>
-                    <button type="button" onClick={onClose} aria-label="Close study thread">&times;</button>
+                    <div className="study-thread-header-actions">
+                        <button type="button" className="study-thread-header-return" onClick={onClose}>
+                            Return to reading
+                        </button>
+                        <button type="button" className="study-thread-header-close" onClick={onClose} aria-label="Close study thread">&times;</button>
+                    </div>
                 </header>
 
                 <div className="study-thread-body">
                     <blockquote>&ldquo;{target.quote}&rdquo;</blockquote>
+
+                    <ol className="study-thread-path" aria-label="Study path">
+                        <li className={view === 'reflect' ? 'active' : ''} aria-current={view === 'reflect' ? 'step' : undefined}>Your thought</li>
+                        <li className={view === 'explore' ? 'active' : ''} aria-current={view === 'explore' ? 'step' : undefined}>Explore sources</li>
+                        <li>Return to reading</li>
+                    </ol>
 
                     <div className="study-thread-tabs" role="tablist" aria-label="Study thread view">
                         <button
@@ -1162,7 +1173,7 @@ export default function StudyThread({
                             className={view === 'reflect' ? 'active' : ''}
                             onClick={() => setView('reflect')}
                         >
-                            My takeaway
+                            Your thought
                         </button>
                         <button
                             type="button"
@@ -1171,15 +1182,15 @@ export default function StudyThread({
                             className={view === 'explore' ? 'active' : ''}
                             onClick={handleExplore}
                         >
-                            Explore
+                            Explore sources
                         </button>
                     </div>
 
                     {view === 'reflect' ? (
                         editingThought ? (
                             <section className="study-thread-reflection">
-                                <span>Your takeaway</span>
-                                <p>In your own words, what do you think this passage is saying?</p>
+                                <span>Your thought or question</span>
+                                <p>Put your first impression into words before you consult sources. You can refine it later.</p>
                                 <textarea
                                     value={thought}
                                     onChange={(event) => {
@@ -1187,7 +1198,7 @@ export default function StudyThread({
                                         setSaved(false);
                                         setPersistenceError('');
                                     }}
-                                    placeholder="Write what you are taking from this passage..."
+                                    placeholder="What do you notice, wonder, or want to remember?"
                                     rows={5}
                                 />
                                 <div className="study-thread-actions">
@@ -1200,28 +1211,34 @@ export default function StudyThread({
                                         </button>
                                     )}
                                     <button type="button" className="study-thread-secondary" onClick={handleExplore}>
-                                        Explore this passage
+                                        Explore sources
                                     </button>
                                     <button type="button" className="study-thread-primary study-thread-explore-action" onClick={handleSave} disabled={!thought.trim()}>
-                                        {saved ? 'Saved' : 'Save takeaway'}
+                                        {saved ? 'Saved' : 'Save thought'}
+                                    </button>
+                                    <button type="button" className="study-thread-return-action" onClick={onClose}>
+                                        Return to reading
                                     </button>
                                 </div>
                                 {persistenceError && <p className="study-thread-persistence-error">{persistenceError}</p>}
                             </section>
                         ) : (
                             <section className="study-thread-takeaway">
-                                <span>Your takeaway</span>
+                                <span>Your thought or question</span>
                                 <p>{thought}</p>
                                 <em>Anchored in {target.reference}</em>
                                 <div className="study-thread-actions">
                                     <button type="button" className="study-thread-delete" onClick={handleDelete}>
-                                        Remove takeaway
+                                        Remove thought
                                     </button>
                                     <button type="button" className="study-thread-secondary" onClick={() => setEditingThought(true)}>
-                                        Refine takeaway
+                                        Refine thought
                                     </button>
                                     <button type="button" className="study-thread-primary study-thread-explore-action" onClick={handleExplore}>
-                                        Explore this passage
+                                        Explore sources
+                                    </button>
+                                    <button type="button" className="study-thread-return-action" onClick={onClose}>
+                                        Return to reading
                                     </button>
                                 </div>
                                 {persistenceError && <p className="study-thread-persistence-error">{persistenceError}</p>}
@@ -1239,7 +1256,7 @@ export default function StudyThread({
                                 onOpenPassage={onOpenPassage}
                             />
                             <section className="study-thread-return">
-                                <span>{thought.trim() ? 'Your takeaway' : 'Before you return'}</span>
+                                <span>{thought.trim() ? 'Your thought' : 'Before you return'}</span>
                                 <p>{thought.trim()
                                     ? 'Keep refining your own understanding as you weigh the passage and the sources.'
                                     : 'Put what you are taking from this passage into your own words.'}</p>
@@ -1248,7 +1265,10 @@ export default function StudyThread({
                                         setView('reflect');
                                         setEditingThought(true);
                                     }}>
-                                        {thought.trim() ? 'Review my takeaway' : 'Write my takeaway'}
+                                        {thought.trim() ? 'Review my thought' : 'Write a thought'}
+                                    </button>
+                                    <button type="button" className="study-thread-return-action" onClick={onClose}>
+                                        Return to reading
                                     </button>
                                 </div>
                             </section>

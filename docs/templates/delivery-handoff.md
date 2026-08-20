@@ -1,5 +1,9 @@
 # Delivery Handoff: Title
 
+- **Final state:** Implemented, Verified, Integrated, or Shipped
+- **Parent objective:** Link
+- **Task contract:** Link
+
 ## Outcome Delivered
 
 State whether the accepted user outcome was delivered.
@@ -12,9 +16,15 @@ Describe what changed in plain language.
 
 List consequential choices and link any ADRs.
 
+## Decisions And Assumptions
+
+Separate decisions made within the accepted contract from assumptions that still need evidence.
+
 ## Files Changed
 
 Group the meaningful files by responsibility; omit generated noise.
+
+Name public interfaces, schemas, dependencies, or persisted contracts changed. State `None` where applicable.
 
 ## Verification Evidence
 
@@ -28,6 +38,10 @@ Group the meaningful files by responsibility; omit generated noise.
 ## Remaining Risks And Uncertainty
 
 State unresolved risk, missing coverage, assumptions, or external conditions explicitly.
+
+## Integration And Deployment Notes
+
+State dependencies, integration order, compatibility/migrations, rollback, and whether any commit, push, publication, or deployment occurred. Never imply `Shipped` from local implementation.
 
 ## CEO Decisions Required
 

@@ -2088,7 +2088,14 @@
     font-size: 1.25rem;
 }
 
-.study-thread-header button {
+.study-thread-header-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.study-thread-header-close {
     width: 38px;
     height: 38px;
     display: grid;
@@ -2099,9 +2106,23 @@
     color: var(--color-text-secondary);
 }
 
-.study-thread-header button:hover {
+.study-thread-header-close:hover {
     background-color: color-mix(in srgb, var(--color-accent) 9%, transparent);
     color: var(--color-accent);
+}
+
+.study-thread-header-return {
+    min-height: 38px;
+    padding: 0.42rem 0.55rem;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-family-ui);
+    font-size: 0.8rem;
+    line-height: 1.2;
+    color: var(--color-accent);
+}
+
+.study-thread-header-return:hover {
+    background-color: color-mix(in srgb, var(--color-accent) 9%, transparent);
 }
 
 .study-thread-body {
@@ -2121,6 +2142,35 @@
     font-size: 1.12rem;
     line-height: 1.55;
     color: var(--color-text-primary);
+}
+
+.study-thread-path {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-family-ui);
+    font-size: 0.72rem;
+    line-height: 1.35;
+    color: var(--color-text-muted);
+}
+
+.study-thread-path li {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.study-thread-path li:not(:last-child)::after {
+    content: '\2192';
+    color: var(--color-border);
+}
+
+.study-thread-path li.active {
+    color: var(--color-accent);
+    font-weight: 600;
 }
 
 .study-thread-tabs {
@@ -2250,6 +2300,21 @@
 .study-thread-secondary:disabled {
     opacity: 0.46;
     cursor: not-allowed;
+}
+
+.study-thread-return-action {
+    min-height: 38px;
+    padding: 0.42rem 0.35rem;
+    font-family: var(--font-family-ui);
+    font-size: 0.82rem;
+    line-height: 1.2;
+    color: var(--color-text-secondary);
+}
+
+.study-thread-return-action:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 0.16em;
 }
 
 .study-thread-explore-action {

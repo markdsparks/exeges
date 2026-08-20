@@ -1,8 +1,12 @@
 # Engineering Context
 
+- **Owner:** Repository lead
+- **Status:** Current implementation and workflow facts
+- **Last verified against repository:** 2026-08-19
+
 ## System Architecture
 
-Exeges is a React 19 single-page application built by Vite 8 and hosted under the `/exeges/` GitHub Pages base path. It has no application backend. A Cloudflare Worker proxies licensed ESV API calls, public commentary is fetched at runtime, and an optional Web Worker runs on-device WebLLM synthesis. A native iOS WKWebView shell loads the hosted web app.
+Exeges is a React 19 single-page application built by Vite 8 and hosted under the `/exeges/` GitHub Pages base path. It has no application backend. A Cloudflare Worker proxies licensed ESV API calls, public-domain commentary and open-licensed Tyndale study notes are fetched at runtime, and an optional Web Worker runs on-device WebLLM synthesis. A native iOS WKWebView shell loads the hosted web app.
 
 ## Components And Boundaries
 
@@ -16,6 +20,8 @@ Exeges is a React 19 single-page application built by Vite 8 and hosted under th
 - `sources/study`, `scripts`, and generated packs: source ingestion and static retrieval substrate.
 - `workers/esv-proxy.js`: only approved boundary for browser ESV access.
 - `native/ios`: native shell, signing configuration, and TestFlight workflow.
+
+The contractual view of these logical modules, their public interfaces, invariants, allowed dependencies, checks, and review triggers is in the [module map](../architecture/MODULES.md) and [contract registry](../architecture/contracts/README.md). These are current-tree boundaries; they do not imply approval for a package migration.
 
 `src/lib` should own data transformation and grounding rules; components should own presentation and interaction. Hooks bridge persistent/browser state to the UI. Keep licensed or network-specific behavior behind its existing adapter.
 
@@ -42,7 +48,7 @@ Committed curated records and raw OpenBible input are validated and transformed 
 ## External Dependencies
 
 - Crossway ESV API through the Cloudflare Worker.
-- HelloAO Bible API for public-domain commentary delivery.
+- HelloAO Bible API for public-domain commentary and CC BY-SA Tyndale Open Study Notes delivery.
 - OpenBible.info cross-reference data.
 - GitHub Pages and Actions for web release.
 - Apple Developer/App Store Connect for TestFlight.
@@ -52,11 +58,12 @@ External availability, licensing, payload shape, and attribution are part of eac
 
 ## Local Development
 
-Use the Node version compatible with the lockfile and Vite 8; CI currently uses Node 25.
+Use Node 24, matching `.nvmrc` and the Pages workflow.
 
 ```bash
 npm ci
 npm run dev
+npm run check
 ```
 
 The source ZIP at `sources/study/raw/openbible-cross-references.zip` and the host `unzip` utility are required by the current predev/prebuild pipeline. Those hooks regenerate source artifacts, including a tracked JavaScript fallback, so inspect the worktree before and after running them. The local app normally runs at `http://localhost:5173`.
@@ -74,16 +81,17 @@ The source ZIP at `sources/study/raw/openbible-cross-references.zip` and the hos
 | Worker | Local request/response and CORS/error-path checks; never use a real token in committed fixtures |
 | Native iOS shell | Web checks plus Xcode build and relevant real-device behavior; TestFlight upload only when explicitly authorized |
 
+`npm run check` is the standard repository gate: Markdown links, lint, and the production build. `npm run check:full` adds all eight local focused benchmarks after source generation. These commands do not replace the manual, network, Worker, native, security, or device checks named above when those surfaces change.
+
 There is no general test runner, unit-test suite, end-to-end suite, separate type checker, coverage target, or CI lint gate. Add focused tests alongside risky new logic rather than claiming nonexistent coverage.
 
 ## Deployment Path
 
-A push to `main` triggers `.github/workflows/deploy-pages.yml`, installs dependencies, builds with the configured `VITE_ESV_PROXY_URL`, and deploys `dist/` to GitHub Pages. The iOS release app loads that URL, so normal web deploys alter its behavior without a new native binary. Native-shell or App Store metadata changes use `scripts/exeges-testflight.sh` and require signing credentials and explicit authorization.
+A push to `main` triggers `.github/workflows/deploy-pages.yml`, uses Node 24, runs `npm ci`, builds with the configured `VITE_ESV_PROXY_URL`, and deploys `dist/` to GitHub Pages. The iOS release app loads that URL, so normal web deploys alter its behavior without a new native binary. A push is therefore a production action, not merely source synchronization. Native-shell or App Store metadata changes use `scripts/exeges-testflight.sh` and require signing credentials and explicit authorization.
 
 ## Known Technical Risks And Debt
 
-- No automated regression suite or pre-merge CI quality gate beyond the production build.
-- CI uses `npm install` rather than the stricter lockfile-only `npm ci`.
+- No general automated regression suite or pre-merge CI quality gate; production CI currently runs only the production build, while focused assertion benchmarks remain local.
 - The current dependency audit reports two high-severity build-chain advisories through Vite (`nanoid` and `postcss`); production dependencies audit clean.
 - `App.jsx` and the legacy `StudyMode.jsx` are large, stateful ownership hotspots.
 - Legacy guided-study code remains despite the reader-first product pivot.
@@ -97,3 +105,4 @@ A push to `main` triggers `.github/workflows/deploy-pages.yml`, installs depende
 - The repository has no `LICENSE` file even though its former README described the application code as MIT.
 - Source/editorial review is not yet a formal workflow; hand-reviewed coverage is small.
 - No analytics or structured feedback pipeline exists to validate product outcomes.
+- Module boundaries are documented but not enforced by import rules, public entry points, or package manifests; `App.jsx`, `StudyThread.jsx`, and legacy `StudyMode.jsx` remain orchestration hotspots.

@@ -1,5 +1,9 @@
 # Project Charter
 
+- **Owner:** CEO
+- **Status:** Durable mission/principles with explicitly provisional customer and strategy statements
+- **Last verified against repository:** 2026-08-19
+
 ## Mission
 
 Help people read Scripture with sustained attention and, when they choose, pursue deeper understanding through passage-first, source-visible assistance that supports rather than replaces their judgment.
@@ -27,9 +31,9 @@ Help people read Scripture with sustained attention and, when they choose, pursu
 7. Prefer local/private and low-infrastructure behavior where it is reliable.
 8. Respect translation and source licenses at ingestion, storage, display, and synthesis boundaries.
 
-## Current Strategic Goals
+## Provisional Strategic Guardrails
 
-These are provisional until the CEO sets priorities:
+These are provisional until the CEO sets priorities. Current outcome ordering belongs in [product direction](product-direction.md), and CEO decisions that have become actionable belong in the [decision inbox](../coordination/DECISION_INBOX.md).
 
 - Prove that the reader-to-deeper-study journey feels simpler and more helpful than a separate study workspace.
 - Make related Scripture, commentary, and grounded questions trustworthy, inspectable, and easy to navigate.
@@ -62,12 +66,14 @@ No business or product measures are established in the repository. The CEO must 
 - ESV access is licensed and must remain behind a private proxy; ESV text cannot be committed or retained long-term.
 - KJV, notes, bookmarks, studies, position, and settings are currently local to the device/browser.
 - GitHub Pages hosts the web app; the iOS release shell loads that hosted app.
-- Public commentary and OpenBible data require correct attribution and license treatment.
+- Public commentary, open-licensed study notes, and OpenBible data require correct attribution and license treatment.
 - The bundled KJV corpus lacks a committed edition/provenance record, and the repository lacks a code `LICENSE` file.
 - On-device WebGPU model loading is experimental and has shown reliability and quality limits on iPhone.
 - The project has no general automated test suite, account system, analytics, or formal editorial review system.
 
 ## Open Questions
+
+These are durable reserved questions, not an active request for the CEO to decide everything at once. The [decision inbox](../coordination/DECISION_INBOX.md) contains only choices needed for current or near-term work.
 
 - What single user and job should the next release serve?
 - What product promise should Exeges make about privacy, persistence, and backup?

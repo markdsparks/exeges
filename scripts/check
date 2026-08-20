@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+mode="${1:-standard}"
+
+run_standard_checks() {
+    npm run check:docs
+    npm run lint
+    npm run build
+}
+
+run_focused_checks() {
+    node scripts/bench-reader-navigation.mjs
+    node scripts/bench-reading-position.mjs
+    node scripts/bench-user-backup.mjs
+    node scripts/bench-personal-study-threads.mjs
+    node scripts/bench-public-commentary.mjs
+    node scripts/bench-study-source-pack.mjs
+    node scripts/bench-local-study-synthesis.mjs
+    node scripts/bench-commentary-comparison.mjs
+}
+
+case "$mode" in
+    docs)
+        npm run check:docs
+        ;;
+    standard)
+        run_standard_checks
+        ;;
+    full)
+        run_standard_checks
+        run_focused_checks
+        ;;
+    *)
+        echo "Usage: scripts/check [docs|standard|full]" >&2
+        exit 2
+        ;;
+esac

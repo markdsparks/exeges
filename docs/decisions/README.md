@@ -2,6 +2,10 @@
 
 Use an architecture decision record for a consequential product or technical choice whose context would otherwise be lost, especially when reversal is expensive or the choice changes a product promise, data boundary, dependency, deployment shape, public interface, or source/AI policy.
 
+## Index
+
+- [ADR-0001: Adopt a CEO-led AI product development operating system](0001-ai-product-development-operating-system.md) — Accepted
+
 Do not create an ADR for routine implementation details. CEO-reserved decisions require explicit CEO approval before an ADR is marked accepted.
 
 ## Process

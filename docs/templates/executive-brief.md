@@ -1,4 +1,6 @@
-# CEO Executive Brief
+# CEO Directive Brief
+
+Use this to start or redirect an objective. For a current status report, use [the CEO brief](ceo-brief.md).
 
 ## Opportunity Or Problem
 

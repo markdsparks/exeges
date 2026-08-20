@@ -3,4 +3,6 @@ multi_agent = true
 
 [agents]
 enabled = true
+# AGENTS.md permits only one writer in the shared checkout. Remaining slots are
+# for read-only Explorers and Reviewers unless isolated worktrees are created.
 max_concurrent_threads_per_session = 4

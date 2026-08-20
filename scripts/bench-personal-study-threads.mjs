@@ -38,6 +38,8 @@ assert.deepEqual(threads[0], {
     chapter: 1,
     verse: 3,
     reference: 'Genesis 1:3',
+    translationId: '',
+    sourceTextExcluded: false,
     quote: 'And God said, Let there be light.',
     selections: [],
     takeaway: 'God speaks and creation responds.',

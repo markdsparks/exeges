@@ -15,9 +15,9 @@ This is the source plan for Exeges study grounding. The core rule: the model is 
 - Modern lexicons and study Bible notes: likely copyrighted or restrictively licensed unless explicitly licensed.
 - ESV text: use only through the existing licensed API/proxy path; do not import full text into source packs.
 
-## Explorer Commentary
+## Explore Sources
 
-The Explorer gathers one passage-scoped excerpt from each available public-domain commentary. When more than one source is available, it presents their shared attention and distinct emphases before the raw source text. With one source, it presents a named perspective without implying consensus or disagreement. This is reader-visible source material, not automatically trusted authority: a user may inspect it, make a note, and decide how it bears on the passage.
+The Explore view gathers one passage-scoped excerpt from each available source. When more than one source is available, it presents their shared attention and distinct emphases before the raw source text. With one source, it presents a named perspective without implying consensus or disagreement. This is reader-visible source material, not automatically trusted authority: a user may inspect it, make a note, and decide how it bears on the passage.
 
 - Matthew Henry Bible Commentary: public-domain text, delivered at runtime by the HelloAO Bible API.
 - John Calvin's Commentaries: public-domain text, delivered at runtime by the HelloAO Bible API where available.

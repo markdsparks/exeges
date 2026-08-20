@@ -1,5 +1,9 @@
 # Product Direction
 
+- **Owner:** CEO for priority; repository lead for evidence and upkeep
+- **Status:** Current-state facts plus one accepted near-term reader outcome
+- **Last verified against repository:** 2026-08-19
+
 ## Current Product State
 
 Exeges is an internal alpha distributed on the web and through a thin iOS TestFlight shell. The current experience includes:
@@ -10,8 +14,8 @@ Exeges is an internal alpha distributed on the web and through a thin iOS TestFl
 - Reader-first study threads opened from selected Scripture.
 - Personal study threads that preserve the reader's own takeaway, reopen at the selected passage, and remain visible as a subtle reading marker and a private thread list.
 - Related passages resolved to readable Bible text in the selected translation when available.
-- Public-domain Matthew Henry, Calvin, Jamieson-Fausset-Brown, and Keil & Delitzsch commentary loaded on demand with attribution.
-- An explicit Explore view that leads with passage context, a multi-commentary overview, and progressively disclosed raw excerpts.
+- Public-domain Matthew Henry, Calvin, Jamieson-Fausset-Brown, and Keil & Delitzsch commentary plus CC BY-SA Tyndale Open Study Notes, loaded on demand with source-specific attribution and licensing.
+- An explicit Explore view that leads with passage context, lets the reader choose one to three source voices, and progressively discloses raw excerpts.
 - Optional grounded comparison of commentary agreement and distinct emphasis, with exact quotations for examining possible disagreement and evidence-supported reasons for differences.
 - Passage questions grounded in selected text, retrieved source records, related Scripture, and scoped commentary excerpts.
 - Optional experimental on-device synthesis using WebLLM, loaded only after a reader explicitly requests a local draft or commentary comparison. Passage questions first receive a deterministic, passage-first starting point, with a local pass available as a separate opt-in.
@@ -20,7 +24,7 @@ An older guided Observe/Interpret/Apply implementation remains in the codebase, 
 
 ## Near-Term Outcomes
 
-These outcomes are provisional and should be reprioritized by the CEO:
+The first outcome is accepted for the current learning cycle. The others remain provisional and should be reprioritized by the CEO:
 
 1. A reader can tap Scripture, record a thought or question, inspect progressively deeper evidence, and return to reading without confusion.
 2. Every generated or assembled answer makes its supporting Scripture and commentary easy to inspect and distinguishes source text from synthesis.
@@ -52,7 +56,7 @@ These outcomes are provisional and should be reprioritized by the CEO:
 - Asking for the reader's thought first improves agency rather than adding friction.
 - Visible citations and raw sources increase trust and help users judge an answer.
 - Curated per-passage retrieval can deliver enough relevance before semantic/vector retrieval is necessary.
-- Public-domain historical commentary is useful when clearly named and balanced by context and caution.
+- Historical commentary and clearly labeled open-licensed study notes are useful when named, attributed, inspectable, and balanced by context and caution.
 - Local AI offers enough privacy or responsiveness benefit to justify its mobile cost and quality limits.
 - A thin hosted-web iOS shell is sufficient for the current learning stage.
 
@@ -64,4 +68,4 @@ This is intentionally a reading-integrity investment, not another study surface 
 
 ## Next Product Decision
 
-After this return loop has been tested, the CEO should name one primary reader and one read-to-explore job before expanding commentary, AI, ontology, or expert-study features. The brief should include one observable success signal for that job.
+After this return loop has been tested, the CEO should decide whether the evidence supports improving this same journey or shifting priority. Commentary, AI, ontology, and expert-study expansion remain outside the accepted outcome unless separately approved.
