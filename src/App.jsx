@@ -648,8 +648,9 @@ export default function App() {
         }
     }, [referenceTrail, selectedBookId, selectedChapterNum, targetVerse]);
 
-    const handleSaveStudyThreadThought = useCallback((thought) => {
+    const handleSaveStudyThreadThought = useCallback((thought, options = {}) => {
         if (!studyThreadTarget || !thought.trim()) return;
+        const type = options.type === 'question' ? 'question' : 'note';
 
         const existingObservation = findPersonalStudyThreadObservation(getStudy(
             studyThreadTarget.bookId,
@@ -661,13 +662,13 @@ export default function App() {
                 studyThreadTarget.bookId,
                 studyThreadTarget.chapter,
                 existingObservation.id,
-                { note: thought },
+                { note: thought, type },
             );
         }
 
         return addObservation(studyThreadTarget.bookId, studyThreadTarget.chapter, makePersistableStudyObservation({
             id: studyThreadTarget.id,
-            type: 'note',
+            type,
             scope: studyThreadTarget.selections?.length ? 'selection' : 'verse',
             verse: studyThreadTarget.verse,
             quote: studyThreadTarget.quote,

@@ -39,6 +39,14 @@ Only decisions requiring CEO judgment belong here. Routine reversible implementa
 - **Recommendation:** Treat both as unresolved and make no public license/provenance claim until evidence is recorded.
 - **Impact if deferred:** Internal development can continue; release-readiness and redistribution claims remain constrained.
 
+## D-005: Question-Aware Passage Clarification
+
+- **Status:** Accepted for local implementation on 2026-08-24
+- **CEO directive:** “Ok build,” following the product recommendation to make one reader question the organizing object for fast, trustworthy depth.
+- **Decision:** An explicitly saved reader question may enter a passage-first clarification view automatically. That view leads with the passage and a deterministic evidence-backed starting point; broader source comparison, full commentary, and optional local AI remain progressively disclosed.
+- **Scope record:** [TASK-0004](tasks/0004-question-aware-clarification.md) may change the reader-thread UI and use the existing observation `type` field to preserve question intent. It must not add new sources, AI behavior, accounts, telemetry, sync, persistent remote source excerpts or generated answers, new dependencies, infrastructure changes, commit, push, or deployment.
+- **Success signal:** In a moderated alpha scenario, a reader can write one question, receive a useful first clarification without retyping it, inspect why it is supported, and return to Scripture without being led through a research dashboard.
+
 ## Deferred Product Decisions
 
 Privacy/persistence promises, editorial/theological breadth, supported AI strategy, and broader release bar remain CEO-reserved in the [project charter](../operating-system/project-charter.md). Move one here when it becomes necessary for the current objective; do not ask the CEO to decide all of them abstractly.

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buildGroundedStudyDraft } from '../../lib/groundedStudyDraft';
 import {
     getLocalStudyGroundingWithStaticPacks,
@@ -627,8 +627,16 @@ function CommentaryComparison({ target, passageFindings }) {
     );
 }
 
-function PassageQuestion({ target, grounding, relatedPassages, passageText, translation }) {
-    const [question, setQuestion] = useState('');
+function PassageQuestion({
+    target,
+    grounding,
+    relatedPassages,
+    passageText,
+    translation,
+    initialQuestion = '',
+    autoAsk = false,
+}) {
+    const [question, setQuestion] = useState(initialQuestion);
     const [state, setState] = useState({
         status: 'idle',
         sourceDraft: null,
@@ -641,13 +649,15 @@ function PassageQuestion({ target, grounding, relatedPassages, passageText, tran
     });
     const requestIdRef = useRef(0);
     const requestControllerRef = useRef(null);
+    const autoQuestionKeyRef = useRef('');
     const capabilities = getLocalStudyCapabilities();
 
     useEffect(() => {
         requestControllerRef.current?.abort();
         requestControllerRef.current = null;
         requestIdRef.current += 1;
-        setQuestion('');
+        autoQuestionKeyRef.current = '';
+        setQuestion(initialQuestion.trim());
         setState({
             status: 'idle',
             sourceDraft: null,
@@ -664,11 +674,11 @@ function PassageQuestion({ target, grounding, relatedPassages, passageText, tran
             requestControllerRef.current = null;
             requestIdRef.current += 1;
         };
-    }, [target.id]);
+    }, [initialQuestion, target.id]);
 
-    const handleAsk = async () => {
-        const cleanQuestion = question.trim();
-        if (!cleanQuestion || state.status === 'loading') return;
+    const askQuestion = useCallback(async (questionText) => {
+        const cleanQuestion = questionText.trim();
+        if (!cleanQuestion || requestControllerRef.current) return;
 
         requestControllerRef.current?.abort();
         const requestId = requestIdRef.current + 1;
@@ -725,7 +735,21 @@ function PassageQuestion({ target, grounding, relatedPassages, passageText, tran
                     : 'The source-led answer could not be prepared right now.',
             }));
         }
+    }, [grounding, passageText, relatedPassages, target, translation?.name]);
+
+    const handleAsk = () => {
+        void askQuestion(question);
     };
+
+    useEffect(() => {
+        const cleanQuestion = initialQuestion.trim();
+        const questionKey = `${target.id}:${cleanQuestion}`;
+
+        if (!autoAsk || !cleanQuestion || autoQuestionKeyRef.current === questionKey) return;
+
+        autoQuestionKeyRef.current = questionKey;
+        void askQuestion(cleanQuestion);
+    }, [askQuestion, autoAsk, initialQuestion, target.id]);
 
     const handleStopLocalDraft = () => {
         requestIdRef.current += 1;
@@ -801,10 +825,12 @@ function PassageQuestion({ target, grounding, relatedPassages, passageText, tran
     return (
         <section className="study-thread-question-helper">
             <div className="study-thread-section-heading">
-                <span>Ask about this passage</span>
+                <span>{initialQuestion.trim() ? 'Clarify this passage' : 'Ask about this passage'}</span>
                 <em>Passage and sources</em>
             </div>
-            <p>Ask one focused question. The answer stays anchored to the passage, related Scripture, and named commentary.</p>
+            <p>{initialQuestion.trim()
+                ? 'Starting with the question you saved. The answer stays anchored to the passage, related Scripture, and named commentary.'
+                : 'Ask one focused question. The answer stays anchored to the passage, related Scripture, and named commentary.'}</p>
             <textarea
                 value={question}
                 onChange={(event) => setQuestion(event.target.value)}
@@ -820,7 +846,9 @@ function PassageQuestion({ target, grounding, relatedPassages, passageText, tran
                 >
                     {state.status === 'loading'
                         ? 'Gathering sources...'
-                        : 'Ask'}
+                        : initialQuestion.trim()
+                            ? 'Clarify this question'
+                            : 'Ask'}
                 </button>
             </div>
             {state.status === 'error' && <p className="study-thread-question-error">{state.error}</p>}
@@ -837,6 +865,17 @@ function PassageQuestion({ target, grounding, relatedPassages, passageText, tran
                     {state.sourceDraft.nextQuestion && (
                         <p className="study-thread-answer-question">{state.sourceDraft.nextQuestion}</p>
                     )}
+                    <details className="study-thread-answer-sources">
+                        <summary>
+                            <span>Sources used</span>
+                            <em>{state.packet.sourceFindings.length} excerpts</em>
+                        </summary>
+                        <div>
+                            {state.packet.sourceFindings.map(finding => (
+                                <SourceNote key={finding.id} finding={finding} />
+                            ))}
+                        </div>
+                    </details>
                     {capabilities.localSlmAvailable && (
                         <details className="study-thread-local-model">
                             <summary>Optional local model</summary>
@@ -885,17 +924,6 @@ function PassageQuestion({ target, grounding, relatedPassages, passageText, tran
                             )}
                         </section>
                     )}
-                    <details className="study-thread-answer-sources">
-                        <summary>
-                            <span>Sources used</span>
-                            <em>{state.packet.sourceFindings.length} excerpts</em>
-                        </summary>
-                        <div>
-                            {state.packet.sourceFindings.map(finding => (
-                                <SourceNote key={finding.id} finding={finding} />
-                            ))}
-                        </div>
-                    </details>
                 </div>
             )}
         </section>
@@ -930,9 +958,20 @@ function SourceNote({ finding }) {
     );
 }
 
-function ResearchView({ target, grounding, loading, bibles, passageText, translation, onOpenPassage }) {
+function ResearchView({
+    target,
+    grounding,
+    loading,
+    bibles,
+    passageText,
+    translation,
+    onOpenPassage,
+    initialQuestion,
+    autoAskQuestion,
+}) {
     const findings = grounding?.exploreFindings ?? [];
     const draft = grounding ? buildGroundedStudyDraft(grounding.synthesisRequest) : null;
+    const isQuestionClarification = Boolean(initialQuestion?.trim());
     const crossReferenceFindings = findings.filter(finding => (
         finding.source?.id === 'openbible-cross-references'
     ));
@@ -966,10 +1005,24 @@ function ResearchView({ target, grounding, loading, bibles, passageText, transla
                 )}
             </section>
 
-            <CommentaryComparison
-                target={target}
-                passageFindings={grounding.sourceFindings ?? []}
-            />
+            {isQuestionClarification && (
+                <PassageQuestion
+                    target={target}
+                    grounding={grounding}
+                    relatedPassages={referenceTargets}
+                    passageText={passageText}
+                    translation={translation}
+                    initialQuestion={initialQuestion}
+                    autoAsk={autoAskQuestion}
+                />
+            )}
+
+            {!isQuestionClarification && (
+                <CommentaryComparison
+                    target={target}
+                    passageFindings={grounding.sourceFindings ?? []}
+                />
+            )}
 
             <section className="study-thread-related">
                 <div className="study-thread-section-heading">
@@ -992,13 +1045,20 @@ function ResearchView({ target, grounding, loading, bibles, passageText, transla
                 )}
             </section>
 
-            <PassageQuestion
-                target={target}
-                grounding={grounding}
-                relatedPassages={referenceTargets}
-                passageText={passageText}
-                translation={translation}
-            />
+            {isQuestionClarification ? (
+                <CommentaryComparison
+                    target={target}
+                    passageFindings={grounding.sourceFindings ?? []}
+                />
+            ) : (
+                <PassageQuestion
+                    target={target}
+                    grounding={grounding}
+                    relatedPassages={referenceTargets}
+                    passageText={passageText}
+                    translation={translation}
+                />
+            )}
 
             {backgroundFindings.length > 0 && (
                 <details className="study-thread-background">
@@ -1046,15 +1106,19 @@ export default function StudyThread({
     const [saved, setSaved] = useState(false);
     const [persistenceError, setPersistenceError] = useState('');
     const [researchInput, setResearchInput] = useState('');
+    const [clarifyQuestion, setClarifyQuestion] = useState('');
     const [groundingState, setGroundingState] = useState({ status: 'idle', grounding: null });
 
     useEffect(() => {
-        setView('reflect');
+        const savedQuestion = observation?.type === 'question' ? observation.note.trim() : '';
+
+        setView(savedQuestion ? 'explore' : 'reflect');
         setThought(observation?.note ?? '');
         setEditingThought(!observation?.note?.trim());
         setSaved(false);
         setPersistenceError('');
-        setResearchInput('');
+        setResearchInput(savedQuestion);
+        setClarifyQuestion(savedQuestion);
         setGroundingState({ status: 'idle', grounding: null });
     }, [target.id]);
 
@@ -1069,13 +1133,13 @@ export default function StudyThread({
 
     const researchObservation = useMemo(() => ({
         id: target.id,
-        type: 'note',
+        type: clarifyQuestion ? 'question' : 'note',
         verse: target.verse,
         quote: target.quote,
         reference: target.reference,
         selections: target.selections ?? [],
         note: researchInput,
-    }), [researchInput, target]);
+    }), [clarifyQuestion, researchInput, target]);
     const route = useMemo(
         () => classifyBackgroundQuestion(researchObservation),
         [researchObservation],
@@ -1105,9 +1169,9 @@ export default function StudyThread({
 
     if (!target) return null;
 
-    const handleSave = () => {
-        if (!onSaveThought?.(thought)) {
-            setPersistenceError('Your takeaway could not be saved on this device. Keep it here while you try again.');
+    const handleSave = (type = 'note') => {
+        if (!onSaveThought?.(thought, { type })) {
+            setPersistenceError('Your writing could not be saved on this device. Keep it here while you try again.');
             return;
         }
 
@@ -1118,7 +1182,35 @@ export default function StudyThread({
 
     const handleExplore = () => {
         setSaved(false);
+        const savedQuestion = observation?.type === 'question' ? thought.trim() : '';
         setResearchInput(thought);
+        setClarifyQuestion(savedQuestion);
+        setView('explore');
+    };
+
+    const handleClarifyQuestion = () => {
+        if (!thought.trim()) return;
+        if (!onSaveThought?.(thought, { type: 'question' })) {
+            setPersistenceError('Your question could not be saved on this device. Keep it here while you try again.');
+            return;
+        }
+
+        const savedQuestion = thought.trim();
+        setPersistenceError('');
+        setSaved(true);
+        setEditingThought(false);
+        setResearchInput(savedQuestion);
+        setClarifyQuestion(savedQuestion);
+        setView('explore');
+    };
+
+    const handleClarifySavedQuestion = () => {
+        const savedQuestion = thought.trim();
+        if (!savedQuestion) return;
+
+        setSaved(false);
+        setResearchInput(savedQuestion);
+        setClarifyQuestion(savedQuestion);
         setView('explore');
     };
 
@@ -1130,6 +1222,8 @@ export default function StudyThread({
 
         setPersistenceError('');
         setThought('');
+        setClarifyQuestion('');
+        setResearchInput('');
         setSaved(false);
         setEditingThought(true);
     };
@@ -1161,7 +1255,7 @@ export default function StudyThread({
 
                     <ol className="study-thread-path" aria-label="Study path">
                         <li className={view === 'reflect' ? 'active' : ''} aria-current={view === 'reflect' ? 'step' : undefined}>Your thought</li>
-                        <li className={view === 'explore' ? 'active' : ''} aria-current={view === 'explore' ? 'step' : undefined}>Explore sources</li>
+                        <li className={view === 'explore' ? 'active' : ''} aria-current={view === 'explore' ? 'step' : undefined}>{clarifyQuestion ? 'Clarify and explore' : 'Explore sources'}</li>
                         <li>Return to reading</li>
                     </ol>
 
@@ -1182,7 +1276,7 @@ export default function StudyThread({
                             className={view === 'explore' ? 'active' : ''}
                             onClick={handleExplore}
                         >
-                            Explore sources
+                            {clarifyQuestion ? 'Clarify and explore' : 'Explore sources'}
                         </button>
                     </div>
 
@@ -1195,6 +1289,7 @@ export default function StudyThread({
                                     value={thought}
                                     onChange={(event) => {
                                         setThought(event.target.value);
+                                        setClarifyQuestion('');
                                         setSaved(false);
                                         setPersistenceError('');
                                     }}
@@ -1213,8 +1308,11 @@ export default function StudyThread({
                                     <button type="button" className="study-thread-secondary" onClick={handleExplore}>
                                         Explore sources
                                     </button>
-                                    <button type="button" className="study-thread-primary study-thread-explore-action" onClick={handleSave} disabled={!thought.trim()}>
+                                    <button type="button" className="study-thread-secondary" onClick={() => handleSave('note')} disabled={!thought.trim()}>
                                         {saved ? 'Saved' : 'Save thought'}
+                                    </button>
+                                    <button type="button" className="study-thread-primary study-thread-explore-action" onClick={handleClarifyQuestion} disabled={!thought.trim()}>
+                                        Clarify this question
                                     </button>
                                     <button type="button" className="study-thread-return-action" onClick={onClose}>
                                         Return to reading
@@ -1224,18 +1322,22 @@ export default function StudyThread({
                             </section>
                         ) : (
                             <section className="study-thread-takeaway">
-                                <span>Your thought or question</span>
+                                <span>{observation?.type === 'question' ? 'Your question' : 'Your thought'}</span>
                                 <p>{thought}</p>
                                 <em>Anchored in {target.reference}</em>
                                 <div className="study-thread-actions">
                                     <button type="button" className="study-thread-delete" onClick={handleDelete}>
-                                        Remove thought
+                                        Remove {observation?.type === 'question' ? 'question' : 'thought'}
                                     </button>
                                     <button type="button" className="study-thread-secondary" onClick={() => setEditingThought(true)}>
-                                        Refine thought
+                                        Refine {observation?.type === 'question' ? 'question' : 'thought'}
                                     </button>
-                                    <button type="button" className="study-thread-primary study-thread-explore-action" onClick={handleExplore}>
-                                        Explore sources
+                                    <button
+                                        type="button"
+                                        className="study-thread-primary study-thread-explore-action"
+                                        onClick={observation?.type === 'question' ? handleClarifySavedQuestion : handleExplore}
+                                    >
+                                        {observation?.type === 'question' ? 'Clarify this question' : 'Explore sources'}
                                     </button>
                                     <button type="button" className="study-thread-return-action" onClick={onClose}>
                                         Return to reading
@@ -1254,18 +1356,22 @@ export default function StudyThread({
                                 passageText={passageText}
                                 translation={translation}
                                 onOpenPassage={onOpenPassage}
+                                initialQuestion={clarifyQuestion}
+                                autoAskQuestion={Boolean(clarifyQuestion)}
                             />
                             <section className="study-thread-return">
-                                <span>{thought.trim() ? 'Your thought' : 'Before you return'}</span>
+                                <span>{clarifyQuestion ? 'Your question' : thought.trim() ? 'Your thought' : 'Before you return'}</span>
                                 <p>{thought.trim()
-                                    ? 'Keep refining your own understanding as you weigh the passage and the sources.'
+                                    ? clarifyQuestion
+                                        ? 'Keep the question close to the passage as you weigh the answer and its sources.'
+                                        : 'Keep refining your own understanding as you weigh the passage and the sources.'
                                     : 'Put what you are taking from this passage into your own words.'}</p>
                                 <div className="study-thread-actions study-thread-research-actions">
                                     <button type="button" className="study-thread-primary" onClick={() => {
                                         setView('reflect');
                                         setEditingThought(true);
                                     }}>
-                                        {thought.trim() ? 'Review my thought' : 'Write a thought'}
+                                        {clarifyQuestion ? 'Review my question' : thought.trim() ? 'Review my thought' : 'Write a thought'}
                                     </button>
                                     <button type="button" className="study-thread-return-action" onClick={onClose}>
                                         Return to reading

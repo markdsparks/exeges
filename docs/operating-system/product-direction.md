@@ -2,7 +2,7 @@
 
 - **Owner:** CEO for priority; repository lead for evidence and upkeep
 - **Status:** Current-state facts plus one accepted near-term reader outcome
-- **Last verified against repository:** 2026-08-19
+- **Last verified against repository:** 2026-08-24
 
 ## Current Product State
 
@@ -68,4 +68,4 @@ This is intentionally a reading-integrity investment, not another study surface 
 
 ## Next Product Decision
 
-After this return loop has been tested, the CEO should decide whether the evidence supports improving this same journey or shifting priority. Commentary, AI, ontology, and expert-study expansion remain outside the accepted outcome unless separately approved.
+The CEO has authorized the next bounded iteration: an explicitly saved reader question should become the starting point for a short, passage-first clarification without retyping or an expert-tool dashboard. Commentary comparison, AI, ontology, expert-study expansion, persistent answer storage, and new source breadth remain outside that iteration unless separately approved.
