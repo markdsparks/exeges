@@ -299,6 +299,25 @@ await assert.rejects(
     }),
     /took too long/i,
 );
+let completedRunCancellation;
+const completedRun = {
+    cancellation: new Promise((_, reject) => {
+        completedRunCancellation = reject;
+    }),
+    cancel(message) {
+        completedRunCancellation(new Error(message));
+    },
+};
+assert.equal(
+    await runLocalStudyTaskWithDeadline(completedRun, () => new Promise(resolve => {
+        setTimeout(() => resolve('complete comparison'), 25);
+    }), {
+        timeoutMs: 50,
+        timeoutMessage: 'The local comparison took too long to finish.',
+    }),
+    'complete comparison',
+    'a bounded comparison task must be allowed to finish before its deadline',
+);
 let stopCancellation;
 let stopCalls = 0;
 const stoppedRun = {

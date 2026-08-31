@@ -10,7 +10,11 @@ let nextLocalRunId = 0;
 
 const LOCAL_MODEL_LOAD_TIMEOUT_MS = 60_000;
 const LOCAL_STUDY_DRAFT_TIMEOUT_MS = 30_000;
-const COMMENTARY_COMPARISON_TIMEOUT_MS = 20_000;
+// A comparison can require a longer first completion than a short study draft:
+// it receives up to three source excerpts and must return exact quotations in JSON.
+// Keep the work bounded and cancelable, but do not terminate a valid on-device
+// generation before its allowed 220-token response can complete on a slower GPU.
+const COMMENTARY_COMPARISON_TIMEOUT_MS = 60_000;
 
 function createLocalRunError(message) {
     const error = new Error(message);
