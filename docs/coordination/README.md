@@ -2,7 +2,7 @@
 
 - **Owner:** Repository lead
 - **Status:** Authoritative shared coordination state
-- **Last verified:** 2026-08-19
+- **Last verified:** 2026-08-30
 
 This directory is the single repository-level view of current work. The CEO should be able to ask what is active, blocked, ready, risky, or waiting for a decision without reading agent transcripts.
 

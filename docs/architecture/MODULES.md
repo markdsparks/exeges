@@ -166,13 +166,39 @@ Domain libraries must not import React components. Feature components should not
 
 **Public interface:** Vite `/exeges/` build output, configured ESV proxy URL, GitHub Pages URL, iOS shell navigation/loading behavior, and the authorized TestFlight command.
 
-**Owned data and invariants:** A `main` push deploys Pages; the iOS shell currently loads that mutable hosted app; credentials/signing stay outside source; TestFlight upload and infrastructure changes require explicit approval.
+**Owned data and invariants:** A `main` push deploys Pages; the iOS Existing Exeges fallback loads that mutable hosted app, while default native reading is bundled; credentials/signing stay outside source; TestFlight upload and infrastructure changes require explicit approval.
 
 **Allowed dependencies:** Production artifacts from the web build and explicitly configured endpoints. Release automation must not become a source of product intent.
 
 **Verification:** `npm run check`; preview/smoke checks; dependency audits for release readiness; Worker checks; Xcode build and real-device behavior for native changes.
 
 **Architecture review required when:** Changing build base, workflow triggers/permissions, Pages approval policy, Worker deployment, native host/scheme policy, release channel, signing, or App Store behavior.
+
+## 10. Native Reader Proof
+
+**Purpose:** Prove native iPhone/iPad Scripture reading, navigation, a private note, appearance, and restart recovery under [ADR-0002](../decisions/0002-native-reader-proof.md), without replacing the current release.
+
+**Current paths:** `native/ios/ExegesApp/NativeReaderData.swift`, `NativeReaderModel.swift`, `NativeReaderView.swift`; native `Tests/` and `ExegesUITests/`.
+
+**Public interface:** Canonical book/chapter/verse references; unchanged KJV corpus decoded as a build resource; version-1 native reader state; explicit save/delete/navigation/appearance operations. Debug and Release open native reading under ADR-0003; Existing Exeges remains a hosted fallback.
+
+**Owned data and invariants:** Separate Application Support state document; validated references, font/theme and note records; atomic persistence before publishing success; unreadable/future data left untouched; website storage never cleared or migrated. The native document is not a web backup and does not change its version or keys. See [the preservation plan](../../native/ios/DATA_PRESERVATION.md).
+
+**Allowed dependencies:** Apple SwiftUI/Foundation and the existing corpus resource. Pure native data/session code has no UI or website-storage dependency. No new service, model runtime, account, analytics, or third-party dependency.
+
+**Verification:** Foundation corpus/store checks, Debug/Release builds, iPhone/iPad UI journeys, screenshots, independent review, and real-device evidence before release. Native tests supplement the existing web checks.
+
+**Architecture review required when:** Changing storage version, importing website/backup data, adding ESV/study/AI, changing the Release entry or release topology, adding a persistence/service dependency, or extending the privacy promise. Current proof approval does not authorize those later phases.
+
+## 11. Native Search And Bookmarks
+
+**Purpose:** Restore local Scripture discovery and private verse recall in the native reader under [TASK-0011](../coordination/tasks/0011-native-search-bookmarks.md).
+
+**Paths / interfaces:** `NativeScriptureSearch.swift` owns immutable index, normalization, phrase-first matching, bounded response, and cancellation. `NativeBookmarks.swift` owns canonical verse-key/timestamp records, separate versioned atomic storage and mutations. `NativeReaderToolsView.swift` owns native search/bookmark sheets; NativeReaderModel coordinates loading/navigation and explicit save failures.
+
+**Invariants:** KJV corpus unchanged; no request or source text persisted; no query network/telemetry; no context-only nonmatches; no stale-query UI; maximum 60 displayed hits with honest total; existing verse/history contract. Separate bookmark storage cannot overwrite native reader/web data; malformed/noncanonical/future state fails closed without blocking reading. Bookmark failure is visible in the originating screen, including verse context menus.
+
+**Dependencies / checks:** Apple Foundation/SwiftUI and native reader reference/corpus contracts only. Foundation search/bookmark checks, iPhone/iPad success/empty/error/retry/keyboard/large-text/back/restart journeys, build and independent review. No release, imported private data, translation/provider or model change is included.
 
 ## Migration Rule
 

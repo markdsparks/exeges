@@ -8,6 +8,10 @@ Use an architecture decision record for a consequential product or technical cho
 
 Do not create an ADR for routine implementation details. CEO-reserved decisions require explicit CEO approval before an ADR is marked accepted.
 
+- [ADR-0002: Stage a native iPhone and iPad reader proof](0002-native-reader-proof.md) — Accepted for the bounded local proof
+
+- [ADR-0003: Publish the native reader as an internal TestFlight beta](0003-native-reader-internal-testflight.md) — Accepted for this internal beta
+
 ## Process
 
 1. Copy [0000-template.md](0000-template.md) to the next four-digit number and a short slug, for example `0001-reader-first-study.md`.

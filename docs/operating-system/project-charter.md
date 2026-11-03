@@ -30,6 +30,7 @@ Help people read Scripture with sustained attention and, when they choose, pursu
 6. Protect the reverent, immersive visual character of the reading experience.
 7. Prefer local/private and low-infrastructure behavior where it is reliable.
 8. Respect translation and source licenses at ingestion, storage, display, and synthesis boundaries.
+9. Every feature must be visually stunning and highly useful. Native craftsmanship, clear purpose, effortless interaction, accessibility, and reliable behavior belong to the same quality bar; functional parity alone is insufficient.
 
 ## Provisional Strategic Guardrails
 
@@ -65,7 +66,7 @@ No business or product measures are established in the repository. The CEO must 
 
 - ESV access is licensed and must remain behind a private proxy; ESV text cannot be committed or retained long-term.
 - KJV, notes, bookmarks, studies, position, and settings are currently local to the device/browser.
-- GitHub Pages hosts the web app; the iOS release shell loads that hosted app.
+- GitHub Pages hosts the web app; the iOS app opens native reading for the authorized internal beta, with Existing Exeges loading the hosted app from the menu.
 - Public commentary, open-licensed study notes, and OpenBible data require correct attribution and license treatment.
 - The bundled KJV corpus lacks a committed edition/provenance record, and the repository lacks a code `LICENSE` file.
 - On-device WebGPU model loading is experimental and has shown reliability and quality limits on iPhone.

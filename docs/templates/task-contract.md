@@ -26,10 +26,13 @@ Define inputs, outputs, schemas, APIs, events, compatibility promises, and invar
 
 - Observable, testable condition.
 - Observable, testable condition.
+- For user-facing work: identify the reader's job and the observable usefulness improvement; define visual/native interaction expectations under the [feature quality bar](../operating-system/product-direction.md#quality-bar-for-every-feature), including relevant accessibility and non-happy-path states.
 
 ## Verification
 
 List exact tests, lint/build commands, fixtures, previews, browser/device journeys, screenshots, measurements, security checks, or source/output inspections required.
+
+For user-facing work, include a usefulness assessment and visual/native interaction review with screenshots or a working preview. Distinguish technical verification from design acceptance and name unavailable device/accessibility evidence.
 
 ## Non-Goals
 

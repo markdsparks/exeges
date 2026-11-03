@@ -1,16 +1,21 @@
 # Coordination Status
 
 - **Maintainer:** Repository lead
-- **Updated:** 2026-08-24
-- **Current objective delivery state:** Implemented; browser verification pending
-- **Current task phase:** Review / manual browser verification
-- **Release state:** Previous reader-loop release shipped to GitHub Pages on 2026-08-19 via commit `4567ff7`
+- **Updated:** 2026-11-02
+- **Current objective delivery state:** In progress (authorized native search/bookmark release); build 3 remains shipped until build 4 availability is confirmed
+- **Current task phase:** TASK-0013 quality/release checks, TASK-0014 independent review, internal TestFlight and scoped source push
+- **Quality direction:** D-010 beauty/usefulness assessment completed in TASK-0013/0014. Coherent native beta and concrete reader utility verified; broad search noise and maximum-text density remain known polish limits for device feedback.
+- **Release state:** Native TestFlight 1.0.0 (3) available on 2026-11-02: Apple VALID / IN_BETA_TESTING, existing Exeges Testers group access verified. GitHub Pages was not changed.
 
 ## Current Objective
 
-For a serious lay reader, make an explicitly saved question become a short, passage-first clarification path—without retyping it or forcing a source-dashboard workflow—while keeping deeper evidence intentional.
+The CEO reports the basic native app is working and directs wiring in existing features, explicitly choosing **search and bookmarks first**. TASK-0011 / D-009 are locally integrated after checks and independent TASK-0012 review. The subsequent “Ok build and push” directive authorizes TASK-0013 / D-011: assess D-010 quality, publish internal TestFlight build 4 and push native source/documentation to a scoped codex branch. Migration and paused web work remain deferred; no main/Pages deployment is included.
 
-The CEO accepted this objective on 2026-08-24. Its bounded implementation is recorded in [TASK-0004](tasks/0004-question-aware-clarification.md); the previous reader loop remains shipped in [TASK-0003](tasks/0003-reader-reflection-loop.md).
+The prior CEO directive authorized an internal native-reader TestFlight build and defers local-data migration. TASK-0009 / D-008 / ADR-0003 make native reading the Release entry for 1.0.0 (3), using the existing internal Exeges Testers group. No deletion, GitHub Pages deployment, commit, or push is included.
+
+Get current on Exeges and propose a staged transition to a fully native app, starting with iPhone and iPad, then settle the product roadmap. The CEO confirmed that platform scope and approved the bounded SwiftUI reader proof on 2026-11-02; [D-007](DECISION_INBOX.md#d-007-fully-native-app-iphone-and-ipad-first) records the accepted first build and later migration/release boundaries.
+
+The existing comparison repair remains shipped with real-device verification outstanding under [TASK-0006](tasks/0006-local-commentary-comparison-reliability.md). [TASK-0005](tasks/0005-reader-continuity-path.md) remains locally implemented and paused in Review; its accepted reader-continuity objective, research, and uncommitted changes remain intact. [TASK-0007](tasks/0007-native-reader-proof.md) is locally integrated after independent review; the existing shell remains available in the menu and all unfinished web work remains preserved.
 
 ## Dependency Graph And Task State
 
@@ -24,17 +29,24 @@ The CEO accepted this objective on 2026-08-24. Its bounded implementation is rec
 | OS-06 | Independently review the adoption contract and actual diff | Reviewer | Integrated | OS-02 through OS-05 implemented | Passed with known risk |
 | OS-07 | Resolve review findings and rerun integration evidence | Lead / Implementer | Integrated | Initial OS-06 findings | Complete |
 | PR-01 | Clarify the reader reflection -> sources -> return loop | Lead / Implementer | Shipped | D-001 accepted; OS-01 through OS-07 | Alpha journey feedback before prioritizing another product slice |
-| PR-02 | Make saved questions the fast passage-clarification path | Lead / Implementer | Review | D-005 accepted; PR-01 | Desktop and narrow-mobile journey evidence before local integration is declared complete |
+| PR-02 | Make saved questions the fast passage-clarification path | Lead / Integrator | Shipped | D-005 accepted; PR-01 | GitHub Pages deployment run `33296068960` succeeded; browser/mobile gap remains recorded in the task handoff |
+| PR-03 | Make one complete Gospel story easy to start and continue privately | Lead / Implementer | Review (paused) | D-006 accepted; PR-01, PR-02 | Desktop and narrow-mobile Mark-path/backup journey evidence before local integration is declared complete |
+| PR-04 | Let the existing local commentary comparison finish within a still-bounded runtime budget | Lead / Integrator | Shipped | Existing local-model/commentary contract; CEO failure report | CEO device test of completion, Stop, timeout, and retry |
+| NA-01 | Native KJV reading, passage navigation, notes, appearance, and restart recovery | Lead / Integrator | Integrated | D-007 and ADR-0002 accepted | Physical-device inspection before next parity/migration contract |
+| NA-02 | Native reader available to existing internal TestFlight testers | Lead / Integrator | Shipped | D-008; TASK-0007/0008; TASK-0010 review | CEO physical-device reading/note/reopen feedback |
+| NA-03 | Find and privately bookmark Scripture through native screens | Lead / Integrator | Integrated | D-009; TASK-0007/0009; TASK-0012 review | Separately authorized TestFlight build and physical-device inspection |
 
 ## Authoritative Integration Queue
 
-1. Desktop and narrow-mobile manual journeys for the saved-question and ordinary-thought flows, including failure/recovery, keyboard, close, and return behavior.
-2. Lead local integration after that evidence. A production push remains separately CEO-authorized.
+1. TASK-0013: quality assessment -> build4/release checks and TASK-0014 review -> signed artifact inspection -> upload/Apple internal availability -> native/docs commit and scoped branch push. TASK-0011 remains locally integrated; paused web code stays uncommitted.
+2. Retain PR-04 real-device comparison checks as outstanding evidence: completion, Stop, timeout, and retry.
+3. Keep PR-03 paused in Review. Its existing desktop/mobile Mark-path and backup checks remain prerequisites to any future integration or release; decide how to reuse its behavior in the native plan.
 
-Only the repository lead may reorder this queue. No product-code migration, CI/release workflow change, commit, push, or deployment is queued.
+Only the repository lead may reorder this queue. D-011 authorizes this build4 internal upload and native/docs commit/push to `codex/native-search-bookmarks`. No main/Pages deployment, paused web release, CI change or future release is authorized.
 
 ## Evidence So Far
 
+- TASK-0011 native search/bookmarks: 81 Foundation assertions passed independently; Debug/Release builds passed; iPhone broad 8/8 passed. iPad broad six passed and two automation keyboard-focus failures were corrected, then final targeted 3/3 passed on each device. Final light/dark and accessibility-size screenshots passed independent inspection. TASK-0012: Pass with known risk, no unresolved findings. Physical-device, older-runtime and live VoiceOver checks remain unavailable. See TASK-0011 for exact artifacts and aggregate-run limits.
 - Initial tracked worktree was clean on `main` at `a62f498`, matching `origin/main`.
 - Three independent read-only audits covered documentation/coordination, architecture/contracts, and tooling/agent adapters.
 - All pre-existing Markdown links resolved at audit time.
@@ -52,19 +64,30 @@ Only the repository lead may reorder this queue. No product-code migration, CI/r
 - D-005 authorizes a local-only, question-aware clarification iteration. It may use the existing observation type to preserve question intent, but it may not add a data schema, persist source/generative output, expand AI or source behavior, or release without a separate CEO approval.
 - TASK-0004 implementation is complete in the local worktree: an explicit **Clarify this question** action preserves the existing `question` intent, automatically starts the existing deterministic passage-question flow, and shows inspectable sources before optional AI or deeper research. Notes retain the prior broad Explore ordering. The full quality gate and independent re-review passed; manual desktop/390px and source-failure journeys remain unverified because this environment has no browser target.
 - Commit `4567ff7` was pushed to `main`; GitHub Actions run `32320568257` completed the Pages build and deployment successfully.
+- Commit `882a093` was pushed to `main`; GitHub Actions run `33296068960` completed the question-aware clarification deployment successfully. The previously recorded manual browser gap remains a known risk, not a claim of browser verification.
+- External roadmap research identified continuity of coherent reading as the next product gap. D-006 accepts one private Mark path, deliberately excluding a plan catalog, dates, notifications, streaks, accounts, social features, source growth, and AI expansion.
+- TASK-0005 implementation is complete in the local worktree: the reader can explicitly start Mark, mark only the offered chapter read, continue privately, complete or restart, and include compatible progress in backup/restore. The full quality gate and independent review passed; interactive desktop/390px and restore journeys remain unverified because no browser target is connected.
+- The CEO-reported comparison error maps directly to the former 20-second commentary-generation deadline. That deadline is inconsistent with a request containing up to three excerpts and a permitted 220-token, quotation-checked JSON response; TASK-0006 raises only this finite deadline while retaining explicit invocation, cancellation, engine cleanup, source scope, and audit rules.
+- TASK-0006 focused benchmark, lint, production build, `git diff --check`, and `npm run check:full` passed. Independent review returned Pass with known risk: no supported WebGPU browser/device is connected for the required real-device journey.
+- Commits `8b442b0` and `24d6799` were pushed under the CEO's specific 2026-08-31 authorization. GitHub Actions run `33438261622` completed the Pages build and deployment successfully. The known real-device verification gap remains explicit.
 
 ## Resource Position
 
-- Active writer: none; PR-02 awaits manual browser verification.
-- Read-only exploration: complete.
-- Review backlog: none.
-- Blocked product work: none was active in the clean checkout.
-- External actions and material cost: none.
+- Active product writer: lead as Integrator for TASK-0013 release/source publication. TASK-0011 is locally integrated; PR-04 awaits device evidence and PR-03 remains paused in Review.
+- Exploration: current code, native shell, local data boundaries, and prior handoffs inspected on 2026-11-02.
+- Review backlog: none; TASK-0014 quality/release review passed with known risk and no unresolved blockers. TASK-0012 feature review, TASK-0010 release delta review and TASK-0008 proof review also passed with known risk.
+- Preserved work: the checkout contains existing uncommitted PR-03 implementation and coordination changes; they have not been discarded or committed.
+- External actions: D-011 authorizes build4 upload to the existing internal tester group and native/docs commit/push to `codex/native-search-bookmarks`. Main/Pages and paused web code remain excluded. Material new cost: none.
 
 ## Shipped Since Previous Brief
 
+- Native KJV reader internal TestFlight **1.0.0 (3)** on 2026-11-02: Apple processing VALID, internal state IN_BETA_TESTING, existing Exeges Testers group lists the build. See TASK-0009.
+
 - Commit `4567ff7`: the operating-system layer and TASK-0003 reader reflection loop. GitHub Pages deployment run `32320568257` succeeded.
+- Commit `882a093`: TASK-0004 question-aware passage clarification. GitHub Pages deployment run `33296068960` succeeded.
 
 ## CEO Checkpoint
 
-PR-02 is locally implemented and awaiting manual browser verification. The next CEO checkpoint is review of the working clarification flow and its alpha-test readiness; do not infer commit, push, or deployment authority from the implementation directive. The recommended architecture action remains not to start a monorepo migration; approve lightweight current-tree boundary enforcement only when a product task first needs it.
+The CEO reports basic native build 3 works. D-011 now authorizes publishing native search/bookmarks as internal build4 after the D-010 assessment, checks and independent review. Lead is completing that release and scoped source push; no further approval is needed for those exact actions. Physical iPhone/iPad and live VoiceOver inspection remain the next CEO checkpoint once Apple confirms availability. Data migration remains deferred and existing material was not cleared. The next parity slice, later migration, broader distribution and future release actions remain separate decisions.
+
+Release evidence is recorded in [TASK-0009](tasks/0009-native-reader-testflight.md); independent review in [TASK-0010](tasks/0010-review-native-testflight.md). Simulator coverage does not claim physical-device or older-runtime verification. Current dependency audit found four high web development-tool advisories and no production dependency vulnerabilities; no npm/web build is bundled in the native reader.

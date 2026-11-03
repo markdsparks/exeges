@@ -1,7 +1,7 @@
 # Active Risk Register
 
 - **Maintainer:** Repository lead
-- **Updated:** 2026-08-19
+- **Updated:** 2026-11-02
 
 | ID | Risk | Exposure / trigger | Owner | Current response | Status |
 | --- | --- | --- | --- | --- | --- |
@@ -18,6 +18,7 @@
 | R-011 | Runtime source failure silently reduces evidence | Static pack fetch/schema/version failure | Study/source owner | Record as contract debt; add explicit partial/error states in an approved phase | Open |
 | R-012 | Code license and KJV provenance are unsubstantiated | Broader distribution or public legal claims | CEO | Keep claims unresolved; complete D-004 before relying on them | Open |
 | R-013 | Hand-authored study chunks bypass SourcePack v2 validation | Adding or relying on unvalidated runtime source records | Study/source owner | Do not expand bypass; migrate through validated path in an approved contract task | Open |
+| R-014 | Native transition separates existing website data from new native state | Native beta use or later migration | CEO / native owner | D-008 approved native Debug/Release entry for the internal beta with migration deferred; Existing Exeges retains access to website data. D-011 authorizes build4 without data deletion/transfer. Follow the [data preservation plan](../../native/ios/DATA_PRESERVATION.md); validate import/export and device-upgrade behavior before any later migration | Controlled for internal beta; migration/device evidence outstanding |
 
 ## Escalation Rule
 

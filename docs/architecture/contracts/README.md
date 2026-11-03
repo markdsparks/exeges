@@ -80,9 +80,9 @@ These are the shared contracts whose changes can affect more than one Exeges cap
 
 ## Release Contract
 
-**Consumers:** GitHub Pages, browser users, and the iOS WKWebView shell.
+**Consumers:** GitHub Pages, browser users, the iOS Existing Exeges fallback, and native releases.
 
-**Interface:** A push to `main` triggers the Pages workflow; its `dist/` result becomes the hosted web app. The iOS shell loads that hosted URL, so a web deployment changes the iOS experience without a new native binary.
+**Interface:** A push to `main` triggers the Pages workflow; its `dist/` result becomes the hosted web app. Existing Exeges in the iOS menu loads that URL, so a web deployment changes that fallback surface without a new native binary. The default native reader is bundled in the binary under [ADR-0003](../../decisions/0003-native-reader-internal-testflight.md).
 
 **Invariants:** `Implemented`, `Verified`, and `Integrated` do not mean `Shipped`. Before a production push, workflow/infrastructure change, or TestFlight upload, the Integrator must confirm either per-action CEO approval given immediately before it or a still-valid standing approval that explicitly covers it. No standing production approval is currently recorded. Signing and secrets remain external.
 
@@ -91,3 +91,27 @@ These are the shared contracts whose changes can affect more than one Exeges cap
 **Checks:** `npm run check`; release-readiness audits; preview/smoke testing; Xcode and device checks for native changes.
 
 **Approval boundary:** Trigger, permissions, environment protection, hosted URL/channel, Worker deployment, signing, or TestFlight behavior changes require the applicable per-action or recorded standing CEO authorization before live action and an ADR for consequential topology changes.
+
+## Native Reader Proof
+
+**Consumers:** Debug/Release iPhone/iPad reader and focused native verification; Existing Exeges remains a separate hosted-app surface.
+
+**Interface:** [ADR-0002](../../decisions/0002-native-reader-proof.md) and [TASK-0007](../../coordination/tasks/0007-native-reader-proof.md) define canonical references and an isolated native JSON document (`version: 1`, `position`, `fontSize`, `theme`, `notes`). Native notes use compatible reference keys and millisecond timestamps; the document is not `exeges-user-backup` version 1.
+
+**Invariants:** Only valid corpus references; explicit note Save/Cancel/Delete; successful atomic writes before state publication; visible failures; no reset of corrupt/future saved material; no website data deletion/import or silent ESV preference replacement. Native preview data and existing app data do not sync. D-008 / ADR-0003 approve the native root for this internal beta, with data transfer deferred.
+
+**Implementation:** `native/ios/ExegesApp/NativeReaderData.swift`, `NativeReaderModel.swift`, `NativeReaderView.swift`; transfer gates in [the data-preservation plan](../../../native/ios/DATA_PRESERVATION.md).
+
+**Checks:** `bash native/ios/Tests/check-reader.sh`; Debug/Release Xcode builds; native iPhone/iPad UI tests; screenshots and independent review. Physical-device verification and complete migration/recovery evidence remain release requirements.
+
+**Approval boundary:** Persistence schema changes, actual migration/import, feature-parity expansion, AI/service/dependency changes, privacy promises, native Release cutover, signing, and external release require applicable CEO approval.
+
+## Native Search And Bookmarks
+
+**Consumers:** Native reader, search/bookmark sheets and native checks under [TASK-0011](../../coordination/tasks/0011-native-search-bookmarks.md).
+
+**Interface:** Memory-only KJV search index, query capped at 200 characters, at most 60 hits and total count; canonical reference per hit. Rank matching phrase first, then all terms, then occurrence/context relevance with canonical ties. A separate `NativeReader/bookmarks-v1.json` document has `version: 1` and `bookmarks` mapping canonical verse keys to nonnegative finite millisecond timestamps.
+
+**Invariants:** No network/query retention; canceled or older queries cannot display stale hits. Result/list navigation uses existing history and visible verse restore. Bookmark writes succeed atomically before publication; explicit removal is idempotent. Noncanonical, malformed or future data is preserved and rejected, with retry separate from reader availability. Native reader-state-v1 and web backup versions/keys are unchanged; no migration occurs.
+
+**Checks / approval:** Foundation checks, native iPhone/iPad journeys and independent review. Sources, translation/AI/service/dependency changes, imported data and release remain outside this feature port and need their applicable approval.

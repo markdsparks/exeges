@@ -1,10 +1,29 @@
 # Product Direction
 
 - **Owner:** CEO for priority; repository lead for evidence and upkeep
-- **Status:** Current-state facts plus one accepted near-term reader outcome
-- **Last verified against repository:** 2026-08-24
+- **Status:** Current-state facts, accepted reader outcome, and accepted native iPhone/iPad platform direction; bounded SwiftUI reader proof locally integrated; later migration roadmap proposed
+- **Last verified against repository:** 2026-11-02
+
+## Current Strategic Direction
+
+On 2026-11-02 the CEO directed a transition to a fully native application and confirmed iPhone and iPad first. The CEO then approved the proposed bounded SwiftUI reader proof. TASK-0007 and ADR-0002 cover native KJV reading, navigation, notes, appearance, isolated local persistence, and restart recovery. Data migration, AI runtime, full feature parity, and Release cutover remain outside that approval; see [D-007](../coordination/DECISION_INBOX.md#d-007-fully-native-app-iphone-and-ipad-first).
+
+The reader-first mission remains the organizing principle. The existing Mark-path implementation is preserved and paused in Review, not shipped. The prior assumption that a hosted-web shell is sufficient is superseded as the target direction; the existing shell remains a menu fallback after the native-root internal beta cutover approved in D-008 / ADR-0003.
+
+## Quality Bar For Every Feature
+
+The CEO explicitly requires every feature to be **visually stunning and highly useful** ([D-010](../coordination/DECISION_INBOX.md#d-010-beauty-and-usefulness-in-every-feature)). Functional parity and passing checks are necessary but do not establish this quality bar. It applies to existing surfaces and each native addition, including search and bookmarks.
+
+- **Useful:** Define the reader's job and show that the feature makes it easier. Review relevance, clarity, discoverability, effort, and return to reading through realistic journeys, rather than counting controls or features.
+- **Beautiful:** Use deliberate typography, spacing, hierarchy, color, and restrained motion consistent with the immersive reader. Native controls must form a coherent Exeges experience on both iPhone and iPad.
+- **Effortless and inclusive:** Check touch/keyboard behavior, accessibility text sizes, contrast, safe areas, scrolling, and loading/empty/error/recovery states. Important actions must remain clear and reachable.
+- **Proven:** Include visual evidence and a usefulness assessment in acceptance and review. State missing physical-device or accessibility evidence explicitly. Technical checks alone must not be reported as design acceptance.
+
+Polish must support reading and understanding. Major workflow or architecture changes and releases still require their applicable approvals.
 
 ## Current Product State
+
+Separately from the released alpha, the local Debug iOS app now has a native SwiftUI KJV reader proof: passage navigation, private verse notes, appearance, and verse-level resume. It has passed simulator verification and independent review. The CEO subsequently authorized a native-reader internal TestFlight beta with local-data transfer deferred; Debug and Release now open native reading, while Existing Exeges in the menu preserves access to the hosted app. The internal beta 1.0.0 (3) is available to Exeges Testers with Apple processing and group access verified. Full parity and migration remain incomplete. See [TASK-0007](../coordination/tasks/0007-native-reader-proof.md).
 
 Exeges is an internal alpha distributed on the web and through a thin iOS TestFlight shell. The current experience includes:
 
@@ -26,10 +45,11 @@ An older guided Observe/Interpret/Apply implementation remains in the codebase, 
 
 The first outcome is accepted for the current learning cycle. The others remain provisional and should be reprioritized by the CEO:
 
-1. A reader can tap Scripture, record a thought or question, inspect progressively deeper evidence, and return to reading without confusion.
-2. Every generated or assembled answer makes its supporting Scripture and commentary easy to inspect and distinguishes source text from synthesis.
-3. Core reading, search, study, and navigation journeys have repeatable regression coverage and real-device checks.
-4. Tester feedback can answer whether the reader-first study proposition is useful and trustworthy before source or AI expansion.
+1. A reader can start a coherent, complete Gospel story and return to the next chapter without an account, schedule, or performance pressure.
+2. A reader can tap Scripture, record a thought or question, inspect progressively deeper evidence, and return to reading without confusion.
+3. Every generated or assembled answer makes its supporting Scripture and commentary easy to inspect and distinguishes source text from synthesis.
+4. Core reading, search, study, and navigation journeys have repeatable regression coverage and real-device checks.
+5. Tester feedback can answer whether the reader-first study proposition is useful and trustworthy before source or AI expansion.
 
 ## Roadmap Themes
 
@@ -58,14 +78,16 @@ The first outcome is accepted for the current learning cycle. The others remain 
 - Curated per-passage retrieval can deliver enough relevance before semantic/vector retrieval is necessary.
 - Historical commentary and clearly labeled open-licensed study notes are useful when named, attributed, inspectable, and balanced by context and caution.
 - Local AI offers enough privacy or responsiveness benefit to justify its mobile cost and quality limits.
-- A thin hosted-web iOS shell is sufficient for the current learning stage.
+- The native transition can improve the reading experience enough to justify a second implementation and data-migration work; this requires a real-device reader proof before broad feature porting.
 
 ## Current Alpha Slice
 
-**Provisional implementation hypothesis.** A reader should be able to protect their private reading life without leaving the reading experience for an account or a cloud setup. The menu exposes a compact “Backup & restore” path that exports notes, bookmarks, study writing, reading place, and preferences; licensed ESV wording is omitted. Restore is deliberately additive and preserves an existing local note when two copies contain one at the same passage.
+**Provisional implementation hypothesis.** A reader should be able to protect their private reading life without leaving the reading experience for an account or a cloud setup. The menu exposes a compact “Backup & restore” path that exports notes, bookmarks, study writing, reading place, reading-path progress, and preferences; licensed ESV wording is omitted. Restore is deliberately additive and preserves an existing local note when two copies contain one at the same passage.
 
 This is intentionally a reading-integrity investment, not another study surface or a promise of sync. The qualitative success signal is that testers can move their saved material to another browser/device or recover after a browser reset without uncertainty about what will be overwritten.
 
 ## Next Product Decision
 
-The CEO has authorized the next bounded iteration: an explicitly saved reader question should become the starting point for a short, passage-first clarification without retyping or an expert-tool dashboard. Commentary comparison, AI, ontology, expert-study expansion, persistent answer storage, and new source breadth remain outside that iteration unless separately approved.
+The CEO reports basic native reading works and has explicitly selected native **search and bookmarks first**. TASK-0011 restores those existing capabilities and is locally integrated after Foundation/iPhone/iPad checks and independent TASK-0012 review (Pass with known risk). The later “Ok build and push” directive authorizes TASK-0013 / D-011 to publish internal build4 and its native source/documents on a scoped branch after D-010 assessment and independent release review. Physical-device, older-runtime and live VoiceOver checks remain outstanding. Migration remains deferred; study/source/AI and ESV parity remain subsequent bounded decisions.
+
+The bounded native reader proof is locally integrated with simulator checks, independent review, and a data-preservation plan. The next checkpoint is physical-device reading/accessibility/performance; the later parity/migration roadmap remains for discussion. The previously authorized Mark path remains valid and locally implemented, but paused pending its outstanding verification and the native roadmap discussion. Its scope remains one explicit, chapter-sized Mark path—not a plan marketplace, daily schedule, streak, reminder, account, social feature, generated devotional, source expansion, or AI expansion. The external rationale is recorded in [reader continuity research](../research/2026-08-reader-continuity.md).

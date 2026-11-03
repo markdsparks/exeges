@@ -6,7 +6,7 @@
 
 ## System Architecture
 
-Exeges is a React 19 single-page application built by Vite 8 and hosted under the `/exeges/` GitHub Pages base path. It has no application backend. A Cloudflare Worker proxies licensed ESV API calls, public-domain commentary and open-licensed Tyndale study notes are fetched at runtime, and an optional Web Worker runs on-device WebLLM synthesis. A native iOS WKWebView shell loads the hosted web app.
+Exeges is a React 19 single-page application built by Vite 8 and hosted under the `/exeges/` GitHub Pages base path. It has no application backend. A Cloudflare Worker proxies licensed ESV API calls, public-domain commentary and open-licensed Tyndale study notes are fetched at runtime, and an optional Web Worker runs on-device WebLLM synthesis. The iOS app now opens a native SwiftUI KJV reader with isolated local state in Debug and Release under the internal beta cutover in ADR-0003. Existing Exeges in the menu loads the hosted app; [ADR-0002](../decisions/0002-native-reader-proof.md) and [the native README](../../native/ios/README.md) define the boundary.
 
 ## Components And Boundaries
 
@@ -79,15 +79,15 @@ The source ZIP at `sources/study/raw/openbible-cross-references.zip` and the hos
 | Grounding, audit, prompt, or synthesis | `npm run lint`; `npm run build`; relevant source, synthesis, and commentary-comparison benchmarks; inspect representative raw evidence and output |
 | Dependency or release readiness | Above as applicable; `npm audit --audit-level=high`; `npm audit --omit=dev`; review lockfile and license impact |
 | Worker | Local request/response and CORS/error-path checks; never use a real token in committed fixtures |
-| Native iOS shell | Web checks plus Xcode build and relevant real-device behavior; TestFlight upload only when explicitly authorized |
+| Native iOS reader or shell | Web checks; `bash native/ios/Tests/check-reader.sh`; Debug/Release Xcode builds; iPhone/iPad UI tests and screenshots; relevant real-device behavior before release; TestFlight upload only when explicitly authorized |
 
 `npm run check` is the standard repository gate: Markdown links, lint, and the production build. `npm run check:full` adds all eight local focused benchmarks after source generation. These commands do not replace the manual, network, Worker, native, security, or device checks named above when those surfaces change.
 
-There is no general test runner, unit-test suite, end-to-end suite, separate type checker, coverage target, or CI lint gate. Add focused tests alongside risky new logic rather than claiming nonexistent coverage.
+There is no general web test runner, web unit/end-to-end suite, separate type checker, coverage target, or CI lint gate. The native reader proof adds a focused Foundation check harness and an Xcode UI test target; these are not general web coverage. Add focused tests alongside risky new logic rather than claiming nonexistent coverage.
 
 ## Deployment Path
 
-A push to `main` triggers `.github/workflows/deploy-pages.yml`, uses Node 24, runs `npm ci`, builds with the configured `VITE_ESV_PROXY_URL`, and deploys `dist/` to GitHub Pages. The iOS release app loads that URL, so normal web deploys alter its behavior without a new native binary. A push is therefore a production action, not merely source synchronization. Native-shell or App Store metadata changes use `scripts/exeges-testflight.sh` and require signing credentials and explicit authorization.
+A push to `main` triggers `.github/workflows/deploy-pages.yml`, uses Node 24, runs `npm ci`, builds with the configured `VITE_ESV_PROXY_URL`, and deploys `dist/` to GitHub Pages. Existing Exeges in the iOS menu loads that URL, so normal web deploys alter that fallback surface without a new native binary; the native reader itself is bundled and updated through native releases. A push is therefore a production action, not merely source synchronization. Native-shell or App Store metadata changes use `scripts/exeges-testflight.sh` and require signing credentials and explicit authorization.
 
 ## Known Technical Risks And Debt
 

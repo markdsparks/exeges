@@ -1,8 +1,8 @@
 # TASK-0004: Question-Aware Passage Clarification
 
 - **Role / owner:** Implementer / repository lead
-- **Task state:** Review
-- **Delivery state:** Implemented
+- **Task state:** Shipped
+- **Delivery state:** Shipped
 - **Risk / reversibility:** Medium; reader-study interaction and existing local observation intent change, but no new storage schema, source, model, network contract, or release is permitted
 - **Parent objective:** D-005, accepted by the CEO on 2026-08-24: make one saved reader question the fast, trustworthy entry to deeper study
 
@@ -78,5 +78,5 @@ Stop and escalate if the existing observation type cannot safely distinguish a q
 - **Changed boundary:** `src/App.jsx` passes only the existing observation type to the existing persistence path. `src/components/Study/StudyThread.jsx` adds question-aware presentation and reuses existing grounding, source, cancellation, close, return, and local-model contracts. No storage key or object shape, source/provider behavior, model behavior, network call, dependency, external system, or release setting changed.
 - **Evidence:** `npm run check:full` passed (documentation links, lint, production build, reader navigation, reading position, backup, personal-thread, public-commentary, source-pack, synthesis, and commentary-comparison checks); `git diff --check` passed. Independent re-review returned **Pass with known risk** after evidence-before-AI and ordinary-Explore ordering remediations.
 - **Known limit:** The local browser-control runtime had no available browser target, so the desktop/390px interaction, focus/overflow, and simulated source-failure journey remain unverified. The Vite build retains the repository's pre-existing large-chunk warning.
-- **Integration/release:** Local implementation is ready for browser verification. No commit, push, deployment, or other external action was performed or authorized.
+- **Integration/release:** Commit `882a093` was pushed to `main` under the CEO's explicit 2026-08-30 authorization. GitHub Actions run `33296068960` deployed it successfully. The missing browser verification remains an explicit known risk.
 - **Recommended next bounded action:** Exercise the saved-question and ordinary-thought journeys in a desktop browser and at 390px, including failure/recovery and return-to-reading; then request a specific commit/push authorization only if the CEO wants a release candidate.
