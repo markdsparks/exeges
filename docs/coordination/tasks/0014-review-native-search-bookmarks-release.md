@@ -16,11 +16,11 @@ Read-only: task13, accepted task11/12 implementation/evidence, native source/ver
 
 ## Dependencies
 
-TASK-0011/12 accepted -> CEO build/push directive -> TASK-0013 build4 preparation and available evidence. Lead reconciles final artifacts and Apple access after review.
+TASK-0011/12 accepted -> CEO build/push directive -> TASK-0013 build 4 preparation and available evidence. Lead reconciles final artifacts and Apple access after review.
 
 ## Interface Contract
 
-Build4, version1.0.0, original identifier/signing/internal group, unchanged local-data/corpus/DEBUG exclusions, feature-branch source publication with no main/Pages deployment. Apply D-010 beauty/usefulness criteria separately from technical checks.
+Build4, version 1.0.0, original identifier/signing/internal group, unchanged local-data/corpus/DEBUG exclusions, feature-branch source publication with no main/Pages deployment. Apply D-010 beauty/usefulness criteria separately from technical checks.
 
 ## Acceptance Criteria
 
@@ -50,8 +50,8 @@ Verdict; prioritized actionable findings; usefulness/visual assessment; checks/e
 
 **Pass with known risk.** No unresolved release-blocking findings; proceed with the authorized internal beta and scoped source publication. Lead corrected and restaged stale risk/status wording before final review.
 
-The Reviewer independently repeated 81 Foundation assertions (index0.134s), inspected six final screenshots, accepted iPhone8/8 broad and iPad6/8 plus corrected3/3 per-device evidence, and reconciled final Release search/open/Back/empty smoke1/1. Independently checked IPA version/build/identifier/device families, byte-identical corpus, absent DEBUG fixtures/test/key paths and SHA-256 matching TASK-0013. Strict/deep signature trust is lead evidence: restricted Reviewer trust returned the known TASK-0010 limitation, reconciled by lead's successful verification of archive and exported package with Mac trust services. Staged38 native/documentation files passed whitespace/scope and credential-pattern inspection; paused web code and build products excluded. Repository checks passed; audit baseline4 high development advisories/0 production vulnerabilities remains unchanged.
+The Reviewer independently repeated 81 Foundation assertions (index 0.134s), inspected six final screenshots, accepted iPhone 8/8 broad and iPad 6/8 plus corrected 3/3 per-device evidence, and reconciled final Release search/open/Back/empty smoke 1/1. Independently checked IPA version/build/identifier/device families, byte-identical corpus, absent DEBUG fixtures/test/key paths and SHA-256 matching TASK-0013. Strict/deep signature trust is lead evidence: restricted Reviewer trust returned the known TASK-0010 limitation, reconciled by lead's successful verification of archive and exported package with Mac trust services. Staged 38 native/documentation files passed whitespace/scope and credential-pattern inspection; paused web code and build products excluded. Repository checks passed; audit baseline 4 high development advisories / 0 production vulnerabilities remains unchanged.
 
-Usefulness: exact recall leads with John3:16/Psalms23:1, navigation/Back and bookmark save/restart/reopen/remove have meaningful journey assertions, and local private operation adds value. Craft: coherent native sheets, serif Scripture, clear references/primary contrast, restrained warm actions, reachable dismissal, scrolling/selection at maximum Dynamic Type. This supports a coherent internal beta, not certification of subjective CEO delight.
+Usefulness: exact recall leads with John 3:16 / Psalms 23:1, navigation/Back and bookmark save/restart/reopen/remove have meaningful journey assertions, and local private operation adds value. Craft: coherent native sheets, serif Scripture, clear references/primary contrast, restrained warm actions, reachable dismissal, scrolling/selection at maximum Dynamic Type. This supports a coherent internal beta, not certification of subjective CEO delight.
 
 Nonblocking quality limits: broad OR/substring search produces noisy totals and weaker subsequent hits; at maximum text size the count and return control consume much of the phone viewport. Reassess relevance/hierarchy after device feedback. Physical-device, older-runtime and live VoiceOver behavior remain unverified. Apple processing/group access and remote source SHA remain lead acceptance checks before reporting release completion. Reviewer made no edits or external mutations.

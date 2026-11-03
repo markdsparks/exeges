@@ -2,8 +2,8 @@
 
 - **Maintainer:** Repository lead
 - **Updated:** 2026-11-02
-- **Current objective delivery state:** In progress (authorized native search/bookmark release); build 3 remains shipped until build 4 availability is confirmed
-- **Current task phase:** TASK-0013 source pushed and upload accepted; waiting for Apple processing/internal-group availability
+- **Current objective delivery state:** Source published and build 4 upload accepted; Apple availability verification blocked; build 3 remains confirmed shipped
+- **Current task phase:** TASK-0013 blocked on Apple status verification (direct status HTTP 500); no further implementation or upload queued
 - **Quality direction:** D-010 beauty/usefulness assessment completed in TASK-0013/0014. Coherent native beta and concrete reader utility verified; broad search noise and maximum-text density remain known polish limits for device feedback.
 - **Release state:** Build4 upload accepted (delivery ef092896-8f6f-4048-9d51-772da04d73af); Apple processing/internal availability pending. Native source pushed as ad24615 to codex/native-search-bookmarks. Build3 remains available; main/GitHub Pages unchanged.
 
@@ -35,14 +35,15 @@ The existing comparison repair remains shipped with real-device verification out
 | NA-01 | Native KJV reading, passage navigation, notes, appearance, and restart recovery | Lead / Integrator | Integrated | D-007 and ADR-0002 accepted | Physical-device inspection before next parity/migration contract |
 | NA-02 | Native reader available to existing internal TestFlight testers | Lead / Integrator | Shipped | D-008; TASK-0007/0008; TASK-0010 review | CEO physical-device reading/note/reopen feedback |
 | NA-03 | Find and privately bookmark Scripture through native screens | Lead / Integrator | Integrated | D-009; TASK-0007/0009; TASK-0012 review | Separately authorized TestFlight build and physical-device inspection |
+| NA-04 | Internal build 4 plus native source publication | Lead / Integrator | Blocked | D-011; TASK-0013/0014 checks and review passed | Upload and branch push succeeded; verify Apple processing/group availability after status service recovers |
 
 ## Authoritative Integration Queue
 
-1. TASK-0013: quality assessment -> build4/release checks and TASK-0014 review -> signed artifact inspection -> upload/Apple internal availability -> native/docs commit and scoped branch push. TASK-0011 remains locally integrated; paused web code stays uncommitted.
+1. TASK-0013: build 4/release checks, D-010 assessment, TASK-0014 review, signed artifact inspection, upload and native/docs branch push complete. Remaining: Apple processing/internal availability verification; direct status service returned HTTP 500 and the build list has not yet exposed build 4. No re-upload queued. TASK-0011 remains integrated; paused web code stays uncommitted.
 2. Retain PR-04 real-device comparison checks as outstanding evidence: completion, Stop, timeout, and retry.
 3. Keep PR-03 paused in Review. Its existing desktop/mobile Mark-path and backup checks remain prerequisites to any future integration or release; decide how to reuse its behavior in the native plan.
 
-Only the repository lead may reorder this queue. D-011 authorizes this build4 internal upload and native/docs commit/push to `codex/native-search-bookmarks`. No main/Pages deployment, paused web release, CI change or future release is authorized.
+Only the repository lead may reorder this queue. D-011 authorizes this build 4 internal upload and native/docs commit/push to `codex/native-search-bookmarks`. No main/Pages deployment, paused web release, CI change or future release is authorized.
 
 ## Evidence So Far
 
@@ -73,11 +74,11 @@ Only the repository lead may reorder this queue. D-011 authorizes this build4 in
 
 ## Resource Position
 
-- Active product writer: lead as Integrator for TASK-0013 release/source publication. TASK-0011 is locally integrated; PR-04 awaits device evidence and PR-03 remains paused in Review.
+- Active product writer: none; TASK-0013 upload/source publication complete, Apple status verification blocked. TASK-0011 is locally integrated; PR-04 awaits device evidence and PR-03 remains paused in Review.
 - Exploration: current code, native shell, local data boundaries, and prior handoffs inspected on 2026-11-02.
 - Review backlog: none; TASK-0014 quality/release review passed with known risk and no unresolved blockers. TASK-0012 feature review, TASK-0010 release delta review and TASK-0008 proof review also passed with known risk.
 - Preserved work: the checkout contains existing uncommitted PR-03 implementation and coordination changes; they have not been discarded or committed.
-- External actions: D-011 authorizes build4 upload to the existing internal tester group and native/docs commit/push to `codex/native-search-bookmarks`. Main/Pages and paused web code remain excluded. Material new cost: none.
+- External actions: D-011 build 4 upload and native/docs scoped branch push executed. No new upload/action queued; read-only Apple processing/group verification remains. Main/Pages and paused web code remain unchanged. Material new cost: none.
 
 ## Shipped Since Previous Brief
 
@@ -88,6 +89,6 @@ Only the repository lead may reorder this queue. D-011 authorizes this build4 in
 
 ## CEO Checkpoint
 
-The CEO reports basic native build 3 works. D-011 now authorizes publishing native search/bookmarks as internal build4 after the D-010 assessment, checks and independent review. Lead is completing that release and scoped source push; no further approval is needed for those exact actions. Physical iPhone/iPad and live VoiceOver inspection remain the next CEO checkpoint once Apple confirms availability. Data migration remains deferred and existing material was not cleared. The next parity slice, later migration, broader distribution and future release actions remain separate decisions.
+Build4 upload and scoped source push succeeded after D-010 assessment, checks and independent review. Apple has not yet listed build 4; its direct status endpoint returned HTTP 500. Availability is unconfirmed, with no additional CEO approval needed for read-only rechecking. Physical iPhone/iPad and live VoiceOver inspection are the next CEO checkpoint once Apple confirms availability. Data migration remains deferred and existing material was not cleared. The next parity slice, later migration, broader distribution and future release actions remain separate decisions.
 
 Release evidence is recorded in [TASK-0009](tasks/0009-native-reader-testflight.md); independent review in [TASK-0010](tasks/0010-review-native-testflight.md). Simulator coverage does not claim physical-device or older-runtime verification. Current dependency audit found four high web development-tool advisories and no production dependency vulnerabilities; no npm/web build is bundled in the native reader.

@@ -1,8 +1,8 @@
 # TASK-0013: Native Search And Bookmark Internal Release
 
 - **Role / owner:** Integrator / repository lead
-- **Task state:** In progress
-- **Delivery state:** In progress
+- **Task state:** Blocked (Apple processing/internal-availability verification)
+- **Delivery state:** Implemented and source published; upload accepted; availability unverified
 - **Risk / reversibility:** Medium; signed internal beta and source branch publication; previous beta remains available
 - **Parent objective:** CEO 2026-11-02 directive “Ok build and push,” following native search/bookmarks and D-010 quality direction
 
@@ -59,9 +59,9 @@ Known quality limits: accepted broad OR/substring admission can report very larg
 
 Current release checks: 81 Foundation assertions passed (independently repeated); standard repository gate passed. npm audit reports the unchanged four high web development-tool advisories and zero production vulnerabilities. Signed archive and internal-only export succeeded; archive and exported IPA strict/deep signatures succeeded with the Mac trust services. The Reviewer's restricted trust environment reproduces the prior TASK-0010 trust limitation; lead's successful final signature/entitlement verification reconciles it.
 
-Artifact: version1.0.0/build4, original identifier, iOS17 minimum, iPhone/iPad families, Exeges App Distribution profile expiring 2027-08-02. Corpus SHA-256 `91aeab361abd47e3d795eeb453cabad432c0657ca625f26871de7336b555a08f` is identical to the repository; DEBUG fixtures/test bundles/key files absent. IPA 1,966,520bytes; SHA-256 `9861d1397cac9c71e48c0f4ae4dc5bc125d5c90141e5b67d420573291fcd852a`. Evidence: `/private/tmp/exeges-testflight-4-archive.log`, `exeges-testflight-4-export.log`, `exeges-testflight-4-artifact.json`. Staged-source documentation links passed in an isolated index snapshot; only native source/tests and documentation are staged, no paused web code or build products.
+Artifact: version 1.0.0/build 4, original identifier, iOS 17 minimum, iPhone/iPad families, Exeges App Distribution profile expiring 2027-08-02. Corpus SHA-256 `91aeab361abd47e3d795eeb453cabad432c0657ca625f26871de7336b555a08f` is identical to the repository; DEBUG fixtures/test bundles/key files absent. IPA 1,966,520 bytes; SHA-256 `9861d1397cac9c71e48c0f4ae4dc5bc125d5c90141e5b67d420573291fcd852a`. Evidence: `/private/tmp/exeges-testflight-4-archive.log`, `exeges-testflight-4-export.log`, `exeges-testflight-4-artifact.json`. Staged-source documentation links passed in an isolated index snapshot; only native source/tests and documentation are staged, no paused web code or build products.
 
-Final build4 Release-configuration search/open/exact verse/Back/short/no-match recovery smoke passed1/1 in31.149s with DEBUG fixtures excluded. Evidence: `/private/tmp/exeges-testflight-4-release-smoke.log` and matching `.xcresult`. Independent TASK-0014 returned **Pass with known risk**, no unresolved release blockers; usefulness/visual limits are explicitly retained above. Upload follows that review and package inspection; availability is not claimed until Apple processing/group checks pass.
+Final build 4 Release-configuration search/open/exact verse/Back/short/no-match recovery smoke passed 1/1 in 31.149s with DEBUG fixtures excluded. Evidence: `/private/tmp/exeges-testflight-4-release-smoke.log` and matching `.xcresult`. Independent TASK-0014 returned **Pass with known risk**, no unresolved release blockers; usefulness/visual limits are explicitly retained above. Upload follows that review and package inspection; availability is not claimed until Apple processing/group checks pass.
 
 ## Source Publication And Upload Evidence
 
@@ -69,4 +69,12 @@ Native implementation/tests and coherent project documents were committed as `ad
 
 The exact staged native/web source snapshot also passed `npm run check` independently of dirty web work (44 documentation files/125 local links, lint, source generation and production build). Existing local dependencies were reused without changing package/lock files. Log: `/private/tmp/exeges-testflight-4-source-check.log`.
 
-Apple upload succeeded with no errors, exit0; delivery UUID `ef092896-8f6f-4048-9d51-772da04d73af`, 1,966,520bytes transferred. Log: `/private/tmp/exeges-testflight-4-upload.log`. Upload acceptance alone is not a claim of TestFlight availability; processing/group status is the remaining release acceptance check.
+Apple upload succeeded with no errors, exit 0; delivery UUID `ef092896-8f6f-4048-9d51-772da04d73af`, 1,966,520 bytes transferred. Log: `/private/tmp/exeges-testflight-4-upload.log`. Upload acceptance alone is not a claim of TestFlight availability; processing/group status is the remaining release acceptance check.
+
+## Handoff: Uploaded And Pushed; Apple Verification Pending
+
+Build4 is signed, exported, reviewed, and uploaded successfully. Native source and release evidence are published on the scoped branch; the documentation-only source-verification commit `6d3e4859025b1cf86cc3008215b427c5cf0fed56` was also verified remotely. A final documentation-only commit records this pending handoff. Main and paused web work remain unchanged.
+
+Repeated authenticated App Store Connect checks through approximately 19:04 Central on 2026-11-02 did not yet list build 4. Direct `altool --build-status --delivery-id ef092896-8f6f-4048-9d51-772da04d73af` returned HTTP 500 internal server error at 19:04:22; its stalled read-only check was stopped after recording the error. This is a status-service failure, not evidence that the accepted upload failed. Evidence: `/private/tmp/exeges-testflight-4-status.json` and `exeges-testflight-4-delivery-status.log`.
+
+Apple processing state VALID, internal beta state and existing Exeges Testers access remain unverified for build 4. Build3 remains the confirmed available beta. No re-upload or new build was attempted. Do not mark TASK-0013 Shipped until those Apple checks pass. No CEO decision is needed to repeat the read-only check after Apple recovers. The next bounded action is verify build 4 processing/group access, then inspect native search and bookmark save/reopen on physical iPhone/iPad with VoiceOver.

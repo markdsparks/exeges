@@ -4,11 +4,13 @@ The staged native transition begins with a SwiftUI KJV reader for iPhone and iPa
 
 ## Current Internal Beta
 
+**1.0.0 (4)**, adding native search/bookmarks, was signed and uploaded successfully on 2026-11-02. Apple processing/internal availability is **not yet verified**: the build list has not yet exposed it and direct delivery-status verification returned HTTP 500. Source is published on `codex/native-search-bookmarks`; [TASK-0013](../../docs/coordination/tasks/0013-native-search-bookmarks-release.md) records upload, review and pending verification. No re-upload is queued.
+
 **1.0.0 (3)** was uploaded and processed on 2026-11-02. Apple reports `VALID` / `IN_BETA_TESTING`, and the existing internal **Exeges Testers** group lists the build. Open TestFlight to update. Local-data migration is deferred for this beta; no data was cleared. Evidence and limits are in [TASK-0009](../../docs/coordination/tasks/0009-native-reader-testflight.md).
 
 ## Local Search And Bookmark Additions
 
-Native KJV text search and private verse bookmarks are implemented locally under [TASK-0011](../../docs/coordination/tasks/0011-native-search-bookmarks.md); they are **not yet in the shipped build 3**. Search finds words/phrases offline, opens the exact verse, and uses normal passage Back. Typing is cancelable and stale results stay hidden; exact phrases lead and at most 60 matches are displayed with the total count. Queries are not stored or sent to a service.
+Native KJV text search and private verse bookmarks are integrated under [TASK-0011](../../docs/coordination/tasks/0011-native-search-bookmarks.md) and included in uploaded build 4; they are **not in confirmed-available build 3**. Search finds words/phrases offline, opens the exact verse, and uses normal passage Back. Typing is cancelable and stale results stay hidden; exact phrases lead and at most 60 matches are displayed with the total count. Queries are not stored or sent to a service.
 
 Use Search Scripture or My Bookmarks from the reader menu. Touch and hold a verse, or tap it and use Bookmark Verse. Bookmarks can reopen their verse, be removed by swipe/context action, and survive restart. They live in a separate atomic `NativeReader/bookmarks-v1.json` file; the reader/note document stays unchanged. Invalid bookmark data is left untouched, with a retry surface that does not block reading. No existing web data is imported.
 

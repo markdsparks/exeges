@@ -93,7 +93,7 @@ Only decisions requiring CEO judgment belong here. Routine reversible implementa
 
 ## D-011: Build And Push Native Search And Bookmarks
 
-- **Status:** Accepted for this release on 2026-11-02
+- **Status:** Authorized build 4 upload and scoped source push executed on 2026-11-02; Apple availability verification pending
 - **CEO directive:** “Ok build and push.”
 - **Decision:** Build/sign/export/upload native search/bookmarks as 1.0.0 (4) to the existing internal Exeges Testers group after D-010 assessment and release review. Commit/push native source/tests and coherent durable documentation to `codex/native-search-bookmarks`.
 - **Scope:** [TASK-0013](tasks/0013-native-search-bookmarks-release.md), independent [TASK-0014](tasks/0014-review-native-search-bookmarks-release.md). The scoped branch preserves paused web implementation and avoids a main push/Pages deployment. Existing identifier/signing/audience and data-preservation boundaries remain unchanged.
