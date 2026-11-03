@@ -3,9 +3,9 @@
 - **Maintainer:** Repository lead
 - **Updated:** 2026-11-02
 - **Current objective delivery state:** In progress (authorized native search/bookmark release); build 3 remains shipped until build 4 availability is confirmed
-- **Current task phase:** TASK-0013 quality/release checks, TASK-0014 independent review, internal TestFlight and scoped source push
+- **Current task phase:** TASK-0013 source pushed and upload accepted; waiting for Apple processing/internal-group availability
 - **Quality direction:** D-010 beauty/usefulness assessment completed in TASK-0013/0014. Coherent native beta and concrete reader utility verified; broad search noise and maximum-text density remain known polish limits for device feedback.
-- **Release state:** Native TestFlight 1.0.0 (3) available on 2026-11-02: Apple VALID / IN_BETA_TESTING, existing Exeges Testers group access verified. GitHub Pages was not changed.
+- **Release state:** Build4 upload accepted (delivery ef092896-8f6f-4048-9d51-772da04d73af); Apple processing/internal availability pending. Native source pushed as ad24615 to codex/native-search-bookmarks. Build3 remains available; main/GitHub Pages unchanged.
 
 ## Current Objective
 
